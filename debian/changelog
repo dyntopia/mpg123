@@ -1,0 +1,100 @@
+mpg123 (0.59o-2) frozen unstable; urgency=low
+
+  * fixed #20301: compiles under m68k
+
+ -- Paul Haggart <phaggart@debian.org>  Fri, 27 Mar 1998 15:19:43 -0500
+
+mpg123 (0.59o-1) unstable; urgency=low
+
+  * new upstream source
+  * fixed #17398: 8 bit cards supported with --8bit option
+  * fixed #15348: alpha architecture is supported
+  * fixed #14541: move me to non-free/sound!
+
+ -- Paul Haggart <phaggart@debian.org>  Sat, 14 Mar 1998 10:02:57 -0500
+
+mpg123 (0.59n-3) unstable; urgency=low
+
+  * moved to non-free/sound for real now.  
+
+ -- Paul Haggart <phaggart@debian.org>  Tue, 10 Feb 1998 10:51:59 -0500
+
+mpg123 (0.59n-2) unstable; urgency=low
+
+  * really added support for non-i386 this time.  last time I was just
+    kidding or something.
+
+ -- Paul Haggart <phaggart@debian.org>  Sat,  7 Feb 1998 14:26:10 -0500
+
+mpg123 (0.59n-1) unstable; urgency=low
+
+  * new upstream source
+  * hopefully added support for non-i386 architectures
+
+ -- Paul Haggart <phaggart@debian.org>  Sat, 24 Jan 1998 12:07:02 -0500
+
+mpg123 (0.59m-3) unstable; urgency=low
+
+  * okay, now we're -really- moved to non-free/sound.
+
+ -- Paul Haggart <phaggart@debian.org>  Thu, 20 Nov 1997 18:00:36 -0500
+
+mpg123 (0.59m-2) unstable; urgency=low
+
+  * moved to non-free/sound because of DFSG non-compliance.
+
+ -- Paul Haggart <phaggart@debian.org>  Tue, 18 Nov 1997 18:31:36 -0500
+
+mpg123 (0.59m-1) unstable; urgency=low
+
+  * new upstream source
+
+ -- Paul Haggart <phaggart@debian.org>  Wed, 22 Oct 1997 21:55:13 -0400
+
+mpg123 (0.59l-2) unstable; urgency=low
+
+  * i386 only :(  (bug #13833)
+
+ -- Paul Haggart <phaggart@debian.org>  Mon, 13 Oct 1997 14:27:39 -0400
+
+mpg123 (0.59l-1) unstable; urgency=low
+
+  * new upstream version
+
+ -- Paul Haggart <phaggart@debian.org>  Mon, 29 Sep 1997 15:59:57 -0400
+
+mpg123 (0.59k-2) unstable; urgency=low
+
+  * fixed bug #11465: mpg123 isn't i386 specific any more
+
+ -- Paul Haggart <phaggart@debian.org>  Wed, 23 Jul 1997 20:10:42 -0400
+
+mpg123 (0.59k-1) unstable; urgency=low
+
+  * new upstream version
+
+ -- Paul Haggart <phaggart@debian.org>  Sun, 13 Jul 1997 11:41:34 -0400
+
+mpg123 (0.59i-1) unstable; urgency=low
+
+  * new upstream version
+
+ -- Paul Haggart <phaggart@debian.org>  Thu, 19 Jun 1997 17:03:15 -0400
+
+mpg123 (0.59g-1) unstable; urgency=low
+
+  * recompiled with libc6
+  * new upstream source
+
+ -- Paul Haggart <phaggart@debian.org>  Sun, 4 May 1997 00:11:44 -0400
+
+mpg123 (0.59f-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Paul Haggart <phaggart@debian.org>  Sun, 27 Apr 1997 15:09:37 -0400
+
+Local variables:
+mode: debian-changelog
+add-log-mailing-address: "phaggart@debian.org"
+End:

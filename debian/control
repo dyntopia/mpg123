@@ -1,0 +1,16 @@
+Source: mpg123
+Section: non-free/sound
+Priority: optional
+Maintainer: Paul Haggart <phaggart@debian.org>
+Standards-Version: 2.1.2.2
+
+Package: mpg123
+Architecture: i386 alpha powerpc m68k
+Depends: ${shlibs:Depends}
+Description: MPEG layer 1/2/3 audio player
+ Mpg123 is a fast, free and portable MPEG audio player for Unix.  It supports
+ MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
+ . 
+ For full CD quality playback (44 kHz, 16 bit, stereo) a Pentium,
+ SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
+ quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.

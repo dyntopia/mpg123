@@ -1,0 +1,60 @@
+#!/usr/bin/make -f
+
+package=mpg123
+ARCH=$(shell dpkg --print-gnu-build-architecture)
+
+build:
+ifeq ($(ARCH),i486)
+	$(MAKE) linux
+endif
+ifeq ($(ARCH),alpha)
+	$(MAKE) linux-alpha
+endif
+ifeq ($(ARCH),powerpc)
+	$(MAKE) linuxppc
+endif
+ifeq ($(ARCH),m68k)
+	$(MAKE) linux-m68k
+endif
+	touch build
+
+clean:
+	$(checkdir)
+	-rm -f build
+	-make clean
+	-rm -f `find . -name "*~"`
+	-rm -rf debian/tmp debian/files* core debian/substvars
+
+binary-indep:	checkroot build
+	$(checkdir)
+
+binary-arch:	checkroot build
+	$(checkdir)
+	-rm -rf debian/tmp
+	
+	install -d debian/tmp/usr/bin
+	install -d debian/tmp/usr/man/man1
+	
+	install -m 0755 mpg123 debian/tmp/usr/bin
+	install -m 0644 mpg123.1 debian/tmp/usr/man/man1
+
+	debstd CHANGES README TODO 
+
+	dpkg-gencontrol
+	chown -R root.root debian/tmp
+	chmod -R go=rX debian/tmp
+	dpkg --build debian/tmp ..
+
+define checkdir
+	test -f debian/rules
+endef
+
+# Below here is fairly generic really
+
+binary:		binary-indep binary-arch
+
+checkroot:
+	$(checkdir)
+	test root = "`whoami`"
+
+.PHONY: binary binary-arch binary-indep clean checkroot
