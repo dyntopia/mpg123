@@ -7,6 +7,15 @@
 
 #include "mpg123.h"
 
+#include <sys/ioctl.h>
+#ifdef LINUX
+#include <linux/soundcard.h>
+#elif defined(__bsdi__)
+#include <sys/soundcard.h>
+#else
+#include <machine/soundcard.h>
+#endif
+
 #ifndef AFMT_S16_NE
 # ifdef OSS_BIG_ENDIAN
 #  define AFMT_S16_NE AFMT_S16_BE
@@ -25,35 +34,50 @@
 
 extern int outburst;
 
-#include <sys/ioctl.h>
-#ifdef LINUX
-#include <linux/soundcard.h>
-#elif defined(__bsdi__)
-#include <sys/soundcard.h>
-#else
-#include <machine/soundcard.h>
-#endif
-
 int audio_open(struct audio_info_struct *ai)
 {
+  char usingdefdev = 0;
+
   if(!ai)
     return -1;
 
-  if(!ai->device)
+  if(!ai->device) {
     ai->device = "/dev/dsp";
+    usingdefdev = 1;
+  }
 
   ai->fn = open(ai->device,O_WRONLY);  
 
   if(ai->fn < 0)
   {
-    fprintf(stderr,"Can't open %s!\n",ai->device);
-    exit(1);
+    if(usingdefdev) {
+      ai->device = "/dev/sound/dsp";
+      ai->fn = open(ai->device,O_WRONLY);
+      if(ai->fn < 0) {
+	fprintf(stderr,"Can't open default sound device!\n");
+	exit(1);
+      }
+    } else {
+      fprintf(stderr,"Can't open %s!\n",ai->device);
+      exit(1);
+    }
+  }
+
+  if(audio_reset_parameters(ai) < 0) {
+    close(ai->fn);
+    return -1;
   }
 
   ioctl(ai->fn, SNDCTL_DSP_GETBLKSIZE, &outburst);
   if(outburst > MAXOUTBURST)
     outburst = MAXOUTBURST;
 
+  /* XXX This is weird.  We need to call GETBLKSIZE after setting up new
+   * sampling parameters via audio_reset_parameters().  If we do so, however,
+   * OSS on PPC freaks out, returning EINVAL on any ioctl().  I'd say there's a
+   * bug lurking in PPC's OSS implementation.  Setting the same format again
+   * serves as a workaround. [dk]
+   */
   if(audio_reset_parameters(ai) < 0) {
     close(ai->fn);
     return -1;

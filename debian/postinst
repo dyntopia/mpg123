@@ -1,4 +1,18 @@
-#!/bin/sh
+#!/bin/sh -e
+
+PACKAGE="@PACKAGE@"
+FILENAME="@FILENAME@"
+
+if [ "$1" = "configure" ]; then
+	if [ -d /usr/doc -a ! -e /usr/doc/"$PACKAGE" \
+            -a -d /usr/share/doc/"$PACKAGE" ]; then
+		ln -sf ../share/doc/"$PACKAGE" /usr/doc/"$PACKAGE"
+	fi
+fi
 
 if [ -x /usr/sbin/update-mime ]; then /usr/sbin/update-mime; fi
 
+update-alternatives --install \
+	/usr/bin/mpg123 mpg123 "/usr/bin/$FILENAME" "@PRIORITY@" \
+	--slave /usr/share/man/man1/mpg123.1.gz mpg123.1.gz \
+	"/usr/share/man/man1/$FILENAME.1.gz"

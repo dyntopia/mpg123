@@ -26,6 +26,7 @@
 #endif
 #else
 #include <asm/audioio.h>
+#include <sys/ioctl.h>
 #endif
 
 static void audio_set_format_helper(struct audio_info_struct *ai,audio_info_t *ainfo);
@@ -101,7 +102,6 @@ int audio_open(struct audio_info_struct *ai)
 
 int audio_reset_parameters(struct audio_info_struct *ai)
 {
-  int ret;
   audio_info_t ainfo;
 
   AUDIO_INITINFO(&ainfo);
