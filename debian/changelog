@@ -1,3 +1,24 @@
+mpg123 (0.59q-2) unstable; urgency=low
+
+  * fixes #15434: changelog.debian is compressed
+  * fixes #27867: manpage is correct
+  * fixes #28690: copyright file updated with new url
+  * fixes #17751, #14168, #17751: random with one file doesn't crash anymore
+  * fixes #13659, #14118, #14759, #15312: sound doesn't stop after 20 minutes
+  * many thanks to justin mccright for helping me clean these up
+
+ -- Paul Haggart <phaggart@debian.org>  Sun, 14 Mar 1999 11:02:42 -0500
+
+mpg123 (0.59q-1) unstable; urgency=low
+
+  * fixes #32668: new upstream source 
+  * i think we lost gmp3 support though.. the patch was none too clean
+  * fixes #32322: add -DUSE_MMAP to alpha
+  * fixes #26899: registered mime type for audio/mpeg
+  * updated standards version to current
+
+ -- Paul Haggart <phaggart@debian.org>  Sun,  7 Feb 1999 17:14:17 -0500
+
 mpg123 (0.59o-3) unstable; urgency=low
 
   * incorporated patches for gmp3 support

@@ -143,7 +143,7 @@ int synth_1to1(real *bandPtr,int channel,unsigned char *out,int *pnt)
   int bo1;
 #endif
 
-  if(param.equalizer)
+  if(equalfile)
 	do_equalizer(bandPtr,channel);
 
 #ifndef PENTIUM_OPT
@@ -237,12 +237,21 @@ int synth_1to1(real *bandPtr,int channel,unsigned char *out,int *pnt)
 
   return clip;
 #else
+#ifdef USE_3DNOW
+  {
+    int ret;
+    ret = synth_1to1_3dnow(bandPtr,channel,out+*pnt);
+    *pnt += 128;
+    return ret;
+  }
+#else
   {
     int ret;
     ret = synth_1to1_pent(bandPtr,channel,out+*pnt);
     *pnt += 128;
     return ret;
   }
+#endif
 #endif
 }
 

@@ -34,9 +34,11 @@ binary-arch:	checkroot build
 	
 	install -d debian/tmp/usr/bin
 	install -d debian/tmp/usr/man/man1
-	
+	install -d debian/tmp/usr/lib/mime/packages
+
 	install -m 0755 mpg123 debian/tmp/usr/bin
 	install -m 0644 mpg123.1 debian/tmp/usr/man/man1
+	install -m 0644 debian/mime debian/tmp/usr/lib/mime/packages/mpg123
 
 	debstd CHANGES README TODO 
 

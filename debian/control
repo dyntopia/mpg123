@@ -2,7 +2,7 @@ Source: mpg123
 Section: non-free/sound
 Priority: optional
 Maintainer: Paul Haggart <phaggart@debian.org>
-Standards-Version: 2.1.2.2
+Standards-Version: 2.4.0.0
 
 Package: mpg123
 Architecture: i386 alpha powerpc m68k
