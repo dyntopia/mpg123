@@ -5,7 +5,7 @@ mpg123 \- play audio MPEG 1.0/2.0 file (layers 1, 2 and 3)
 .SH SYNOPSIS
 .B mpg123
 [
-.B \-tscvqy01m24wEC
+.B \-tscvqy01m24wC
 ]
 [
 .BI \-b " size"
@@ -46,6 +46,9 @@ mpg123 \- play audio MPEG 1.0/2.0 file (layers 1, 2 and 3)
 [
 .BI \-@ " file"
 ]
+[
+.BI \-E " file"
+]
 .IR file " ... | " URL " ... | "
 .B \-
 .SH DESCRIPTION
@@ -79,6 +82,7 @@ The output format is raw (headerless) linear PCM audio data,
 .BR \-c ", " \-\^\-check
 Check for filter range violations, and report them for each frame
 if any occur.
+.TP
 .BR \-C ", " \-\^\-control
 Enable control keys. By default use 's' to stop, 'p' to
 pause, 'f' to jump forward to the next song, 'b' to jump back to the
@@ -262,8 +266,14 @@ Forces 8bit output
 .TP
 \fB\-E \fIfile\fR, \fB\-\^\-equalizer
 Enables equalization, taken from
-.I file
-.
+.IR file .
+The file needs to contain 32 lines of data, additional comment lines may
+be prefixed with
+.IR # .
+Each data line consists of two floating-point entries, separated by
+whitespace.  They specify the multipliers for left and right channel of
+a certain frequency band, respectively.  The first line corresponds to the
+lowest, the 32nd to the highest frequency band.
 .TP
 .BR \-T ", " \-\-realtime
 Tries to gain realtime priority.  This option usually requires root

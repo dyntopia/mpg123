@@ -22,9 +22,15 @@ static real COS1[12][6];
 static real win[4][36];
 static real win1[4][36];
 static real gainpow2[256+118+4];
+#ifdef USE_3DNOW
+real COS9[9];
+static real COS6_1,COS6_2;
+real tfcos36[9];
+#else
 static real COS9[9];
 static real COS6_1,COS6_2;
 static real tfcos36[9];
+#endif
 static real tfcos12[3];
 #define NEW_DCT9
 #ifdef NEW_DCT9
@@ -1224,8 +1230,11 @@ static void III_antialias(real xr[SBLIMIT][SSLIMIT],struct gr_info_s *gr_info) {
 /*    Function: Calculation of the inverse MDCT                     */
 /*                                                                  */
 /*------------------------------------------------------------------*/
-
+#ifdef USE_3DNOW
+void dct36(real *inbuf,real *o1,real *o2,real *wintab,real *tsbuf)
+#else
 static void dct36(real *inbuf,real *o1,real *o2,real *wintab,real *tsbuf)
+#endif
 {
 #ifdef NEW_DCT9
   real tmp[18];
@@ -1650,8 +1659,12 @@ static void dct12(real *in,real *rawout1,real *rawout2,register real *wi,registe
 /*
  * III_hybrid
  */
+#ifdef USE_3DNOW
+static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT],real tsOut[SSLIMIT][SBLIMIT],int ch,struct gr_info_s *gr_info,struct frame *fr)
+#else
 static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT],real tsOut[SSLIMIT][SBLIMIT],
    int ch,struct gr_info_s *gr_info)
+#endif
 {
    static real block[2][2][SBLIMIT*SSLIMIT] = { { { 0, } } };
    static int blc[2]={0,0};
@@ -1670,8 +1683,13 @@ static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT],real tsOut[SSLIMIT][SBLIMIT],
   
    if(gr_info->mixed_block_flag) {
      sb = 2;
+#ifdef USE_3DNOW
+     (fr->dct36)(fsIn[0],rawout1,rawout2,win[0],tspnt);
+     (fr->dct36)(fsIn[1],rawout1+18,rawout2+18,win1[0],tspnt+1);
+#else
      dct36(fsIn[0],rawout1,rawout2,win[0],tspnt);
      dct36(fsIn[1],rawout1+18,rawout2+18,win1[0],tspnt+1);
+#endif
      rawout1 += 36; rawout2 += 36; tspnt += 2;
    }
  
@@ -1684,8 +1702,13 @@ static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT],real tsOut[SSLIMIT][SBLIMIT],
    }
    else {
      for (; sb<gr_info->maxb; sb+=2,tspnt+=2,rawout1+=36,rawout2+=36) {
+#ifdef USE_3DNOW
+       (fr->dct36)(fsIn[sb],rawout1,rawout2,win[bt],tspnt);
+       (fr->dct36)(fsIn[sb+1],rawout1+18,rawout2+18,win1[bt],tspnt+1);
+#else
        dct36(fsIn[sb],rawout1,rawout2,win[bt],tspnt);
        dct36(fsIn[sb+1],rawout1+18,rawout2+18,win1[bt],tspnt+1);
+#endif
      }
    }
 
@@ -1814,7 +1837,11 @@ int do_layer3(struct frame *fr,int outmode,struct audio_info_struct *ai)
     for(ch=0;ch<stereo1;ch++) {
       struct gr_info_s *gr_info = &(sideinfo.ch[ch].gr[gr]);
       III_antialias(hybridIn[ch],gr_info);
+#ifdef USE_3DNOW
+      III_hybrid(hybridIn[ch], hybridOut[ch], ch,gr_info,fr);
+#else
       III_hybrid(hybridIn[ch], hybridOut[ch], ch,gr_info);
+#endif
     }
 
 #ifdef I486_OPT

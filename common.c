@@ -343,9 +343,12 @@ static int decode_header(struct frame *fr,unsigned long newhead)
       fr->mpeg25 = 1;
     }
     
-    if (!param.tryresync || !oldhead) {
-          /* If "tryresync" is true, assume that certain
-             parameters do not change within the stream! */
+    if (!param.tryresync || !oldhead ||
+        (((oldhead>>19)&0x3) ^ ((newhead>>19)&0x3))) {
+          /* If "tryresync" is false, assume that certain
+             parameters do not change within the stream!
+	     Force an update if lsf or mpeg25 settings
+	     have changed. */
       fr->lay = 4-((newhead>>17)&3);
       if( ((newhead>>10)&0x3) == 0x3) {
         fprintf(stderr,"Stream error\n");

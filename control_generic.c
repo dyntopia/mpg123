@@ -198,22 +198,22 @@ void control_generic (struct frame *fr)
 		if (n > 0) {
 			int len;
 			char buf[1024];
-			char *cmd;
+			char *cmd, *ret;
 
 			/* read command */
-			len = read(STDIN_FILENO, buf, sizeof(buf)-1);
+			ret = fgets(buf, sizeof(buf)-1, stdin);
 
 			/* exit on error */
-			if (len < 0) {
-				fprintf(stderr, "Error reading command: %s\n", strerror(errno));
+			if (!ret) {
+				if (feof(stdin))
+					break;
+				
+				fprintf(stderr, "Error reading command: %s\n",
+				        strerror(errno));
 				exit(1);
 			}
 
-			/* eof */
-			if (len == 0)
-			  break;
-
-			buf[len] = 0;
+			len=strlen(buf);
 
 			/* strip CR/LF at EOL */
 			while (len>0 && (buf[strlen(buf)-1] == '\n' || buf[strlen(buf)-1] == '\r')) {

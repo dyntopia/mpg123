@@ -68,21 +68,6 @@ int audio_open(struct audio_info_struct *ai)
     return -1;
   }
 
-  ioctl(ai->fn, SNDCTL_DSP_GETBLKSIZE, &outburst);
-  if(outburst > MAXOUTBURST)
-    outburst = MAXOUTBURST;
-
-  /* XXX This is weird.  We need to call GETBLKSIZE after setting up new
-   * sampling parameters via audio_reset_parameters().  If we do so, however,
-   * OSS on PPC freaks out, returning EINVAL on any ioctl().  I'd say there's a
-   * bug lurking in PPC's OSS implementation.  Setting the same format again
-   * serves as a workaround. [dk]
-   */
-  if(audio_reset_parameters(ai) < 0) {
-    close(ai->fn);
-    return -1;
-  }
-
   if(ai->gain >= 0) {
     int e,mask;
     e = ioctl(ai->fn , SOUND_MIXER_READ_DEVMASK ,&mask);
@@ -108,13 +93,28 @@ int audio_open(struct audio_info_struct *ai)
 int audio_reset_parameters(struct audio_info_struct *ai)
 {
   int ret;
-  ret = ioctl(ai->fn,SNDCTL_DSP_RESET,NULL);
+  ret = ioctl(ai->fn, SNDCTL_DSP_RESET, NULL);
   if(ret < 0)
     fprintf(stderr,"Can't reset audio!\n");
   ret = audio_set_format(ai);
+  if (ret == -1)
+    goto err;
   ret = audio_set_channels(ai);
+  if (ret == -1)
+    goto err;
   ret = audio_set_rate(ai);
+  if (ret == -1)
+    goto err;
 
+  /* Careful here.  As per OSS v1.1, the next ioctl() commits the format
+   * set above, so we must issue SNDCTL_DSP_RESET before we're allowed to
+   * change it again. [dk]
+   */
+  if (ioctl(ai->fn, SNDCTL_DSP_GETBLKSIZE, &outburst) == -1 ||
+      outburst > MAXOUTBURST)
+    outburst = MAXOUTBURST;
+
+err:
   return ret;
 }
 
@@ -241,6 +241,9 @@ int audio_get_formats(struct audio_info_struct *ai)
 	AUDIO_FORMAT_UNSIGNED_8 , AUDIO_FORMAT_SIGNED_8 ,
 	AUDIO_FORMAT_UNSIGNED_16 , AUDIO_FORMAT_ALAW_8 };
 	
+  /* Reset is required before we're allowed to set the new formats. [dk] */
+  ioctl(ai->fn, SNDCTL_DSP_RESET, NULL);
+
   for(i=0;i<6;i++) {
 	ai->format = fmts[i];
 	if(audio_set_format(ai) < 0) {

@@ -1,30 +1,91 @@
-mpg123 (0.59r-13woody4) stable-security; urgency=high
+mpg123 (0.59r-19) unstable; urgency=high
 
-  * httpget.c: Fix yet another heap overflow in http authentication
-    handler (CAN-2004-0982).
+  * layer2.c: Fix off-by-one error in boundary check introduced in -18.
+    Thanks to Jeremy Huddleston for noticing.
+  * layer1.c: Use proper parameter range in stereo test.
 
- -- Daniel Kobras <kobras@debian.org>  Tue, 26 Oct 2004 23:48:41 +0200
+ -- Daniel Kobras <kobras@debian.org>  Wed,  5 Jan 2005 17:18:30 +0100
 
-mpg123 (0.59r-13woody3) stable-security; urgency=high
+mpg123 (0.59r-18) unstable; urgency=high
+
+  * common.c, layer2.c: Fix insufficient validation of MPEG header
+    values, discovered by Yuri D'Elia (CAN-2004-0991).
+  * mpg123.c: Fix buffer overflow in playlist parser, discovered by
+    Bartlomiej Sieka (CAN-2004-1284). Thanks to Steve Kemp for the
+    patch. Closes: #287043
+  * httpget.c: Fix further heap overflows in http parser. Backported
+    from the Gentoo patch for CAN-2004-0982. Original path was coded
+    by Jeremy Huddleston for version pre0.59s.
+  * mpg123.c: Fix NULL pointer dereference if http_open() fails.
+  * httpget.c, xfermem.c: Do not explicitly declare errno variable.
+  * audio.c: Include stdlib.h to silence compiler warning.
+
+ -- Daniel Kobras <kobras@debian.org>  Mon,  3 Jan 2005 23:11:32 +0100
+
+mpg123 (0.59r-17) unstable; urgency=high
+
+  * httpget.c: Fix heap overflow in http authentication handler
+    (CAN-2004-0982). Closes: #277948
+  * mpg123.c: Apply patch by Dan Olson to fix handling of remote
+    playlists. Closes: #60058, #185544
+
+ -- Daniel Kobras <kobras@debian.org>  Wed, 27 Oct 2004 00:16:23 +0200
+
+mpg123 (0.59r-16) unstable; urgency=high
 
   * layer2.c: Fix buffer overflow in layer2 decoder (CVE ID CAN-2004-0805).
+  * Makefile: Fix compiler options to build for generic targets on ARM,
+    but optimise for xscale. Closes: #261255
+  * README.3DNOW, dct36_3dnow.s, dct64_3dnow.s, decode_3dnow.s,
+    decode_i386.c, equalizer_3dnow.s, getcpuflags.s, layer3.c, mpg123.c,
+    mpg123.h, tabinit.c, debian/rules: Apply patch by KIMURA Takuhiro and
+    Syuuhei Kashiyama to fix errors in 3dnow-optimised decoding.
+    Thanks to Alberto Garcia for the patch-merging. Closes: #242212
+  * debian/prerm: De-register mp3-decoder alternative. Closes: #222982
+  * debian/changelog: Convert to utf8.
+  * debian/control: Bump standards version.
 
- -- Daniel Kobras <kobras@debian.org>  Mon,  6 Sep 2004 22:01:16 +0200
+ -- Daniel Kobras <kobras@debian.org>  Tue,  7 Sep 2004 15:57:57 +0200
 
-mpg123 (0.59r-13woody2) stable-security; urgency=high
+mpg123 (0.59r-15) unstable; urgency=high
 
-  * httpget.c: Fix heap overflow in http subsystem (CVE ID CAN-2003-0865,
-    BugTraq ID 8680). Closes: #212584
+  * httpget.c: Fix heap overflow in http subsystem (cf. BID 8680, and Debian
+    bug #212584). As a side-effect, this imposes an upper limit on the
+    supported length of URLs (1013 characters).
+  * buffer.c: Fix potential loop in buffer process after parent has exited.
+    Closes: #181176
+  * term.c: Do not send internal signals to whole process group. Patch thanks
+    to Rupert Levene. Closes: #192547
+  * control_generic.c: Fix line reading (up to a max. length of 1023
+    characters). Closes: #64789
+  * mpg123.c: -R does not require any further argument on the command line.
+  * Makefile: Replace obsolete '-m486' by '-mcpu=i486'.
+  * mpg123.1: Add missing .TP separator. Closes: #190965
+  * mpg123.1: Document format of equalizer file. Closes: #107221
+  * README.Debian: Clarify that mpg123 does not contain GPLed code.
+    Closes: #149398
+  * debian/rules: Distribute README.Debian.
+  * debian/postinst: Check arguments and only act when called with
+    'configure'.
+  * debian/postinst: Install alternative for mp3-decoder. Closes: #144303
 
- -- Daniel Kobras <kobras@debian.org>  Thu, 29 Jan 2004 18:33:17 +0100
+ -- Daniel Kobras <kobras@debian.org>  Sun, 28 Sep 2003 15:29:07 +0200
 
-mpg123 (0.59r-13woody1) stable-security; urgency=high
+mpg123 (0.59r-14) unstable; urgency=high
 
-  * common.[hc]: Fix potential heap overflow due to bogus framesize
-    calculation. (Resembles the vulnerability CAN-2003-0577/BID 6629
-    in 0.59s, but the bug in 0.59r does not appear to be exploitable.)
+  * Finally understood why size calculation of audio fragments broke
+    PPC support--we're actually violating OSS v1.1 specs, and PPC's
+    dmasound driver traps it.  Reverted previous workaround and added
+    proper fix.
+  * common.h: Increase MAXFRAMESIZE to 3456 bytes, which is much closer to
+    reality.
+  * common.c: Add a sanity check on framesize overflow. Cannot happen now,
+    but let's be prepared.
+  * Makefile: Fix gcc commandline in linux-ppc target to keep gcc 3.2 happy.
+  * debian/postinst: Do not set symlink to /usr/doc.
+  * debian/control: Complies with current standards version.
 
- -- Daniel Kobras <kobras@debian.org>  Wed, 29 Jan 2003 21:32:51 +0100
+ -- Daniel Kobras <kobras@debian.org>  Wed, 29 Jan 2003 21:39:04 +0100
 
 mpg123 (0.59r-13) unstable; urgency=low
 
@@ -57,7 +118,7 @@ mpg123 (0.59r-12) unstable; urgency=low
     endian formats.
   * Applied patch from Andreas Dilger <adilger@turbolinux.com> to skip
     over unplayable files during shuffle play. Closes: #60726
-  * Applied patch from Martin Sjögren <md9ms@mdstud.chalmers.se> to
+  * Applied patch from Martin SjÃ¶gren <md9ms@mdstud.chalmers.se> to
     handle spaces in URLs. Closes: #75289
   * Updated standards version.
 

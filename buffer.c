@@ -167,6 +167,9 @@ void buffer_loop(struct audio_info_struct *ai, sigset_t *oldsigset)
 			
 			if(!done) {
 
+				/* Don't spill into errno check below. */
+				errno = 0;
+
 				cmd = xfermem_block(XF_READER, xf);
 
 				switch(cmd) {
@@ -188,7 +191,8 @@ void buffer_loop(struct audio_info_struct *ai, sigset_t *oldsigset)
 					case -1:
 						if(errno==EINTR)
 							continue;
-						perror("Yuck! Error in buffer handling...");
+						if(errno)
+							perror("Yuck! Error in buffer handling...");
 						done = TRUE;
 						xf->readindex = xf->freeindex;
 						xfermem_putcmd(xf->fd[XF_READER], XF_CMD_TERMINATE);

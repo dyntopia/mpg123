@@ -32,8 +32,6 @@
 #include <sys/shm.h>
 #endif
 
-extern int errno;
-
 #if defined (USE_MMAP) && defined(MAP_ANONYMOUS) && !defined(MAP_ANON)
 #define MAP_ANON MAP_ANONYMOUS
 #endif

@@ -81,12 +81,14 @@ binary-pkg-%: build
 
 	install -d --mode=0755 "debian/tmp.$*/usr/share/doc/$(PKGNAME_$*)"
 	install --mode=0644 debian/copyright \
-		README README.remote TODO BENCHMARKING BUGS \
+		README README.remote README.3DNOW TODO BENCHMARKING BUGS \
 		"debian/tmp.$*/usr/share/doc/$(PKGNAME_$*)"
 	install --mode=0644 CHANGES \
 		"debian/tmp.$*/usr/share/doc/$(PKGNAME_$*)/changelog"
 	install --mode=0644 debian/changelog \
 		"debian/tmp.$*/usr/share/doc/$(PKGNAME_$*)/changelog.Debian"
+	install --mode=0644 debian/README \
+		"debian/tmp.$*/usr/share/doc/$(PKGNAME_$*)/README.Debian"
 	gzip -9 \
 		"debian/tmp.$*/usr/share/doc/$(PKGNAME_$*)/changelog" \
 		"debian/tmp.$*/usr/share/doc/$(PKGNAME_$*)/changelog.Debian" \
