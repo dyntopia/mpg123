@@ -1,3 +1,9 @@
+mpg123 (0.59o-3) unstable; urgency=low
+
+  * incorporated patches for gmp3 support
+
+ -- Paul Haggart <phaggart@debian.org>  Sun,  2 Aug 1998 12:50:31 -0400
+
 mpg123 (0.59o-2) frozen unstable; urgency=low
 
   * fixed #20301: compiles under m68k

@@ -15,6 +15,7 @@ int preload;
 
 static int intflag = FALSE;
 static int usr1flag = FALSE;
+static int stopped = FALSE;
 
 static void catch_interrupt (void)
 {
@@ -24,6 +25,19 @@ static void catch_interrupt (void)
 static void catch_usr1 (void)
 {
 	usr1flag = TRUE;
+}
+
+static void catch_usr2 (void)
+{
+  stopped = TRUE;
+  
+  while(stopped)
+    sleep(60000);
+}
+
+static void catch_cont(void)
+{
+  stopped = FALSE;
 }
 
 #if !defined(OS2) && !defined(GENERIC) && !defined(WIN32)
@@ -37,6 +51,9 @@ void buffer_loop(struct audio_info_struct *ai, sigset_t *oldsigset)
 
 	catchsignal (SIGINT, catch_interrupt);
 	catchsignal (SIGUSR1, catch_usr1);
+	catchsignal (SIGUSR2, catch_usr2);
+	catchsignal (SIGCONT, catch_cont);
+	
 	sigprocmask (SIG_SETMASK, oldsigset, NULL);
 	if (param.outmode == DECODE_AUDIO) {
 		if (audio_open(ai) < 0) {

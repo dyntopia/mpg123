@@ -60,6 +60,7 @@ int shuffle_listsize = 0;
 
 static int intflag = FALSE;
 static int remflag = FALSE;
+static int stopped = FALSE;
 
 #ifndef _WIN32
 static void catch_child(void)
@@ -70,6 +71,25 @@ static void catch_child(void)
 static void catch_interrupt(void)
 {
   intflag = TRUE;
+}
+
+static void catch_cont(void)
+{
+  stopped = FALSE;
+}
+
+static void catch_usr2(void)
+{
+  stopped = TRUE;
+  fprintf(stderr, "mpg123 Stopped\n");
+  if(param.usebuffer)
+    kill(buffer_pid, SIGUSR2);
+    
+  while (stopped)
+    sleep(60000);
+    
+  if (param.usebuffer)
+    kill(buffer_pid, SIGCONT);   
 }
 #endif
 
@@ -749,6 +769,8 @@ void main(int argc, char *argv[])
 
 #ifndef WIN32
 	catchsignal (SIGINT, catch_interrupt);
+	catchsignal (SIGUSR2, catch_usr2);
+	catchsignal (SIGCONT, catch_cont);
 
 	if(frontend_type) {
 		handle_remote();
@@ -801,12 +823,12 @@ void main(int argc, char *argv[])
 	if(param.usebuffer) {
 		int s;
         	struct timeval wait100 = {0, 100000};
-		while ((s = xfermem_get_usedspace(buffermem))) {
+/*		while ((s = xfermem_get_usedspace(buffermem))) {
 			if(buffermem->wakeme[XF_READER] == TRUE)
 				break;
 			print_stat(&fr,frameNum,xfermem_get_usedspace(buffermem),&ai);
-                	select(1, NULL, NULL, NULL, &wait100);
-		}
+                	select(1, NULL, NULL, NULL, &wait100); 
+		} */
 	}
 
 	if (!param.quiet) {
@@ -838,12 +860,18 @@ void main(int argc, char *argv[])
         if (secdiff < 1000)
           break;
 #endif
-        intflag = FALSE;
       }
     }
 #if !defined(OS2) && !defined(GENERIC) && !defined(WIN32)
     if (param.usebuffer) {
-      xfermem_done_writer (buffermem);
+      if (intflag)
+        {
+          fprintf(stderr, "Killing buffer PID...\n");
+          kill(buffer_pid, SIGKILL);
+          intflag = FALSE;
+        }
+      else  
+        xfermem_done_writer (buffermem);        
       waitpid (buffer_pid, NULL, 0);
       xfermem_done (buffermem);
     }
