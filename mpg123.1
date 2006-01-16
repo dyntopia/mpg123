@@ -77,7 +77,8 @@ option must be used if your audio hardware is not supported
 by
 .BR mpg123 .
 The output format is raw (headerless) linear PCM audio data,
-16 bit, stereo, host byte order.
+16 bit, host byte order, and stereo or mono, depending on the number of
+channels in the input files.
 .TP
 .BR \-c ", " \-\^\-check
 Check for filter range violations, and report them for each frame

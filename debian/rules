@@ -2,7 +2,7 @@
 
 PACKAGE:=mpg123
 
-ARCH:=$(shell dpkg --print-gnu-build-architecture)
+ARCH:=$(shell dpkg-architecture -qDEB_HOST_GNU_CPU)
 
 ARCH_i486:=
 ARCH_alpha:=-alpha

@@ -337,6 +337,7 @@ int http_open (char *url)
 			strcpy (request, "GET ");
 			if (strncasecmp(url, "http://", 7) != 0)
 				strcat (request, "http://");
+			strcat(request, purl);
 		} else {
 			if (host) {
 				free (host);

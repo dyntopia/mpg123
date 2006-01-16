@@ -1,9 +1,32 @@
-mpg123 (0.59r-20sarge1) stable-security; urgency=high
+mpg123 (0.59r-21) unstable; urgency=medium
 
-  * layer3.c: Fix buffer overflow in III_i_stereo() (CVE-2006-1655).
-    Closes: #361863
+  * Makefile: In linux-nas target, only link with libaudio, but not with
+    its dependent libs.
+  * Makefile: Likewise, in linux-*-esd targets remove explicit audiofile
+    linkage.
+  * Makefile: Use double rather than single quotes in OBJECTS definitions
+    to fix multi-line OBJECTS with recent implementations of GNU make.
+  * Makefile: Sprinkle some extra spaces after macro definitions to
+    placate gcc with recent GNU make.
+  * httpget.c: Do not forget to pass the target URL when using an HTTP
+    proxy. Closes: #311049
+  * mpg123.c: Resync buffers when interrupted by Ctrl-c to clean out
+    remaining cruft. Also cures long delays when skipping songs in
+    buffered mode. Closes: #154509, #280034
+  * mpg123.h: Complete fix from 0.59r-2 and remove external declaration
+    esdserver variable from mpg123.h. There's no need for it to be global.
+    Fixes build of linux-esd with recent gcc.
+  * mpg123.1: Correct description of -s option for mono input.
+    Closes: #326038
+  * debian/control: Remove build-dependency on xlibs-dev because we no
+    longer link with libXau and libXt directly. Closes: #346937
+  * debian/control: Likewise, remove libaudiofile-dev build-dependency.
+  * debian/control: Follow name change from nas-dev to libaudio-dev in
+    build dependencies.
+  * debian/rules: Define ARCH from dpkg-architecture rather than from
+    obsolete dpkg option.
 
- -- Daniel Kobras <kobras@debian.org>  Wed,  3 May 2006 16:59:50 +0200
+ -- Daniel Kobras <kobras@debian.org>  Mon, 16 Jan 2006 18:03:38 +0100
 
 mpg123 (0.59r-20) unstable; urgency=high
 

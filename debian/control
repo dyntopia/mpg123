@@ -3,7 +3,7 @@ Section: non-free/sound
 Priority: optional
 Maintainer: Daniel Kobras <kobras@debian.org>
 Standards-Version: 3.6.1
-Build-Depends: libesd0-dev [i386 alpha powerpc], libaudiofile-dev [i386 alpha powerpc], nas-dev [i386], xlibs-dev [i386]
+Build-Depends: libesd0-dev [i386 alpha powerpc], libaudio-dev [i386]
 
 Package: mpg123
 Architecture: i386 alpha powerpc m68k arm sparc hppa
