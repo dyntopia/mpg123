@@ -2,7 +2,7 @@ Source: mpg123
 Section: non-free/sound
 Priority: optional
 Maintainer: Daniel Kobras <kobras@debian.org>
-Standards-Version: 3.6.1
+Standards-Version: 3.6.2
 Build-Depends: libesd0-dev [i386 alpha powerpc], libaudio-dev [i386]
 
 Package: mpg123

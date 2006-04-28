@@ -1,3 +1,16 @@
+mpg123 (0.59r-22) unstable; urgency=high
+
+  * layer3.c: Fix buffer overflow in III_i_stereo() (CVE-2006-1655).
+    Closes: #361863
+  * mpg123.1: Fix several typos in man page. Patch thanks to A Costa.
+    Closes: #350356
+  * decode_i386.c: Cheat around strict aliasing problem in WRITE_SAMPLE().
+  * Makefile: Replace deprecated -mcpu option with -mtune in x86 targets.
+  * debian/control: Complies with version 3.6.2 of Debian policy. Bump
+    Standards-Version accordingly.
+
+ -- Daniel Kobras <kobras@debian.org>  Fri, 28 Apr 2006 18:27:35 +0200
+
 mpg123 (0.59r-21) unstable; urgency=medium
 
   * Makefile: In linux-nas target, only link with libaudio, but not with
