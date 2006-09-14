@@ -1,3 +1,28 @@
+mpg123 (0.60-1) unstable; urgency=low
+
+  * New upstream release.
+    + Includes security fix for a heap overflow in httpget.c
+      (CVE-2006-3355). Closes: #377264
+  * configure, configure.ac: Fix typo to make esd detection work.
+  * src/audio_esd.c: Always define audio_queueflush().
+  * debian/compat: Set to debhelper compatibility level 5.
+  * debian/control: Move from non-free to main. Closes: #292260
+  * debian/control: OSS versions depend on oss-compat now.
+  * debian/control: Build-depend on pkg-config. Configure script uses it.
+  * debian/control: Build-depend on dephelper and autotools-dev.
+  * debian/copyright: Download location now points to SourceForge site.
+  * debian/copyright: Document new copyright and license, and add pointer to
+    documentation of relicensing process.
+  * debian/mime: Require a terminal when called via mailcap.
+  * debian/rules: Debhelperize.
+  * debian/rules: Tweak rules for new configure-style build system.
+  * debian/rules: Add magic touches to prevent accidential rebuiling of
+    configure.
+  * debian/{control,rules}: Reinstate mpg123-alsa package now that current
+    ALSA versions are supported again.
+
+ -- Daniel Kobras <kobras@debian.org>  Thu, 14 Sep 2006 13:49:03 +0200
+
 mpg123 (0.59r-22) unstable; urgency=high
 
   * layer3.c: Fix buffer overflow in III_i_stereo() (CVE-2006-1655).
