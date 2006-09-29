@@ -47,6 +47,8 @@ PKGNAME_mpg123-esd:=mpg123-esd
 PKGNAME_mpg123-alsa:=mpg123-alsa
 PKGNAME_mpg123-nas:=mpg123-nas
 
+ARCH_PKGSTR=$(foreach pkg,$(TARGETS_$(ARCH)),-p$(PKGNAME_$(pkg)))
+
 # We assume if the user installs esd/nas, he wants
 # esd/nas, and if he installs alsa, he wants
 # alsa. For both alsa and esd/nas installed, assume
@@ -154,20 +156,21 @@ binary-pkg-%: build
 install: build
 	dh_testdir
 	dh_testroot
-	dh_install -A
-	dh_installdocs -A README AUTHORS doc/BENCHMARKING doc/CONTACT \
-	                  doc/README.gain doc/README.remote doc/THANKS 
-	dh_installman -A
-	dh_installchangelogs -A NEWS
-	dh_installmime -A
-	dh_strip -A
-	dh_compress -A
-	dh_fixperms -A
-	dh_installdeb -A
-	dh_shlibdeps -A
-	dh_gencontrol -A
-	dh_md5sums -A
-	dh_builddeb -A
+	dh_install $(ARCH_PKGSTR)
+	dh_installdocs $(ARCH_PKGSTR) -A \
+	               README AUTHORS doc/BENCHMARKING doc/CONTACT \
+	               doc/README.gain doc/README.remote doc/THANKS 
+	dh_installman $(ARCH_PKGSTR)
+	dh_installchangelogs $(ARCH_PKGSTR) NEWS
+	dh_installmime $(ARCH_PKGSTR)
+	dh_strip $(ARCH_PKGSTR)
+	dh_compress $(ARCH_PKGSTR)
+	dh_fixperms $(ARCH_PKGSTR)
+	dh_installdeb $(ARCH_PKGSTR)
+	dh_shlibdeps $(ARCH_PKGSTR)
+	dh_gencontrol $(ARCH_PKGSTR)
+	dh_md5sums $(ARCH_PKGSTR)
+	dh_builddeb $(ARCH_PKGSTR)
 
 binary-arch: build $(TARGETS_$(ARCH):%=binary-pkg-%) install
 
