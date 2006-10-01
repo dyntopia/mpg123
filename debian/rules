@@ -139,7 +139,7 @@ binary-pkg-%: build
 
 	echo "obj/$*/$* /usr/bin/" > "$(CURDIR)/debian/$(PKGNAME_$*).install"
 	echo "obj/$*/$*.1" > "$(CURDIR)/debian/$(PKGNAME_$*).manpages"
-	echo "$(CURDIR)/debian/mime" > "$(CURDIR)/debian/$(PKGNAME_$*).mime"
+	cat "$(CURDIR)/debian/mime" > "$(CURDIR)/debian/$(PKGNAME_$*).mime"
 
 	sed \
 		-e 's/@PACKAGE@/$(PKGNAME_$*)/g' \

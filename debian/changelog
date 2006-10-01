@@ -1,3 +1,10 @@
+mpg123 (0.60-3) unstable; urgency=low
+
+  * debian/rules: When generating $pkgname.mime, don't point to master
+    file but copy over its contents. Closes: #390450
+
+ -- Daniel Kobras <kobras@debian.org>  Sun,  1 Oct 2006 17:21:19 +0200
+
 mpg123 (0.60-2) unstable; urgency=low
 
   * debian/rules: Pass per-arch list of built packages to debhelper calls.
