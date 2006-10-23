@@ -4,59 +4,47 @@ PACKAGE:=mpg123
 
 ARCH:=$(shell dpkg-architecture -qDEB_HOST_GNU_CPU)
 
-ARCH_i486:=
-ARCH_alpha:=-alpha
-ARCH_powerpc:=-ppc
-ARCH_m68k:=-m68k
-ARCH_arm:=-arm
-ARCH_sparc:=-sparc
-ARCH_hppa:=-hppa
+TARGETS_DEFAULT:=mpg123-oss
 
 TARGETS_i486:=mpg123-oss mpg123-esd mpg123-nas \
-	mpg123-oss-i486 mpg123-oss-3dnow mpg123-alsa
+	mpg123-oss-i486 mpg123-alsa
 TARGETS_alpha:=mpg123-oss mpg123-esd
 TARGETS_powerpc:=mpg123-oss mpg123-esd
-TARGETS_m68k:=mpg123-oss
-TARGETS_arm:=mpg123-oss
-TARGETS_sparc:=mpg123-oss
-TARGETS_hppa:=mpg123-oss
+
+TARGETS_$(ARCH)?=$(TARGETS_DEFAULT)
 
 CACHE_FILE:="$(CURDIR)/config.cache"
 
 CONF_COMMON:=--prefix=/usr --cache-file="$(CACHE_FILE)"
 
-CONF_i486:=--with-cpu=i586
-CONF_alpha:=
-CONF_powerpc:=
-CONF_m68k:=
+# 3dnow includes the previous default i586 as fallback at runtime.
+CONF_i486:=--with-cpu=3dnow
 CONF_arm:=--with-cpu=generic_nofpu
-CONF_sparc:=
-CONF_hppa:=
 
 CONF_oss:=--with-audio=oss
 CONF_oss-i486:=--with-audio=oss --with-cpu=i486
-CONF_oss-3dnow:=--with-audio=oss --with-cpu=3dnow
 CONF_esd:=--with-audio=esd
 CONF_alsa:=--with-audio=alsa
 CONF_nas:=--with-audio=nas
 
 PKGNAME_mpg123-oss:=mpg123
 PKGNAME_mpg123-oss-i486:=mpg123-oss-i486
-PKGNAME_mpg123-oss-3dnow:=mpg123-oss-3dnow
 PKGNAME_mpg123-esd:=mpg123-esd
 PKGNAME_mpg123-alsa:=mpg123-alsa
 PKGNAME_mpg123-nas:=mpg123-nas
 
 ARCH_PKGSTR=$(foreach pkg,$(TARGETS_$(ARCH)),-p$(PKGNAME_$(pkg)))
+ifeq ($(ARCH),i486)
+ARCH_PKGSTR += -pmpg123-oss-3dnow
+endif
 
 # We assume if the user installs esd/nas, he wants
 # esd/nas, and if he installs alsa, he wants
 # alsa. For both alsa and esd/nas installed, assume
 # he has an esd-alsa installed and wants to use it.
-# i486 or 3dnow is used by default only if it's the only provider.
+# i486 is used by default only if it's the only provider.
 ALTPRIO_mpg123-oss:=30
 ALTPRIO_mpg123-oss-i486:=60
-ALTPRIO_mpg123-oss-3dnow:=60
 ALTPRIO_mpg123-alsa:=40
 ALTPRIO_mpg123-esd:=50
 ALTPRIO_mpg123-nas:=50

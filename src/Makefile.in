@@ -137,7 +137,7 @@ AM_LDFLAGS = @AUDIO_LIBS@
 mpg123_LDADD = @AUDIO_OBJ@ @CPU_TYPE_LIB@
 mpg123_DEPENDENCIES = @AUDIO_OBJ@ @CPU_TYPE_LIB@
 
-EXTRA_DIST = Makefile.legacy
+EXTRA_DIST = Makefile.legacy config.h.legacy
 
 bin_PROGRAMS = mpg123
 mpg123_SOURCES = \
@@ -236,7 +236,7 @@ libcpu_generic_nofpu_a_SOURCES = \
 
 
 libcpu_altivec_a_SOURCES = \
-	decode.c \
+	decode_altivec.c \
 	dct64_altivec.c
 
 
@@ -305,7 +305,8 @@ am_libcpu_3dnow_a_OBJECTS = decode_i386.$(OBJEXT) decode_3dnow.$(OBJEXT) \
 libcpu_3dnow_a_OBJECTS = $(am_libcpu_3dnow_a_OBJECTS)
 libcpu_altivec_a_AR = $(AR) cru
 libcpu_altivec_a_LIBADD =
-am_libcpu_altivec_a_OBJECTS = decode.$(OBJEXT) dct64_altivec.$(OBJEXT)
+am_libcpu_altivec_a_OBJECTS = decode_altivec.$(OBJEXT) \
+	dct64_altivec.$(OBJEXT)
 libcpu_altivec_a_OBJECTS = $(am_libcpu_altivec_a_OBJECTS)
 libcpu_generic_a_AR = $(AR) cru
 libcpu_generic_a_LIBADD =
@@ -387,6 +388,7 @@ am__depfiles_maybe = depfiles
 @AMDEP_TRUE@	./$(DEPDIR)/dct64_i386.Po ./$(DEPDIR)/dct64_i486.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/decode.Po ./$(DEPDIR)/decode_2to1.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/decode_4to1.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/decode_altivec.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/decode_i386.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/decode_i486.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/decode_ntom.Po ./$(DEPDIR)/equalizer.Po \
@@ -550,6 +552,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decode.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decode_2to1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decode_4to1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decode_altivec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decode_i386.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decode_i486.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decode_ntom.Po@am__quote@

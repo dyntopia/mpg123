@@ -1,3 +1,22 @@
+mpg123 (0.61-1) unstable; urgency=low
+
+  * New upstream version.
+    + Includes esd-related patches to configure and src/audio_esd.c.
+      Dropped our version from Debian diff.
+    + Abnormal exit of the program has been unified and improved. Returns
+      a more meaningful exit status now. Closes: #27870
+  * src/audio_nas.c: Use correct error macro to fix compile error.
+  * debian/control: Turn mpg123-oss-3dnow into a dummy package, superseded
+    by main mpg123 package.
+  * debian/control: Don't build depend on alsa lib on hurd and kfreebsd.
+  * debian/control: Build main package on any architecture. Closes: #390939
+  * debian/rules: Build with 3dnow optimisation by default on i386. Support
+    is deteced at runtime and falls back to our previous default optimisation
+    level. Closes: #368850
+  * debian/rules: Reduce per-arch variables, use defaults for most archs.
+
+ -- Daniel Kobras <kobras@debian.org>  Mon, 23 Oct 2006 21:09:17 +0200
+
 mpg123 (0.60-3) unstable; urgency=low
 
   * debian/rules: When generating $pkgname.mime, don't point to master

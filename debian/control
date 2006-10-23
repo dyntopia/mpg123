@@ -3,12 +3,13 @@ Section: sound
 Priority: optional
 Maintainer: Daniel Kobras <kobras@debian.org>
 Standards-Version: 3.7.2
-Build-Depends: debhelper (>> 5), autotools-dev, pkg-config, libesd0-dev [i386 alpha powerpc], libaudio-dev [i386], libasound2-dev
+Build-Depends: debhelper (>> 5), autotools-dev, pkg-config, libesd0-dev [i386 alpha powerpc], libaudio-dev [i386], libasound2-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386]
 
 Package: mpg123
-Architecture: i386 alpha powerpc m68k arm sparc hppa
+Architecture: any
 Depends: ${shlibs:Depends}, oss-compat
-Provides: mp3-decoder
+Provides: mp3-decoder, mpg123-oss-3dnow
+Replaces: mpg123-oss-3dnow
 Description: MPEG layer 1/2/3 audio player
  Mpg123 is a fast and portable MPEG audio player for Unix.  It supports
  MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
@@ -40,10 +41,8 @@ Description: MPEG layer 1/2/3 audio player for i486 machines
 
 Package: mpg123-oss-3dnow
 Architecture: i386
-Depends: ${shlibs:Depends}, oss-compat
-Provides: mpg123, mp3-decoder
-Conflicts: mpg123 (<< 0.59r-2)
-Description: MPEG layer 1/2/3 audio player for 3DNow! machines
+Depends: mpg123
+Description: MPEG layer 1/2/3 audio player for 3DNow! machines - dummy package
  Mpg123 is a fast and portable MPEG audio player for Unix.  It supports
  MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
  . 
@@ -51,9 +50,9 @@ Description: MPEG layer 1/2/3 audio player for 3DNow! machines
  SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
  quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.
  .
- This version uses the OSS/Lite drivers for sound output, and
- is specially optimized for the 3DNow! command set. It may fail on other
- CPUs.
+ An mpg123 optimised for the 3DNow! command set nowadays is part of the main
+ package mpg123. This is an empty dummy package to facilitate upgrades and
+ can be safely removed.
 
 Package: mpg123-esd
 Architecture: i386 alpha powerpc

@@ -333,13 +333,8 @@ init_resync:
 
 #ifdef SKIP_JUNK
 	/* watch out for junk/tags on beginning of stream by invalid header */
-	if(!firsthead && !head_check(newhead) ) {
+	if(!firsthead && !head_check(newhead) && !free_format_header(newhead)) {
 		int i;
-		if(free_format_header(newhead))
-		{
-			error1("Header 0x%08lx seems to indicate a free format stream; I do not handle that yet", newhead);
-			return 0;
-		}
 
 		/* check for id3v2; first three bytes (of 4) are "ID3" */
 		if((newhead & (unsigned long) 0xffffff00) == (unsigned long) 0x49443300)
@@ -384,12 +379,56 @@ init_resync:
 		 */
 	}
 #endif
+
+	/* first attempt of read ahead check to find the real first header; cannot believe what junk is out there! */
+	/* for now, a spurious first free format header screws up here; need free format support for detecting false free format headers... */
+	if(!firsthead && rd->flags & READER_SEEKABLE && head_check(newhead) && decode_header(fr, newhead))
+	{
+		unsigned long nexthead = 0;
+		int hd = 0;
+		off_t start = rd->tell(rd);
+		debug1("doing ahead check with BPF %d", fr->framesize+4);
+		/* step framesize bytes forward and read next possible header*/
+		if(rd->back_bytes(rd, -fr->framesize))
+		{
+			error("cannot seek!");
+			return 0;
+		}
+		hd = rd->head_read(rd,&nexthead);
+		if(rd->back_bytes(rd, rd->tell(rd)-start))
+		{
+			error("cannot seek!");
+			return 0;
+		}
+		if(!hd)
+		{
+			warning("cannot read next header, a one-frame stream? Duh...");
+		}
+		else
+		{
+			debug2("does next header 0x%08lx match first 0x%08lx?", nexthead, newhead);
+			/* not allowing free format yet */
+			if(!head_check(nexthead) || (nexthead & HDRCMPMASK) != (newhead & HDRCMPMASK))
+			{
+				debug("No, the header was not valid, start from beginning...");
+				/* try next byte for valid header */
+				if(rd->back_bytes(rd, 3))
+				{
+					error("cannot seek!");
+					return 0;
+				}
+				goto read_again;
+			}
+		}
+	}
+
     /* why has this head check been avoided here before? */
     if(!head_check(newhead))
     {
       if(!firsthead && free_format_header(newhead))
       {
         error1("Header 0x%08lx seems to indicate a free format stream; I do not handle that yet", newhead);
+        goto read_again;
         return 0;
       }
     /* and those ugly ID3 tags */
@@ -425,7 +464,7 @@ init_resync:
         do {
           if(!rd->head_shift(rd,&newhead))
 		return 0;
-          debug2("resync try %i, got newhead 0x%08lx", try, newhead);
+          /* debug2("resync try %i, got newhead 0x%08lx", try, newhead); */
           if (!oldhead)
           {
             debug("going to init_resync...");
@@ -446,6 +485,7 @@ init_resync:
            error("giving up resync - your stream is not nice... perhaps an improved routine could catch up");
            return 0;
          }
+
         if (give_note)
           fprintf (stderr, "Note: Skipped %d bytes in input.\n", try);
       }
@@ -703,6 +743,7 @@ init_resync:
 			}
 		} /* end block for Xing/Lame/Info tag */
 		firsthead = newhead; /* _now_ it's time to store it... the first real header */
+		debug1("firsthead: %08lx", firsthead);
 		/* now adjust volume */
 		do_rva();
 		/* and print id3 info */
@@ -846,7 +887,7 @@ static int decode_header(struct frame *fr,unsigned long newhead)
       fr->lay = 4-((newhead>>17)&3);
       if( ((newhead>>10)&0x3) == 0x3) {
         error("Stream error");
-        exit(1);
+        return 0; /* exit() here really is too much, isn't it? */
       }
       if(fr->mpeg25) {
         fr->sampling_frequency = 6 + ((newhead>>10)&0x3);
@@ -895,6 +936,7 @@ static int decode_header(struct frame *fr,unsigned long newhead)
           return (0);
         }
 #endif
+debug2("bitrate index: %i (%i)", fr->bitrate_index, tabsel_123[fr->lsf][1][fr->bitrate_index] );
         fr->framesize = (long) tabsel_123[fr->lsf][1][fr->bitrate_index] * 144000;
         fr->framesize /= freqs[fr->sampling_frequency];
         fr->framesize += fr->padding - 4;
@@ -1043,8 +1085,8 @@ int split_dir_file (const char *path, char **dname, char **fname)
 		*fname = slashpos + 1;
 		*dname = strdup(path); /* , 1 + slashpos - path); */
 		if(!(*dname)) {
-			perror("memory");
-			exit(1);
+			perror("failed to allocate memory for dir name");
+			return 0;
 		}
 		(*dname)[1 + slashpos - path] = 0;
 		if (lastdir && !strcmp(lastdir, *dname)) {
@@ -1145,7 +1187,7 @@ long compute_buffer_offset(struct frame *fr)
 }
 
 /* Way too many parameters - heck, this fr and ai is always the same! */
-int position_info(struct frame* fr, long buffsize, struct audio_info_struct* ai,
+int position_info(struct frame* fr, unsigned long no, long buffsize, struct audio_info_struct* ai,
                    unsigned long* frames_left, double* current_seconds, double* seconds_left)
 {
 	double tpf;
@@ -1182,7 +1224,7 @@ int position_info(struct frame* fr, long buffsize, struct audio_info_struct* ai,
 
 	(*frames_left) = 0;
 
-	if((track_frames != 0) && (track_frames >= fr->num)) (*frames_left) = track_frames - fr->num;
+	if((track_frames != 0) && (track_frames >= fr->num)) (*frames_left) = no < track_frames ? track_frames - no : 0;
 	else
 	if(rd->filelen >= 0)
 	{
@@ -1190,12 +1232,22 @@ int position_info(struct frame* fr, long buffsize, struct audio_info_struct* ai,
 		long t = rd->tell(rd);
 		bpf = mean_framesize ? mean_framesize : compute_bpf(fr);
 		(*frames_left) = (unsigned long)((double)(rd->filelen-t)/bpf);
+		/* no can be different for prophetic purposes, file pointer is always associated with fr->num! */
+		if(fr->num != no)
+		{
+			if(fr->num > no) *frames_left += fr->num - no;
+			else
+			{
+				if(*frames_left >= (no - fr->num)) *frames_left -= no - fr->num;
+				else *frames_left = 0; /* uh, oh! */
+			}
+		}
 		/* I totally don't understand why we should re-estimate the given correct(?) value */
 		/* fr->num = (unsigned long)((double)t/bpf); */
 	}
 
 	/* beginning with 0 or 1?*/
-	(*current_seconds) = (double) fr->num*tpf-dt;
+	(*current_seconds) = (double) no*tpf-dt;
 	(*seconds_left) = (double)(*frames_left)*tpf+dt;
 #if 0
 	(*current_seconds) = (*current_seconds) < 0 ? 0.0 : (*current_seconds);
@@ -1213,7 +1265,7 @@ void print_stat(struct frame *fr,unsigned long no,long buffsize,struct audio_inf
 {
 	double tim1,tim2;
 	unsigned long rno;
-	if(!position_info(fr, buffsize, ai, &rno, &tim1, &tim2))
+	if(!position_info(fr, no, buffsize, ai, &rno, &tim1, &tim2))
 	{
 		/* All these sprintf... only to avoid two writes to stderr in case of using buffer?
 		   I guess we can drop that. */

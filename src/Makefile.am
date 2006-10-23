@@ -9,7 +9,7 @@ AM_LDFLAGS = @AUDIO_LIBS@
 mpg123_LDADD = @AUDIO_OBJ@ @CPU_TYPE_LIB@
 mpg123_DEPENDENCIES = @AUDIO_OBJ@ @CPU_TYPE_LIB@
 
-EXTRA_DIST = Makefile.legacy
+EXTRA_DIST = Makefile.legacy config.h.legacy
 
 
 bin_PROGRAMS = mpg123
@@ -105,7 +105,7 @@ libcpu_generic_nofpu_a_SOURCES = \
 	dct64.c
 
 libcpu_altivec_a_SOURCES = \
-	decode.c \
+	decode_altivec.c \
 	dct64_altivec.c
 
 libcpu_i386_a_SOURCES = \
