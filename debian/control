@@ -3,7 +3,7 @@ Section: sound
 Priority: optional
 Maintainer: Daniel Kobras <kobras@debian.org>
 Standards-Version: 3.7.2
-Build-Depends: debhelper (>> 5), autotools-dev, pkg-config, libesd0-dev [i386 alpha powerpc], libaudio-dev [i386], libasound2-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386]
+Build-Depends: debhelper (>> 5), autotools-dev, pkg-config, libesd0-dev, libaudio-dev, libasound2-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386]
 
 Package: mpg123
 Architecture: any
@@ -23,7 +23,7 @@ Description: MPEG layer 1/2/3 audio player
  want this version.
 
 Package: mpg123-oss-i486
-Architecture: i386
+Architecture: i386 kfreebsd-i386
 Depends: ${shlibs:Depends}, oss-compat
 Provides: mpg123, mp3-decoder
 Conflicts: mpg123 (<< 0.59r-2)
@@ -55,7 +55,7 @@ Description: MPEG layer 1/2/3 audio player for 3DNow! machines - dummy package
  can be safely removed.
 
 Package: mpg123-esd
-Architecture: i386 alpha powerpc
+Architecture: any
 Depends: ${shlibs:Depends}
 Provides: mpg123, mp3-decoder
 Conflicts: mpg123 (<< 0.59r-2)
@@ -71,7 +71,7 @@ Description: MPEG layer 1/2/3 audio player with Esound support
  This version uses the Enlightened Sound Daemon (esound) for sound output.
 
 Package: mpg123-nas
-Architecture: i386
+Architecture: any
 Depends: ${shlibs:Depends}
 Provides: mpg123, mp3-decoder
 Conflicts: mpg123 (<< 0.59r-2)
@@ -87,7 +87,7 @@ Description: MPEG layer 1/2/3 audio player with NAS support
  This version uses the Network Audio System (NAS) for output.
 
 Package: mpg123-alsa
-Architecture: i386 alpha powerpc m68k arm sparc hppa
+Architecture: alpha amd64 arm armeb hppa i386 ia64 m68k mips mipsel powerpc ppc64 s390 sh sparc
 Depends: ${shlibs:Depends}
 Provides: mpg123, mp3-decoder
 Conflicts: mpg123 (<< 0.59r-2)

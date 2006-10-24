@@ -3,15 +3,17 @@
 PACKAGE:=mpg123
 
 ARCH:=$(shell dpkg-architecture -qDEB_HOST_GNU_CPU)
+OS:=$(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 
-TARGETS_DEFAULT:=mpg123-oss
+TARGETS:=mpg123-oss mpg123-esd mpg123-nas
 
-TARGETS_i486:=mpg123-oss mpg123-esd mpg123-nas \
-	mpg123-oss-i486 mpg123-alsa
-TARGETS_alpha:=mpg123-oss mpg123-esd
-TARGETS_powerpc:=mpg123-oss mpg123-esd
+ifeq ($(ARCH),i486)
+TARGETS += mpg123-oss-i486
+endif
 
-TARGETS_$(ARCH)?=$(TARGETS_DEFAULT)
+ifeq ($(OS),linux)
+TARGETS += mpg123-alsa
+endif
 
 CACHE_FILE:="$(CURDIR)/config.cache"
 
@@ -33,9 +35,11 @@ PKGNAME_mpg123-esd:=mpg123-esd
 PKGNAME_mpg123-alsa:=mpg123-alsa
 PKGNAME_mpg123-nas:=mpg123-nas
 
-ARCH_PKGSTR=$(foreach pkg,$(TARGETS_$(ARCH)),-p$(PKGNAME_$(pkg)))
+ARCH_PKGSTR=$(foreach pkg,$(TARGETS),-p$(PKGNAME_$(pkg)))
 ifeq ($(ARCH),i486)
+ifeq ($(OS),linux)
 ARCH_PKGSTR += -pmpg123-oss-3dnow
+endif
 endif
 
 # We assume if the user installs esd/nas, he wants
@@ -65,7 +69,7 @@ mpg123-%:
 	touch "$@"
 
 build: build-stamp
-build-stamp: configure $(TARGETS_$(ARCH))
+build-stamp: configure $(TARGETS)
 	touch build-stamp
 
 configure:
@@ -86,7 +90,7 @@ clean:
 	dh_testroot
 
 	-rm -f build-stamp
-	-rm -f "$(TARGETS_$(ARCH))"
+	-rm -f "$(TARGETS)"
 	-rm -rf "$(CURDIR)/obj"
 	-rm -f "$(CACHE_FILE)"
 
@@ -160,7 +164,7 @@ install: build
 	dh_md5sums $(ARCH_PKGSTR)
 	dh_builddeb $(ARCH_PKGSTR)
 
-binary-arch: build $(TARGETS_$(ARCH):%=binary-pkg-%) install
+binary-arch: build $(TARGETS:%=binary-pkg-%) install
 
 binary: binary-indep binary-arch
 

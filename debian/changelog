@@ -1,3 +1,16 @@
+mpg123 (0.61-2) unstable; urgency=low
+
+  * debian/control: Lift architecture restrictions of esd, nas, and alsa
+    flavours as much as possible. Build i486 variant on kfreebsd as well.
+    3dnow version is only needed for upgrades and can stay linux-i386-only.
+  * debian/postinst.in: Increase priorities by 100 for mpg123 alternative to
+    get us above mpg321. We /are/ mpg123, after all, and we are free now.
+    Priorities for mp3-decoder remain unchanged. Closes: #394749
+  * debian/rules: Take OS into account when building package lists to
+    keep kfreebsd happy. Thanks to Petr Salinger. Closes: #390939
+
+ -- Daniel Kobras <kobras@debian.org>  Tue, 24 Oct 2006 14:13:44 +0200
+
 mpg123 (0.61-1) unstable; urgency=low
 
   * New upstream version.
