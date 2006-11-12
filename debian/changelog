@@ -1,3 +1,11 @@
+mpg123 (0.61-3) unstable; urgency=high
+
+  * debian/control: 3dnow dummy package needs a versioned dependency on
+    the main mpg123 package. Other providers would also fulfill the
+    dependency otherwise. Closes: #398228
+
+ -- Daniel Kobras <kobras@debian.org>  Sun, 12 Nov 2006 16:22:30 +0100
+
 mpg123 (0.61-2) unstable; urgency=low
 
   * debian/control: Lift architecture restrictions of esd, nas, and alsa

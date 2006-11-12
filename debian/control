@@ -41,7 +41,7 @@ Description: MPEG layer 1/2/3 audio player for i486 machines
 
 Package: mpg123-oss-3dnow
 Architecture: i386
-Depends: mpg123
+Depends: mpg123 (>= 0.61-1)
 Description: MPEG layer 1/2/3 audio player for 3DNow! machines - dummy package
  Mpg123 is a fast and portable MPEG audio player for Unix.  It supports
  MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
