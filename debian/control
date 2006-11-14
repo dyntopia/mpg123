@@ -2,7 +2,6 @@ Source: mpg123
 Section: sound
 Priority: optional
 Maintainer: Daniel Kobras <kobras@debian.org>
-Uploaders: Gurkan Sengun <gurkan@linuks.mine.nu>
 Standards-Version: 3.7.2
 Build-Depends: debhelper (>> 5), autotools-dev, pkg-config, libesd0-dev, libaudio-dev, libasound2-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386]
 

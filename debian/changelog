@@ -1,9 +1,3 @@
-mpg123 (0.61-4~bpo1) sarge-backports; urgency=low
-
-  * Rebuild for Backports <http://www.backports.org/>.
-
- -- Gurkan Sengun <gurkan@linuks.mine.nu>  Sun, 24 Dec 2006 16:07:36 +0100
-
 mpg123 (0.61-4) unstable; urgency=high
 
   * src/audio_oss.c: OSS output always uses formats in native endianness,
