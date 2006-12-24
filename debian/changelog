@@ -1,3 +1,17 @@
+mpg123 (0.61-4~bpo1) sarge-backports; urgency=low
+
+  * Rebuild for Backports <http://www.backports.org/>.
+
+ -- Gurkan Sengun <gurkan@linuks.mine.nu>  Sun, 24 Dec 2006 16:07:36 +0100
+
+mpg123 (0.61-4) unstable; urgency=high
+
+  * src/audio_oss.c: OSS output always uses formats in native endianness,
+    so don't additionally swap bytes on big endian architectures.
+    Closes: #398480
+
+ -- Daniel Kobras <kobras@debian.org>  Tue, 14 Nov 2006 13:09:57 +0100
+
 mpg123 (0.61-3) unstable; urgency=high
 
   * debian/control: 3dnow dummy package needs a versioned dependency on
