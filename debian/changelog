@@ -1,3 +1,11 @@
+mpg123 (0.61-5) unstable; urgency=high
+
+  * src/httpget.c: Fix potential denial of service attack on premature
+    end-of-file from HTTP server (CVE-2007-0578). Patch taken from upstream's
+    0.64 release. Closes: #409296
+
+ -- Daniel Kobras <kobras@debian.org>  Mon,  5 Feb 2007 23:18:31 +0100
+
 mpg123 (0.61-4) unstable; urgency=high
 
   * src/audio_oss.c: OSS output always uses formats in native endianness,
