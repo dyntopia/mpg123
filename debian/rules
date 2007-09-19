@@ -17,10 +17,9 @@ endif
 
 CACHE_FILE:="$(CURDIR)/config.cache"
 
-CONF_COMMON:=--prefix=/usr --cache-file="$(CACHE_FILE)"
+CONF_COMMON:=--prefix=/usr --cache-file=$(CACHE_FILE)
 
-# 3dnow includes the previous default i586 as fallback at runtime.
-CONF_i486:=--with-cpu=3dnow
+CONF_i486:=--with-cpu=x86_dither
 CONF_arm:=--with-cpu=generic_nofpu
 
 CONF_oss:=--with-audio=oss
@@ -65,14 +64,15 @@ mpg123-%:
 		../../configure $(CONF_COMMON) $(CONF_$(ARCH)) $(CONF_$*) && \
 		$(MAKE) && \
 		mv src/mpg123 "$@" && \
-		cp ../../mpg123.1 "$@".1
+		cp ../../man1/mpg123.1 "$@".1
 	touch "$@"
 
 build: build-stamp
 build-stamp: configure $(TARGETS)
 	touch build-stamp
 
-configure:
+configure: configure-stamp
+configure-stamp:
 	dh_testdir
 
 	if test -f "$(CURDIR)/build/config.sub"; then \
@@ -85,14 +85,16 @@ configure:
 	ln -sf /usr/share/misc/config.sub "$(CURDIR)/build/"
 	ln -sf /usr/share/misc/config.guess "$(CURDIR)/build/"
 
+	touch configure-stamp
+
 clean:
 	dh_testdir
 	dh_testroot
 
-	-rm -f build-stamp
-	-rm -f "$(TARGETS)"
+	-rm -f build-stamp configure-stamp
+	-rm -f $(TARGETS)
 	-rm -rf "$(CURDIR)/obj"
-	-rm -f "$(CACHE_FILE)"
+	-rm -f $(CACHE_FILE)
 
 	-rm -f "$(CURDIR)/debian/*.install"
 	-rm -f "$(CURDIR)/debian/*.manpages"
@@ -115,13 +117,6 @@ clean:
 	fi
 
 	dh_clean
-
-	# There's no guarrantee we patch configure.ac before configure.
-	touch "$(CURDIR)/aclocal.m4" && \
-		touch "$(CURDIR)/src/config.h.in" && \
-		touch "$(CURDIR)/Makefile.in" && \
-		touch "$(CURDIR)/src/Makefile.in" && \
-		touch "$(CURDIR)/configure"
 
 binary-indep: build
 

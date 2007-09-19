@@ -2,7 +2,7 @@
 	leyer3.c: the layer 3 decoder
 
 	copyright 1995-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 
 	Optimize-TODO: put short bands into the band-field without the stride of 3 reals
@@ -11,13 +11,10 @@
 	The int-vs-pointer situation has to be cleaned up.
 */
 
-#include <stdlib.h>
-#include "config.h"
 #include "mpg123.h"
 #include "huffman.h"
 
 #include "common.h"
-#include "debug.h"
 
 #include "getbits.h"
 
@@ -27,15 +24,9 @@ static real COS1[12][6];
 static real win[4][36];
 static real win1[4][36];
 static real gainpow2[256+118+4];
-#ifdef USE_3DNOW
-real COS9[9];
+real COS9[9]; /* dct36_3dnow wants to use that */
 static real COS6_1,COS6_2;
-real tfcos36[9];
-#else
-static real COS9[9];
-static real COS6_1,COS6_2;
-static real tfcos36[9];
-#endif
+real tfcos36[9]; /* dct36_3dnow wants to use that */
 static real tfcos12[3];
 #define NEW_DCT9
 #ifdef NEW_DCT9
@@ -216,6 +207,19 @@ void layer3_gapless_buffercheck()
 }
 #endif
 
+#ifdef OPT_MMXORSSE
+real init_layer3_gainpow2_mmx(int i)
+{
+	if(!param.down_sample) return 16384.0 * pow((double)2.0,-0.25 * (double) (i+210) );
+	else return DOUBLE_TO_REAL(pow((double)2.0,-0.25 * (double) (i+210)));
+}
+#endif
+
+real init_layer3_gainpow2(int i)
+{
+	return DOUBLE_TO_REAL(pow((double)2.0,-0.25 * (double) (i+210)));
+}
+
 /* 
  * init tables for layer-3 
  */
@@ -224,12 +228,7 @@ void init_layer3(int down_sample_sblimit)
   int i,j,k,l;
 
   for(i=-256;i<118+4;i++)
-#ifdef USE_MMX
-    if(!param.down_sample)
-      gainpow2[i+256] = 16384.0 * pow((double)2.0,-0.25 * (double) (i+210) );
-    else
-#endif
-    gainpow2[i+256] = DOUBLE_TO_REAL(pow((double)2.0,-0.25 * (double) (i+210)));
+    gainpow2[i+256] = opt_init_layer3_gainpow2(i);
 
   for(i=0;i<8207;i++)
     ispow[i] = DOUBLE_TO_REAL(pow((double)i,(double)4.0/3.0));
@@ -680,6 +679,9 @@ static int III_dequantize_sample(real xr[SBLIMIT][SSLIMIT],int *scf,
     int region2  = gr_info->region2start;
 if(region1 > region2)
 {
+	/* That's not optimal: it fixes a segfault with fuzzed data, but also apparently triggers where it shouldn't, see bug 1641196.
+	   The benefit of not crashing / having this security risk is bigger than these few frames of a lame-3.70 file that aren't audible anyway
+	   But still, I want to know if indeed this check or the old lame is at fault. */
 	error("You got some really nasty file there... region1>region2!");
 	return 1;
 }
@@ -1294,11 +1296,8 @@ static void III_antialias(real xr[SBLIMIT][SSLIMIT],struct gr_info_s *gr_info) {
 /*    Function: Calculation of the inverse MDCT                     */
 /*                                                                  */
 /*------------------------------------------------------------------*/
-#ifdef USE_3DNOW
+/* used to be static without 3dnow - does that really matter? */
 void dct36(real *inbuf,real *o1,real *o2,real *wintab,real *tsbuf)
-#else
-static void dct36(real *inbuf,real *o1,real *o2,real *wintab,real *tsbuf)
-#endif
 {
 #ifdef NEW_DCT9
   real tmp[18];
@@ -1723,12 +1722,7 @@ static void dct12(real *in,real *rawout1,real *rawout2,register real *wi,registe
 /*
  * III_hybrid
  */
-#ifdef USE_3DNOW
-static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT],real tsOut[SSLIMIT][SBLIMIT],int ch,struct gr_info_s *gr_info,struct frame *fr)
-#else
-static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT],real tsOut[SSLIMIT][SBLIMIT],
-   int ch,struct gr_info_s *gr_info)
-#endif
+static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT], real tsOut[SSLIMIT][SBLIMIT], int ch,struct gr_info_s *gr_info)
 {
    static real block[2][2][SBLIMIT*SSLIMIT] = { { { 0, } } };
    static int blc[2]={0,0};
@@ -1747,13 +1741,8 @@ static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT],real tsOut[SSLIMIT][SBLIMIT],
   
    if(gr_info->mixed_block_flag) {
      sb = 2;
-#ifdef USE_3DNOW
-     (fr->dct36)(fsIn[0],rawout1,rawout2,win[0],tspnt);
-     (fr->dct36)(fsIn[1],rawout1+18,rawout2+18,win1[0],tspnt+1);
-#else
-     dct36(fsIn[0],rawout1,rawout2,win[0],tspnt);
-     dct36(fsIn[1],rawout1+18,rawout2+18,win1[0],tspnt+1);
-#endif
+     opt_dct36(fsIn[0],rawout1,rawout2,win[0],tspnt);
+     opt_dct36(fsIn[1],rawout1+18,rawout2+18,win1[0],tspnt+1);
      rawout1 += 36; rawout2 += 36; tspnt += 2;
    }
  
@@ -1766,13 +1755,8 @@ static void III_hybrid(real fsIn[SBLIMIT][SSLIMIT],real tsOut[SSLIMIT][SBLIMIT],
    }
    else {
      for (; sb<gr_info->maxb; sb+=2,tspnt+=2,rawout1+=36,rawout2+=36) {
-#ifdef USE_3DNOW
-       (fr->dct36)(fsIn[sb],rawout1,rawout2,win[bt],tspnt);
-       (fr->dct36)(fsIn[sb+1],rawout1+18,rawout2+18,win1[bt],tspnt+1);
-#else
-       dct36(fsIn[sb],rawout1,rawout2,win[bt],tspnt);
-       dct36(fsIn[sb+1],rawout1+18,rawout2+18,win1[bt],tspnt+1);
-#endif
+       opt_dct36(fsIn[sb],rawout1,rawout2,win[bt],tspnt);
+       opt_dct36(fsIn[sb+1],rawout1+18,rawout2+18,win1[bt],tspnt+1);
      }
    }
 
@@ -1836,8 +1820,8 @@ int do_layer3(struct frame *fr,int outmode,struct audio_info_struct *ai)
   set_pointer(sideinfo.main_data_begin);
 
   for (gr=0;gr<granules;gr++) {
-    real hybridIn [2][SBLIMIT][SSLIMIT];
-    real hybridOut[2][SSLIMIT][SBLIMIT];
+    ALIGNED(16) real hybridIn[2][SBLIMIT][SSLIMIT];
+    ALIGNED(16) real hybridOut[2][SSLIMIT][SBLIMIT];
 
     {
       struct gr_info_s *gr_info = &(sideinfo.ch[0].gr[gr]);
@@ -1908,15 +1892,11 @@ int do_layer3(struct frame *fr,int outmode,struct audio_info_struct *ai)
     for(ch=0;ch<stereo1;ch++) {
       struct gr_info_s *gr_info = &(sideinfo.ch[ch].gr[gr]);
       III_antialias(hybridIn[ch],gr_info);
-#ifdef USE_3DNOW
-      III_hybrid(hybridIn[ch], hybridOut[ch], ch,gr_info,fr);
-#else
       III_hybrid(hybridIn[ch], hybridOut[ch], ch,gr_info);
-#endif
     }
 
-#ifdef I486_OPT
-    if (fr->synth != synth_1to1 || single >= 0) {
+#ifdef OPT_I486
+    if (fr->synth != opt_synth_1to1 || single >= 0) {
 #endif
     for(ss=0;ss<SSLIMIT;ss++) {
       if(single >= 0) {
@@ -1938,7 +1918,7 @@ int do_layer3(struct frame *fr,int outmode,struct audio_info_struct *ai)
 #endif
       if(pcm_point >= audiobufsize) audio_flush(outmode,ai);
     }
-#ifdef I486_OPT
+#ifdef OPT_I486
     } else {
       /* Only stereo, 16 bits benefit from the 486 optimization. */
       ss=0;

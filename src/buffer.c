@@ -2,7 +2,7 @@
 	buffer.c: output buffer
 
 	copyright 1997-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Oliver Fromme
 
 	I (ThOr) am reviewing this file at about the same daytime as Oliver's timestamp here:
@@ -10,11 +10,11 @@
 	- dammed night coders;-)
 */
 
-#include <stdlib.h>
-#include <errno.h>
-
-#include "config.h"
 #include "mpg123.h"
+
+#ifndef NOXFERMEM
+
+#include <errno.h>
 
 int outburst = MAXOUTBURST;
 
@@ -35,41 +35,42 @@ static void catch_usr1 (void)
 
 extern void buffer_sig(int signal, int block);
 
-void buffer_ignore_lowmem(void)
+void real_buffer_ignore_lowmem(void)
 {
-#ifndef NOXFERMEM
 	if (!buffermem)
 		return;
 	if(buffermem->wakeme[XF_READER])
 		xfermem_putcmd(buffermem->fd[XF_WRITER], XF_CMD_WAKEUP);
-#endif
 }
 
-void buffer_end(void)
+void real_buffer_end(void)
 {
-#ifndef NOXFERMEM
 	if (!buffermem)
 		return;
 	xfermem_putcmd(buffermem->fd[XF_WRITER], XF_CMD_TERMINATE);
-#endif
 }
 
-void buffer_resync(void)
+void real_buffer_resync(void)
 {
 	buffer_sig(SIGINT, TRUE);
 }
 
-void buffer_reset(void)
+void real_plain_buffer_resync(void)
+{
+	buffer_sig(SIGINT, FALSE);
+}
+
+void real_buffer_reset(void)
 {
 	buffer_sig(SIGUSR1, TRUE);
 }
 
-void buffer_start(void)
+void real_buffer_start(void)
 {
 	buffer_sig(SIGCONT, FALSE);
 }
 
-void buffer_stop(void)
+void real_buffer_stop(void)
 {
 	buffer_sig(SIGSTOP, FALSE);
 }
@@ -78,8 +79,6 @@ extern int buffer_pid;
 
 void buffer_sig(int signal, int block)
 {
-	
-#ifndef NOXFERMEM
 	if (!buffermem)
 		return;
 
@@ -90,12 +89,8 @@ void buffer_sig(int signal, int block)
 
 	if(xfermem_block(XF_WRITER, buffermem) != XF_CMD_WAKEUP) 
 		perror("Could not resync/reset buffers");
-#endif
-	
 	return;
 }
-
-#ifndef NOXFERMEM
 
 void buffer_loop(struct audio_info_struct *ai, sigset_t *oldsigset)
 {

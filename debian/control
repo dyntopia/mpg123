@@ -87,7 +87,7 @@ Description: MPEG layer 1/2/3 audio player with NAS support
  This version uses the Network Audio System (NAS) for output.
 
 Package: mpg123-alsa
-Architecture: alpha amd64 arm armeb hppa i386 ia64 m68k mips mipsel powerpc ppc64 s390 sh sparc
+Architecture: alpha amd64 arm armel armeb hppa i386 ia64 m68k mips mipsel powerpc ppc64 s390 sh sparc
 Depends: ${shlibs:Depends}
 Provides: mpg123, mp3-decoder
 Conflicts: mpg123 (<< 0.59r-2)

@@ -1,3 +1,79 @@
+0.67
+----
+
+Thanks go out to the ROM 106.5FM team (http://www.rom.lu/) for supporting this release with a donation on sf.net and a bottle of finest Gewuerztraminer wine from Luxembourg!
+
+- verified that it builds on SGI IRIX 6.5 for MIPS32 and MIPS64
+- enable flexible rate for stdout decoding, too
+- UTF8 filtering to ASCII finally works thanks to Mika Tiainen, see bug 1745847
+- corrected frame offset; -k was off by one
+	This means now that -k disagrees with mpg123 0.59r on many files because the old version does play a frame of silence when encountering LAME tag instead of dropping it for audio.
+- added --timeout <n>: Possibility to end playback on a stream that doesn't give data for <n> seconds.
+- added --loop <n>: for ... well... looping playback of a track; motivation was persistent internet streaming with unreliable connection (together with --timeout)
+- build fixes
+- use movap instruction in SSE assembly when compiler supports the needed alignment (idea from MPlayer)
+- show decoder options in their priority order in --list-cpu/--test-cpu
+- added Perl script to benchmark each of mpg123's CPU optimisations
+- portability enhancements and cleanups along with testing on SunOS 4.1.2 with gcc-2.7.0
+- workaround for ugly flexible rate for MMX/SSE/3DNowExt code:
+  --with-cpu=mmx also includes i586 code as fallback; similar with the others
+
+0.66
+----
+
+- support for a combined build of x86 optimizations and runtime selection among these
+  The (supposedly) "highest" CPU-supported optimization is chosen by default,
+  --cpu, --list-cpu and --test-cpu parameters are there for you to take control.
+- default build for x86 systems is combined "x86" with generic, i386, i586, MMX, 3DNow, SSE, 3DNowExt;
+  "x86_dither" also includes the dithering i586 decoder
+- no automatic -march compiler flags anymore;
+  the --with-cpu configure option selects specific assembler code but special CFLAGS are up to you
+- extended 3DNow and SSE optmizations from MPlayer's mp3lib
+- x86 assembler optimizations adapted for MacOS X/Intel
+- straight support for Windows using MinGW32, reactivated the native WinMM output
+  Core functionality including assembler optmimizations and WAV writing is there.
+- assembler optimizations also for cygwin
+- set remote-err automatically when putting audio to stdout
+- a bit more general portability in the new build system
+- fix file creation mode for -O
+- experimental decoding to 32bit float (raw and WAV file): ./configure --with-cpu=generic_float
+- generic control interface (-R) can create and read from a named pipe, parameter --fifo <path>
+- audio bugfix: playback of mono file on stereo-only hardware, better error reporting there
+- ALSA output handling underruns
+- MMX, SSE and 3DNowExt fallback to i586 and below or 3Dnow for forced sample rate
+- more terminal control: volume, RVA and verbosity controls
+
+0.65
+----
+
+ - now allow crc bit to vary over stream (fixes files with bad lame tag and some internet streams)
+ - do not try to parse id3v2.2 (as opposed to 2.3 and 2.4)
+ - correct id3v2.3 parsing for not expecting syncsafe integers for framesize, 2.4 introduced that
+ - omit gcc specific compiler flags when gcc is not there
+ - initital attempt to support sgi/irix with configure (please test)
+
+0.64
+----
+
+ - fixing a potential denial of service problem; broken connection to server could trigger an endless loop
+
+0.63
+----
+
+ - build fixes, only relevant to developers and people who had problems building
+
+0.62
+----
+
+ - JUMP command in generic frontend accepts offsets/positions in seconds (JUMP 4s vs. JUMP 4)
+ - initial support for ICY meta data in SHOUTcast streams
+ - a bit of fixing with rva code, added rva and general volume control to generic frontend
+ - accepting more MIME types for http streaming (application/pls and audio/x-mpeg)
+ - ID3v2 info output taking less space per default - more resembling the old ID3v1 view for short tags, full view with always one line per item via extra --long-tag switch
+ - generally less verbosity (i.e. noise on console) per default
+ - ID3v2 now having some kind of support for unicode; trying to print what's latin1-compatible and prevent messing up of terminal with unknown bytes
+ - several bug fixes and small improvements
+
 0.61
 -----
 

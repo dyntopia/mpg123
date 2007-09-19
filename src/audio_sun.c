@@ -2,17 +2,12 @@
 	audio_sun.c: audio output for Sun systems
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include <sys/types.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <fcntl.h>
 
-#include "config.h"
 #include "mpg123.h"
 
 #ifdef HAVE_SYS_IOCTL_H
@@ -46,6 +41,9 @@ static void audio_set_format_helper(struct audio_info_struct *ai, audio_info_t *
     case -1:
     case AUDIO_FORMAT_SIGNED_16:
     default:
+#ifndef AUDIO_ENCODING_LINEAR	/* not supported */
+#define AUDIO_ENCODING_LINEAR 3
+#endif
       ainfo->play.encoding = AUDIO_ENCODING_LINEAR;
       ainfo->play.precision = 16;
       break;
@@ -160,7 +158,7 @@ int audio_open(struct audio_info_struct *ai)
   if(ai->fn < 0)
      return ai->fn;
 
-#ifdef SUNOS
+#if defined(SUNOS)  &&  defined(AUDIO_GETDEV)
   {
     int type;
     if(ioctl(ai->fn, AUDIO_GETDEV, &type) == -1)
@@ -194,8 +192,10 @@ int audio_open(struct audio_info_struct *ai)
     ainfo.play.port |= AUDIO_SPEAKER;
   if(ai->output & AUDIO_OUT_HEADPHONES)
     ainfo.play.port |= AUDIO_HEADPHONE;
+#ifdef AUDIO_LINE_OUT
   if(ai->output & AUDIO_OUT_LINE_OUT)
     ainfo.play.port |= AUDIO_LINE_OUT;
+#endif
 
   if(ai->gain != -1)
     ainfo.play.gain = ai->gain;
@@ -223,7 +223,7 @@ int audio_get_formats(struct audio_info_struct *ai)
   audio_info_t ainfo;
   int i,fmts=0;
 
-  for(i=0;i<4;i++) {
+  for(i=0;i<sizeof(tab)/sizeof(tab[0]);i++) {
     AUDIO_INITINFO(&ainfo);
     ainfo.play.encoding = tab[i][0];
     ainfo.play.precision = tab[i][1];

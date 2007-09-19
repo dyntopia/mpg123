@@ -2,39 +2,43 @@
 	control_generic.c: control interface for frontends and real console warriors
 
 	copyright 1997-99,2004-6 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Andreas Neuhaus and Michael Hipp
 	reworked by Thomas Orgis - it was the entry point for eventually becoming maintainer...
 */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdarg.h>
 #include <sys/time.h>
-#include <sys/types.h>
+#ifndef WIN32
 #include <sys/wait.h>
-#include <unistd.h>
+#include <sys/socket.h>
+#else
+#include <winsock.h>
+#endif
 #include <fcntl.h>
 #include <errno.h>
 
-#include <sys/socket.h>
 
-#include "config.h"
 #include "mpg123.h"
 #include "common.h"
-#include "debug.h"
+#include "buffer.h"
+#include "icy.h"
 #ifdef GAPLESS
 #include "layer3.h"
+extern struct audio_info_struct pre_ai;
 #endif
 #define MODE_STOPPED 0
 #define MODE_PLAYING 1
 #define MODE_PAUSED 2
 
 extern struct audio_info_struct ai;
-struct audio_info_struct pre_ai;
 extern int buffer_pid;
-extern int tabsel_123[2][3][16];
-
+#ifdef FIFO
+#include <sys/stat.h>
+int control_file = STDIN_FILENO;
+#else
+#define control_file STDIN_FILENO
+#endif
 FILE *outstream;
 
 void generic_sendmsg (const char *fmt, ...)
@@ -102,17 +106,42 @@ int control_generic (struct frame *fr)
  	else
  		outstream = stdout;
  		
+#ifndef WIN32
  	setlinebuf(outstream);
+#else /* perhaps just use setvbuf as it's C89 */
+	fprintf(outstream, "You are on Win32 and want to use the control interface... tough luck: We need a replacement for select on STDIN first.\n");
+	return 0;
+	setvbuf(outstream, (char*)NULL, _IOLBF, 0);
+#endif
 	/* the command behaviour is different, so is the ID */
 	/* now also with version for command availability */
 	fprintf(outstream, "@R MPG123 (ThOr) v2\n");
+#ifdef FIFO
+	if(param.fifo)
+	{
+		if(param.fifo[0] == 0)
+		{
+			error("You wanted an empty FIFO name??");
+			return 1;
+		}
+		unlink(param.fifo);
+		if(mkfifo(param.fifo, 0666) == -1)
+		{
+			error2("Failed to create FIFO at %s (%s)", param.fifo, strerror(errno));
+			return 1;
+		}
+		debug("going to open named pipe ... blocking until someone gives command");
+		control_file = open(param.fifo,O_RDONLY);
+		debug("opened");
+	}
+#endif
 
-	while (alive) {
+	while (alive)
+	{
 		tv.tv_sec = 0;
 		tv.tv_usec = 0;
 		FD_ZERO(&fds);
-		FD_SET(STDIN_FILENO, &fds);
-
+		FD_SET(control_file, &fds);
 		/* play frame if no command needs to be processed */
 		if (mode == MODE_PLAYING) {
 			n = select(32, &fds, NULL, NULL, &tv);
@@ -133,12 +162,18 @@ int control_generic (struct frame *fr)
 					generic_sendmsg("P 0");
 				}
 				if (init) {
-					static char tmp[1000];
-					make_remote_header(fr, tmp);
-					generic_sendmsg(tmp);
+					print_remote_header(fr);
 					init = 0;
 				}
-				if(!frame_before && (silent == 0)) generic_sendstat(fr);
+				if(!frame_before && (silent == 0))
+				{
+					generic_sendstat(fr);
+					if (icy.changed && icy.data)
+					{
+						generic_sendmsg("I ICY-META: %s", icy.data);
+						icy.changed = 0;
+					}
+				}
 				if(frame_before) --frame_before;
 			}
 		}
@@ -157,53 +192,53 @@ int control_generic (struct frame *fr)
 			return 1;
 		}
 
-		/* process command */
-		if (n > 0) {
+		/* read & process commands */
+		if (n > 0)
+		{
 			short int len = 1; /* length of buffer */
-			short int cnum = 0; /* number of commands */ 
-			short int cind = 0; /* index for commands */
-			char *cmd, *comstr, *arg; /* variables for parsing, */
+			char *cmd, *arg; /* variables for parsing, */
+			char *comstr = NULL; /* gcc thinks that this could be used uninitialited... */ 
 			char buf[REMOTE_BUFFER_SIZE];
-			char **coms; /* list of commands */
 			short int counter;
-			coms = malloc(sizeof(*coms)); /* malloc magic */
-			coms[0] = &buf[0]; /* first command string */
-			
+			char *next_comstr = buf; /* have it initialized for first command */
+
 			/* read as much as possible, maybe multiple commands */
 			/* When there is nothing to read (EOF) or even an error, it is the end */
-			if((len = read(STDIN_FILENO, buf, REMOTE_BUFFER_SIZE)) < 1)	break;
-			
-			/* one command on a line - separation by \n -> C strings in a row */
-			for(counter = 0; counter < len; ++counter) {
-				/* line end is command end */
-				if( (buf[counter] == '\n') || (buf[counter] == '\r') ) { 
-					buf[counter] = 0; /* now it's a properly ending C string */
-					/* next "real" char is first of next command */
-					if( (counter < (len - 1)) && ((buf[counter+1] == '\n') || (buf[counter+1] == '\r')) )
-						++counter; /* skip the additional line ender */
-					if(counter < (len - 1)) coms[++cind] = &buf[counter+1];
+			if((len = read(control_file, buf, REMOTE_BUFFER_SIZE)) < 1)
+			{
+#ifdef FIFO
+				if(len == 0 && param.fifo)
+				{
+					debug("fifo ended... reopening");
+					close(control_file);
+					control_file = open(param.fifo,O_RDONLY|O_NONBLOCK);
+					if(control_file < 0){ error1("open of fifo failed... %s", strerror(errno)); break; }
+					continue;
 				}
+#endif
+				if(len < 0) error1("command read error: %s", strerror(errno));
+				break;
 			}
-			cnum = cind+1;
 
-			/*
-			   when last command had no \n... should I discard it?
-			   Ideally, I should remember the part and wait for next
-				 read() to get the rest up to a \n. But that can go
-				 to infinity. Too long commands too quickly are just
-				 bad. Cannot/Won't change that. So, discard the unfinished
-				 command and have fingers crossed that the rest of this
-				 unfinished one qualifies as "unknown". 
-			*/
-			if(buf[len-1] != 0){
-				char lasti = buf[len-1];
-				buf[len-1] = 0;
-				generic_sendmsg("E Unfinished command: %s%c", coms[cind], lasti);
-				--cnum;
-			}
-			
-			for(cind = 0; cind < cnum; ++cind) {
-				comstr = coms[cind];
+			debug1("read %i bytes of commands", len);
+			/* one command on a line - separation by \n -> C strings in a row */
+			for(counter = 0; counter < len; ++counter)
+			{
+				/* line end is command end */
+				if( (buf[counter] == '\n') || (buf[counter] == '\r') )
+				{
+					debug1("line end at counter=%i", counter);
+					buf[counter] = 0; /* now it's a properly ending C string */
+					comstr = next_comstr;
+
+					/* skip the additional line ender of \r\n or \n\r */
+					if( (counter < (len - 1)) && ((buf[counter+1] == '\n') || (buf[counter+1] == '\r')) ) buf[++counter] = 0;
+
+					/* next "real" char is first of next command */
+					next_comstr = buf + counter+1;
+
+					/* directly process the command now */
+					debug1("interpreting command: %s", comstr);
 				if(strlen(comstr) == 0) continue;
 
 				/* PAUSE */
@@ -213,13 +248,11 @@ int control_generic (struct frame *fr)
 						if (mode == MODE_PLAYING) {
 							mode = MODE_PAUSED;
 							audio_flush(param.outmode, &ai);
-							if (param.usebuffer)
-								kill(buffer_pid, SIGSTOP);
+							buffer_stop();
 							generic_sendmsg("P 1");
 						} else {
 							mode = MODE_PLAYING;
-							if (param.usebuffer)
-								kill(buffer_pid, SIGCONT);
+							buffer_start();
 							generic_sendmsg("P 2");
 						}
 					}
@@ -256,7 +289,9 @@ int control_generic (struct frame *fr)
 					generic_sendmsg("LOADPAUSED/LP <trackname>: load and start playing resource <trackname>");
 					generic_sendmsg("PAUSE/P: pause playback");
 					generic_sendmsg("STOP/S: stop playback (closes file)");
-					generic_sendmsg("JUMP/J <frame>|<+offset>|<-offset>: jump to mpeg frame <frame> or change position by offset");
+					generic_sendmsg("JUMP/J <frame>|<+offset>|<-offset>|<[+|-]seconds>s: jump to mpeg frame <frame> or change position by offset, same in seconds if number followed by \"s\"");
+					generic_sendmsg("VOLUME/V <percent>: set volume in % (0..100...); float value");
+					generic_sendmsg("RVA off|(mix|radio)|(album|audiophile): set rva mode");
 					generic_sendmsg("EQ/E <channel> <band> <value>: set equalizer value for frequency band on channel");
 					generic_sendmsg("SEQ <bass> <mid> <treble>: simple eq setting...");
 					generic_sendmsg("SILENCE: be silent during playback (meaning silence in text form)");
@@ -278,12 +313,6 @@ int control_generic (struct frame *fr)
 						real b,m,t;
 						int cn;
 						have_eq_settings = TRUE;
-						/* ThOr: The type of real can vary greatly; on my XP1000 with OSF1 I got FPE on setting seq...
-							now using the same ifdefs as mpg123.h for the definition of real
-							I'd like to have the conversion specifier as constant.
-							
-							Also, I' not sure _how_ standard these conversion specifiers and their flags are... I have them from a glibc man page.
-						*/
 						if(sscanf(arg, REAL_SCANF" "REAL_SCANF" "REAL_SCANF, &b, &m, &t) == 3)
 						{
 							/* very raw line */
@@ -330,6 +359,7 @@ int control_generic (struct frame *fr)
 					if (!strcasecmp(cmd, "J") || !strcasecmp(cmd, "JUMP")) {
 						char *spos;
 						long offset;
+						double secs;
 						audio_flush(param.outmode, &ai);
 
 						spos = arg;
@@ -338,12 +368,14 @@ int control_generic (struct frame *fr)
 						if (mode == MODE_STOPPED)
 							continue;
 
+						if(spos[strlen(spos)-1] == 's' && sscanf(arg, "%lf", &secs) == 1) offset = time_to_frame(fr, secs);
+						else offset = atol(spos);
 						/* totally replaced that stuff - it never fully worked
 						   a bit usure about why +pos -> spos+1 earlier... */
 						if (spos[0] == '-' || spos[0] == '+')
-							offset = atol(spos) + frame_before;
+							offset += frame_before;
 						else
-							offset = atol(spos) - fr->num;
+							offset -= fr->num;
 						
 						/* ah, this offset stuff is twisted - I want absolute numbers */
 						#ifdef GAPLESS
@@ -382,6 +414,25 @@ int control_generic (struct frame *fr)
 						continue;
 					}
 
+					/* VOLUME in percent */
+					if(!strcasecmp(cmd, "V") || !strcasecmp(cmd, "VOLUME"))
+					{
+						do_volume(atof(arg)/100);
+						generic_sendmsg("V %f%%", outscale / (double) MAXOUTBURST * 100);
+						continue;
+					}
+
+					/* RVA mode */
+					if(!strcasecmp(cmd, "RVA"))
+					{
+						if(!strcasecmp(arg, "off")) param.rva = RVA_OFF;
+						else if(!strcasecmp(arg, "mix") || !strcasecmp(arg, "radio")) param.rva = RVA_MIX;
+						else if(!strcasecmp(arg, "album") || !strcasecmp(arg, "audiophile")) param.rva = RVA_ALBUM;
+						do_rva();
+						generic_sendmsg("RVA %s", rva_name[param.rva]);
+						continue;
+					}
+
 					/* LOAD - actually play */
 					if (!strcasecmp(cmd, "L") || !strcasecmp(cmd, "LOAD")) {
 						#ifdef GAPLESS
@@ -400,6 +451,9 @@ int control_generic (struct frame *fr)
 							generic_sendinfoid3((char *)rd->id3buf);
 						else
 							generic_sendinfo(arg);
+
+						if (icy.name.fill) generic_sendmsg("I ICY-NAME: %s", icy.name.p);
+						if (icy.url.fill) generic_sendmsg("I ICY-URL: %s", icy.url.p);
 						mode = MODE_PLAYING;
 						init = 1;
 						read_frame_init(fr);
@@ -437,28 +491,50 @@ int control_generic (struct frame *fr)
 				} /* end commands with arguments */
 				else generic_sendmsg("E Unknown command or no arguments: %s", comstr); /* unknown command */
 
-			} /*end command processing loop */
+				} /* end of single command processing */
+			} /* end of scanning the command buffer */
 
-			free(coms); /* release memory of command string (pointer) array */
-				
+			/*
+			   when last command had no \n... should I discard it?
+			   Ideally, I should remember the part and wait for next
+				 read() to get the rest up to a \n. But that can go
+				 to infinity. Too long commands too quickly are just
+				 bad. Cannot/Won't change that. So, discard the unfinished
+				 command and have fingers crossed that the rest of this
+				 unfinished one qualifies as "unknown". 
+			*/
+			if(buf[len-1] != 0)
+			{
+				char lasti = buf[len-1];
+				buf[len-1] = 0;
+				generic_sendmsg("E Unfinished command: %s%c", comstr, lasti);
+			}
 		} /* end command reading & processing */
-
 	} /* end main (alive) loop */
 
 	/* quit gracefully */
+#ifndef NOXFERMEM
 	if (param.usebuffer) {
 		kill(buffer_pid, SIGINT);
 		xfermem_done_writer(buffermem);
 		waitpid(buffer_pid, NULL, 0);
 		xfermem_done(buffermem);
 	} else {
+#endif
 		audio_flush(param.outmode, &ai);
 		free(pcm_sample);
+#ifndef NOXFERMEM
 	}
+#endif
 	if (param.outmode == DECODE_AUDIO)
 		audio_close(&ai);
 	if (param.outmode == DECODE_WAV)
 		wav_close();
+
+#ifdef FIFO
+	close(control_file); /* be it FIFO or STDIN */
+	if(param.fifo) unlink(param.fifo);
+#endif
 	return 0;
 }
 

@@ -2,11 +2,10 @@
 	getbits
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include "config.h"
 #include "mpg123.h"
 #include "common.h"
 
@@ -76,7 +75,7 @@ fprintf(stderr,"g%d",number_of_bits);
   }
 
 #ifdef DEBUG_GETBITS
-fprintf(stderr,":%x ",rval);
+fprintf(stderr,":%lx ",rval);
 #endif
 
   return rval;

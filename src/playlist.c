@@ -2,16 +2,14 @@
 	playlist: playlist logic
 
 	copyright 1995-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp, outsourced/reorganized by Thomas Orgis
 
 	If we officially support Windows again, we should have this reworked to really cope with Windows paths, too.
 */
 
-#include "config.h"
 #include "mpg123.h"
 #include "getlopt.h" /* for loptind */
-#include "debug.h"
 #include "term.h" /* for term_restore */
 #include "playlist.h"
 
@@ -71,9 +69,18 @@ char *get_next_file()
 	/* normal order, just pick next thing */
 	if(param.shuffle < 2)
 	{
-		if(pl.pos < pl.fill) newfile = pl.list[pl.pos].url;
-		else newfile = NULL;
-		++pl.pos;
+		do
+		{
+			if(pl.pos < pl.fill) newfile = pl.list[pl.pos].url;
+			else newfile = NULL;
+			/* if we have rounds left, decrease loop, else reinit loop because it's a new track */
+			if(pl.loop > 0) --pl.loop; /* loop for current track... */
+			if(pl.loop == 0)
+			{
+				pl.loop = param.loop;
+				++pl.pos;
+			}
+		} while(pl.loop == 0 && newfile != NULL);
 	}
 	/* randomly select files, with repeating */
 	else newfile = pl.list[ (size_t) rand() % pl.fill ].url;
@@ -117,6 +124,7 @@ void init_playlist()
 	init_stringbuf(&pl.dir);
 	init_stringbuf(&pl.linebuf);
 	pl.type = UNKNOWN;
+	pl.loop = param.loop;
 }
 
 /*
@@ -174,11 +182,11 @@ int add_next_file (int argc, char *argv[])
 				{
 					debug1("listmime value: %s", listmime);
 					if(!strcmp("audio/x-mpegurl", listmime))	pl.type = M3U;
-					else if(!strcmp("audio/x-scpls", listmime))	pl.type = PLS;
+					else if(!strcmp("audio/x-scpls", listmime) || !strcmp("application/pls", listmime))	pl.type = PLS;
 					else
 					{
 						if(fd >= 0) close(fd);
-						if(!strcmp("audio/mpeg", listmime))
+						if(!strcmp("audio/mpeg", listmime) || !strcmp("audio/x-mpeg", listmime))
 						{
 							pl.type = NO_LIST;
 							if(param.listentry < 0)
@@ -485,7 +493,7 @@ int add_to_playlist(char* new_entry, char freeit)
 	{
 		struct listitem* tmp = NULL;
 		/* enlarge the list */
-		tmp = (struct listitem*) realloc(pl.list, (pl.size + pl.alloc_step) * sizeof(struct listitem));
+		tmp = (struct listitem*) safe_realloc(pl.list, (pl.size + pl.alloc_step) * sizeof(struct listitem));
 		if(!tmp)
 		{
 			error("unable to allocate more memory for playlist");

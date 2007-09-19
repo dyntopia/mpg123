@@ -1,6 +1,3 @@
-#include <stdlib.h>
-#include "config.h"
-#include "debug.h"
 #include "mpg123.h"
 #include "common.h"
 #include "stringbuf.h"
@@ -19,6 +16,29 @@ struct taginfo
 };
 
 struct taginfo id3;
+
+/* UTF support definitions */
+
+typedef int (*text_decoder)(char* dest, unsigned char* source, size_t len);
+
+static int decode_il1(char* dest, unsigned char* source, size_t len);
+static int decode_utf16(char* dest, unsigned char* source, size_t len, int str_be);
+static int decode_utf16bom(char* dest, unsigned char* source, size_t len);
+static int decode_utf16be(char* dest, unsigned char* source, size_t len);
+static int decode_utf8(char* dest, unsigned char* source, size_t len);
+int wide_bytelen(int width, char* string, size_t string_size);
+
+static text_decoder text_decoders[4] =
+{
+	decode_il1,
+	decode_utf16bom,
+	decode_utf16be,
+	decode_utf8
+};
+
+const int encoding_widths[4] = { 1, 2, 2, 1 };
+
+/* the code starts here... */
 
 void init_id3()
 {
@@ -55,10 +75,22 @@ void reset_id3()
 void store_id3_text(struct stringbuf* sb, char* source, size_t source_size)
 {
 	size_t pos = 1; /* skipping the encoding */
+	int encoding;
+	int bwidth;
 	if(! source_size) return;
-	if(!(source[0] == 0 || source[0] == 3))
+	encoding = source[0];
+	debug1("encoding: %i\n", encoding);
+	if(encoding > 3)
 	{
-		warning("Not ISO8859-1 or UTF8 encoding of text - I will probably screw a bit up!");
+		warning1("Unknown text encoding %d, assuming ISO8859-1 - I will probably screw a bit up!", encoding);
+		encoding = 0;
+	}
+	bwidth = encoding_widths[encoding];
+	if((source_size-1) % bwidth)
+	{
+		/* Uh. (BTW, the -1 is for the encoding byte.) */
+		warning2("Weird tag size %d for encoding %d - I will probably trim too early or something but I think the MP3 is broken.", (int)source_size, encoding);
+		source_size -= (source_size-1) % bwidth;
 	}
 	/*
 		first byte: Text encoding          $xx
@@ -68,36 +100,30 @@ void store_id3_text(struct stringbuf* sb, char* source, size_t source_size)
 	*/
 	while(pos < source_size)
 	{
-		/* determine length of string, 0 will be stored, too */
-		size_t l = strlen(source+pos)+1;
-		if(pos+l > source_size) l = source_size - pos + 1; /* not null-terminated... */
-		if((sb->size >= sb->fill+l) || resize_stringbuf(sb, sb->fill+l))
+		size_t l = wide_bytelen(bwidth, source+pos, source_size-pos);
+		debug2("wide bytelen of %lu: %lu", (unsigned long)(source_size-pos), (unsigned long)l);
+		/* we need space for the stuff plus the closing zero */
+		if((sb->size > sb->fill+l) || resize_stringbuf(sb, sb->fill+l+1))
 		{
-			/* append with line break */
+			/* append with line break - sb is in latin1 mode! */
 			if(sb->fill) sb->p[sb->fill-1] = '\n';
-			/* do not copy the ending 0 since it may not be there */
-			memcpy(sb->p+sb->fill, source+pos, l-1);
-			sb->fill += l;
-			sb->p[sb->fill-1] = 0;
+			/* do not include the ending 0 in the conversion */
+			sb->fill += text_decoders[encoding](sb->p+sb->fill, (unsigned char *) source+pos, l-(source_size==pos+l ? 0 : bwidth));
+			sb->p[sb->fill++] = 0;
 			/* advance to beginning of next string */
 			pos += l;
-			while(pos < source_size && source[pos] == 0)
-			{
-				/* an additonal null could mean that we are dealing with unicode... */
-				++pos;
-			}
 		}
 		else break;
 	}
 }
 
 /*
-	* trying to parse ID3v2.3 and ID3v2.4 tags... actually, for a start only v2.4 RVA2 frames
-	*
-	* returns:  0 = read-error
-	*          -1 = illegal ID3 header; maybe extended to mean unparseable (to new) header in future
-	*           1 = somehow ok...
-	*/
+	trying to parse ID3v2.3 and ID3v2.4 tags...
+
+	returns:  0 = read-error
+	         -1 = illegal ID3 header; maybe extended to mean unparseable (to new) header in future
+	          1 = somehow ok...
+*/
 int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 {
 	#define UNSYNC_FLAG 128
@@ -118,26 +144,36 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 
 	if(buf[0] == 0xff) /* major version, will never be 0xff */
 	return -1;
-	debug1("ID3v2: revision %i", buf[0]);
 	/* second new byte are some nice flags, if these are invalid skip the whole thing */
 	flags = buf[1];
 	debug1("ID3v2: flags 0x%08x", flags);
-	/* use 4 bytes from buf to construct 28bit uint value and return 1; return 0 if bytes are not syncsafe */
-	#define syncsafe_to_long(buf,res) \
+	/* use 4 bytes from buf to construct 28bit uint value and return 1; return 0 if bytes are not synchsafe */
+	#define synchsafe_to_long(buf,res) \
 	( \
 		(((buf)[0]|(buf)[1]|(buf)[2]|(buf)[3]) & 0x80) ? 0 : \
-		(res =  (((unsigned long) (buf)[0]) << 27) \
+		(res =  (((unsigned long) (buf)[0]) << 21) \
 		     | (((unsigned long) (buf)[1]) << 14) \
 		     | (((unsigned long) (buf)[2]) << 7) \
 		     |  ((unsigned long) (buf)[3]) \
 		,1) \
 	)
+	/* id3v2.3 does not store synchsafe frame sizes, but synchsafe tag size - doh! */
+	#define bytes_to_long(buf,res) \
+	( \
+		major == 3 ? \
+		(res =  (((unsigned long) (buf)[0]) << 24) \
+		     | (((unsigned long) (buf)[1]) << 16) \
+		     | (((unsigned long) (buf)[2]) << 8) \
+		     |  ((unsigned long) (buf)[3]) \
+		,1) : synchsafe_to_long(buf,res) \
+	)
 	/* length-10 or length-20 (footer present); 4 synchsafe integers == 28 bit number  */
 	/* we have already read 10 bytes, so left are length or length+10 bytes belonging to tag */
-	if(!syncsafe_to_long(buf+2,length)) return -1;
+	if(!synchsafe_to_long(buf+2,length)) return -1;
 	debug1("ID3v2: tag data length %lu", length);
+	if(param.verbose > 1) fprintf(stderr,"Note: ID3v2.%i rev %i tag of %lu bytes\n", major, buf[0], length);
 	/* skip if unknown version/scary flags, parse otherwise */
-	if((flags & UNKNOWN_FLAGS) || (major > 4))
+	if((flags & UNKNOWN_FLAGS) || (major > 4) || (major < 3))
 	{
 		/* going to skip because there are unknown flags set */
 		warning2("ID3v2: Won't parse the ID3v2 tag with major version %u and flags 0x%xu - some extra code may be needed", major, flags);
@@ -150,7 +186,7 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 		/* try to interpret that beast */
 		if((tagdata = (unsigned char*) malloc(length+1)) != NULL)
 		{
-			if(param.verbose > 1) fprintf(stderr, "ID3v2: analysing frames...\n");
+			debug("ID3v2: analysing frames...");
 			if(rds->read_frame_body(rds,tagdata,length))
 			{
 				unsigned long tagpos = 0;
@@ -159,8 +195,8 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 				tagdata[length] = 0;
 				if(flags & EXTHEAD_FLAG)
 				{
-					if(param.verbose > 1) fprintf(stderr, "ID3v2: skipping extended header\n");
-					if(!syncsafe_to_long(tagdata, tagpos)) ret = -1;
+					debug("ID3v2: skipping extended header");
+					if(!bytes_to_long(tagdata, tagpos)) ret = -1;
 				}
 				if(ret >= 0)
 				{
@@ -191,14 +227,14 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 							/* 4 bytes id */
 							strncpy(id, (char*) tagdata+pos, 4);
 							pos += 4;
-							/* size as 32 syncsafe bits */
-							if(!syncsafe_to_long(tagdata+pos, framesize))
+							/* size as 32 bits */
+							if(!bytes_to_long(tagdata+pos, framesize))
 							{
 								ret = -1;
-								error("ID3v2: non-syncsafe frame size, aborting");
+								error1("ID3v2: non-syncsafe size of %s frame, skipping the remainder of tag", id);
 								break;
 							}
-							if(param.verbose > 1) fprintf(stderr, "ID3v2: %s frame of size %lu\n", id, framesize);
+							if(param.verbose > 2) fprintf(stderr, "Note: ID3v2 %s frame of size %lu\n", id, framesize);
 							tagpos += 10 + framesize; /* the important advancement in whole tag */
 							pos += 4;
 							fflags = (((unsigned long) tagdata[pos]) << 8) | ((unsigned long) tagdata[pos+1]);
@@ -281,13 +317,14 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 											{
 												char* comstr;
 												size_t comsize = realsize-4-(strlen((char*)realdata+pos)+1);
-												if(param.verbose > 1) fprintf(stderr, "ID3v2: evaluating %s data for RVA\n", realdata+pos);
+												if(param.verbose > 2) fprintf(stderr, "Note: evaluating %s data for RVA\n", realdata+pos);
 												if((comstr = (char*) malloc(comsize+1)) != NULL)
 												{
 													memcpy(comstr,realdata+realsize-comsize, comsize);
 													comstr[comsize] = 0;
+													/* hm, what about utf16 here? */
 													rva_gain[rva_mode] = atof(comstr);
-													if(param.verbose > 1) fprintf(stderr, "ID3v2: RVA value %fdB\n", rva_gain[rva_mode]);
+													if(param.verbose > 2) fprintf(stderr, "Note: RVA value %fdB\n", rva_gain[rva_mode]);
 													rva_peak[rva_mode] = 0;
 													rva_level[rva_mode] = tt+1;
 													free(comstr);
@@ -317,7 +354,7 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 											
 											if(!strncasecmp((char*)realdata+pos, "replaygain_track_",17))
 											{
-												if(param.verbose > 1) fprintf(stderr, "ID3v2: track gain/peak\n");
+												debug("ID3v2: track gain/peak");
 												rva_mode = 0;
 												if(!strcasecmp((char*)realdata+pos, "replaygain_track_peak")) is_peak = 1;
 												else if(strcasecmp((char*)realdata+pos, "replaygain_track_gain")) rva_mode = -1;
@@ -325,7 +362,7 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 											else
 											if(!strncasecmp((char*)realdata+pos, "replaygain_album_",17))
 											{
-												if(param.verbose > 1) fprintf(stderr, "ID3v2: album gain/peak\n");
+												debug("ID3v2: album gain/peak");
 												rva_mode = 1;
 												if(!strcasecmp((char*)realdata+pos, "replaygain_album_peak")) is_peak = 1;
 												else if(strcasecmp((char*)realdata+pos, "replaygain_album_gain")) rva_mode = -1;
@@ -334,7 +371,7 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 											{
 												char* comstr;
 												size_t comsize = realsize-1-(strlen((char*)realdata+pos)+1);
-												if(param.verbose > 1) fprintf(stderr, "ID3v2: evaluating %s data for RVA\n", realdata+pos);
+												if(param.verbose > 2) fprintf(stderr, "Note: evaluating %s data for RVA\n", realdata+pos);
 												if((comstr = (char*) malloc(comsize+1)) != NULL)
 												{
 													memcpy(comstr,realdata+realsize-comsize, comsize);
@@ -342,12 +379,12 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 													if(is_peak)
 													{
 														rva_peak[rva_mode] = atof(comstr);
-														if(param.verbose > 1) fprintf(stderr, "ID3v2: RVA peak %fdB\n", rva_peak[rva_mode]);
+														if(param.verbose > 2) fprintf(stderr, "Note: RVA peak %fdB\n", rva_peak[rva_mode]);
 													}
 													else
 													{
 														rva_gain[rva_mode] = atof(comstr);
-														if(param.verbose > 1) fprintf(stderr, "ID3v2: RVA gain %fdB\n", rva_gain[rva_mode]);
+														if(param.verbose > 2) fprintf(stderr, "Note: RVA gain %fdB\n", rva_gain[rva_mode]);
 													}
 													rva_level[rva_mode] = tt+1;
 													free(comstr);
@@ -359,9 +396,8 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 									break;
 									case rva2: /* "the" RVA tag */
 									{
-										#ifdef HAVE_INTTYPES_H
 										/* starts with null-terminated identification */
-										if(param.verbose > 1) fprintf(stderr, "ID3v2: RVA2 identification \"%s\"\n", realdata);
+										if(param.verbose > 2) fprintf(stderr, "Note: RVA2 identification \"%s\"\n", realdata);
 										/* default: some individual value, mix mode */
 										rva_mode = 0;
 										if( !strncasecmp((char*)realdata, "album", 5)
@@ -375,21 +411,18 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 											{
 												++pos;
 												/* only handle master channel */
-												if(param.verbose > 1) fprintf(stderr, "ID3v2: it is for the master channel\n");
+												debug("ID3v2: it is for the master channel");
 												/* two bytes adjustment, one byte for bits representing peak - n bytes for peak */
 												/* 16 bit signed integer = dB * 512 */
 												/* we already assume short being 16 bit */
 												rva_gain[rva_mode] = (float) ((((short) realdata[pos]) << 8) | ((short) realdata[pos+1])) / 512;
 												pos += 2;
-												if(param.verbose > 1) fprintf(stderr, "ID3v2: RVA value %fdB\n", rva_gain[rva_mode]);
+												if(param.verbose > 2) fprintf(stderr, "Note: RVA value %fdB\n", rva_gain[rva_mode]);
 												/* heh, the peak value is represented by a number of bits - but in what manner? Skipping that part */
 												rva_peak[rva_mode] = 0;
 												rva_level[rva_mode] = tt+1;
 											}
 										}
-										#else
-										warning("ID3v2: Cannot parse RVA2 value because I don't have a guaranteed 16 bit signed integer type");
-										#endif
 									}
 									break;
 									/* non-rva metainfo, simply store... */
@@ -459,6 +492,7 @@ int parse_new_id3(unsigned long first4bytes, struct reader *rds)
 void print_id3_tag(unsigned char *id3v1buf)
 {
 	char genre_from_v1 = 0;
+	if(!(id3.version || id3v1buf)) return;
 	if(id3v1buf != NULL)
 	{
 		/* fill gaps in id3v2 info with id3v1 info */
@@ -647,7 +681,7 @@ void print_id3_tag(unsigned char *id3v1buf)
 		free_stringbuf(&tmp);
 	}
 
-	if(id3.version > 1)
+	if(param.long_id3)
 	{
 		fprintf(stderr,"\n");
 		/* print id3v2 */
@@ -660,10 +694,125 @@ void print_id3_tag(unsigned char *id3v1buf)
 		fprintf(stderr,"\tComment: %s\n", id3.comment.fill ? id3.comment.p : "");
 		fprintf(stderr,"\n");
 	}
-	else if(id3v1buf != NULL)
+	else
 	{
-		fprintf(stderr,"Title  : %-30s  Artist: %s\n",id3.title.p,id3.artist.p);
-		fprintf(stderr,"Album  : %-30s  Year  : %4s\n",id3.album.p,id3.year.p);
-		fprintf(stderr,"Comment: %-30s  Genre : %s\n",id3.comment.p,id3.genre.p);
+		/* We are trying to be smart here and conserve vertical space.
+		   So we will skip tags not set, and try to show them in two parallel columns if they are short, which is by far the	most common case. */
+		/* one _could_ circumvent the strlen calls... */
+		if(id3.title.fill && id3.artist.fill && strlen(id3.title.p) <= 30 && strlen(id3.title.p) <= 30)
+		{
+			fprintf(stderr,"Title:   %-30s  Artist: %s\n",id3.title.p,id3.artist.p);
+		}
+		else
+		{
+			if(id3.title.fill) fprintf(stderr,"Title:   %s\n", id3.title.p);
+			if(id3.artist.fill) fprintf(stderr,"Artist:  %s\n", id3.artist.p);
+		}
+		if (id3.comment.fill && id3.album.fill && strlen(id3.comment.p) <= 30 && strlen(id3.album.p) <= 30)
+		{
+			fprintf(stderr,"Comment: %-30s  Album:  %s\n",id3.comment.p,id3.album.p);
+		}
+		else
+		{
+			if (id3.comment.fill)
+				fprintf(stderr,"Comment: %s\n", id3.comment.p);
+			if (id3.album.fill)
+				fprintf(stderr,"Album:   %s\n", id3.album.p);
+		}
+		if (id3.year.fill && id3.genre.fill && strlen(id3.year.p) <= 30 && strlen(id3.genre.p) <= 30)
+		{
+			fprintf(stderr,"Year:    %-30s  Genre:  %s\n",id3.year.p,id3.genre.p);
+		}
+		else
+		{
+			if (id3.year.fill)
+				fprintf(stderr,"Year:    %s\n", id3.year.p);
+			if (id3.genre.fill)
+				fprintf(stderr,"Genre:   %s\n", id3.genre.p);
+		}
 	}
+}
+
+/*
+	Preliminary UTF support routines
+
+	Text decoder decodes the ID3 text content from whatever encoding to plain ASCII, substituting unconvertable characters with '*' and returning the final length of decoded string.
+	TODO: iconv() to whatever locale. But we will want to keep this code anyway for systems w/o iconv(). But we currently assume that it is enough to allocate @len bytes in dest. That might not be true when converting to Unicode encodings.
+*/
+
+static int decode_il1(char* dest, unsigned char* source, size_t len)
+{
+	memcpy(dest, source, len);
+	return len;
+}
+
+static int decode_utf16(char* dest, unsigned char* source, size_t len, int str_be)
+{
+	int spos = 0;
+	int dlen = 0;
+
+	len -= len % 2;
+	/* Just ASCII, we take it easy. */
+	for (; spos < len; spos += 2)
+	{
+		unsigned short word;
+		if(str_be) word = source[spos] << 8 | source[spos+1];
+		else word = source[spos] | source[spos+1] << 8;
+		/* utf16 continuation byte */
+		if(word & 0xdc00) continue;
+		/* utf16 out-of-range codepoint */
+		else if(word > 255) dest[dlen++] = '*';
+		/* an old-school character */
+		else dest[dlen++] = word; /* would a cast be good here? */
+	}
+	return dlen;
+}
+
+static int decode_utf16bom(char* dest, unsigned char* source, size_t len)
+{
+	if(len < 2) return 0;
+	if(source[0] == 0xFF && source[1] == 0xFE) /* Little-endian */
+	return decode_utf16(dest, source + 2, len - 2, 0);
+	else /* Big-endian */
+	return decode_utf16(dest, source + 2, len - 2, 1);
+}
+
+static int decode_utf16be(char* dest, unsigned char* source, size_t len)
+{
+	return decode_utf16(dest, source, len, 1);
+}
+
+static int decode_utf8(char* dest, unsigned char* source, size_t len)
+{
+	int spos = 0;
+	int dlen = 0;
+	/* Just ASCII, we take it easy. */
+	for(; spos < len; spos++)
+	{
+		/* utf8 continuation byte bo, lead!*/
+		if((source[spos] & 0xc0) == 0x80) continue;
+		/* utf8 lead byte, no, cont! */
+		else if(source[spos] & 0x80) dest[dlen++] = '*';
+		else dest[dlen++] = source[spos];
+	}
+	return dlen;
+}
+
+/* determine byte length of string with characters wide @width;
+   terminating 0 will be included, too, if there is any */
+int wide_bytelen(int width, char* string, size_t string_size)
+{
+	size_t l = 0;
+	while(l < string_size)
+	{
+		int b;
+		for(b = 0; b < width; b++)
+		if(string[l + b])
+		break;
+
+		l += width;
+		if(b == width) /* terminating zero */
+		return l;
+	}
+	return l;
 }

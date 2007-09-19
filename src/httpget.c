@@ -2,7 +2,7 @@
 	httpget.c: http communication
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written Oliver Fromme
 	old timestamp: Wed Apr  9 20:57:47 MET DST 1997
 
@@ -26,36 +26,28 @@
 	Funny aspect there is that shoutcast servers do not do HTTP/1.1 chunked transfer but implement some different chunking themselves...
 */
 
-#include "config.h"
+#include "mpg123.h"
+
+/* That _is_ real now */
+#define ACCEPT_HEAD "Accept: audio/mpeg, audio/x-mpeg, audio/x-mpegurl, audio/x-scpls, application/pls, */*\r\n"
+char *proxyurl = NULL;
+
 #if !defined(WIN32) && !defined(GENERIC)
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-
-/* for SIZE_MAX */
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-#ifndef SIZE_MAX
-/* hm, is this portable across preprocessors? */
-#define SIZE_MAX ((size_t)-1)
-#endif
 
 #define HTTP_MAX_RELOCATIONS 20
 
 #include <netdb.h>
 #include <sys/param.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <ctype.h>
 
-#include "config.h"
-#include "mpg123.h"
-#include "debug.h"
+#include "stringbuf.h"
+#include "icy.h"
 
 #ifndef INADDR_NONE
 #define INADDR_NONE 0xffffffff
@@ -206,15 +198,38 @@ char *url2hostport (char *url, char **hname, unsigned long *hip, unsigned int *p
 	return (cptr);
 }
 
-char *proxyurl = NULL;
+char* get_header_val(const char *hname, char* response, size_t *length)
+{
+	char *tmp = NULL;
+	size_t len = 0;
+	size_t prelen = strlen(hname);
+	/* if header name found, next char is at least something, so just check for : */
+	if(!strncasecmp(hname, response, prelen) && (response[prelen] == ':'))
+	{
+		++prelen;
+		if((tmp = strchr(response, '\r')) != NULL ) tmp[0] = 0;
+		if((tmp = strchr(response, '\n')) != NULL ) tmp[0] = 0;
+		len = strlen(response)-prelen;
+		tmp = response+prelen;
+		while(len && ((tmp[0] == ' ') || (tmp[0] == '\t')))
+		{
+			++tmp;
+			--len;
+		}
+	}
+	*length = len;
+	return tmp;
+}
+
 unsigned long proxyip = 0;
 unsigned int proxyport;
 
-/* That is not real ... I should really check the type of what I get! */
-#define ACCEPT_HEAD "Accept: audio/mpeg, audio/x-mpegurl, audio/x-scpls, */*\r\n"
 /* needed for HTTP/1.1 non-pipelining mode */
 /* #define CONN_HEAD "Connection: close\r\n" */
 #define CONN_HEAD ""
+
+/* shoutcsast meta data: 1=on, 0=off */
+#define ACCEPT_ICY_META "Icy-MetaData: 1\r\n"
 
 char *httpauth = NULL;
 char *httpauth1 = NULL;
@@ -322,9 +337,10 @@ int http_open (char* url, char** content_type)
 	 * ACCEPT_HEAD               strlen(ACCEPT_HEAD)
 	 * "Authorization: Basic \r\n"	23
 	 * "\r\n"			 2
+	 * ... plus the other predefined header lines
 	 */
 	linelengthbase = 62 + strlen(PACKAGE_NAME) + strlen(PACKAGE_VERSION)
-	                 + strlen(ACCEPT_HEAD) + strlen(CONN_HEAD);
+	                 + strlen(ACCEPT_HEAD) + strlen(CONN_HEAD) + strlen(ACCEPT_ICY_META);
 
 	if(httpauth) {
 		tmp = (strlen(httpauth) + 1) * 4;
@@ -484,6 +500,7 @@ int http_open (char* url, char** content_type)
 		} */
 		strcat (request, ACCEPT_HEAD);
 		strcat (request, CONN_HEAD);
+		strcat (request, ACCEPT_ICY_META);
 		server.sin_family = AF_INET;
 		server.sin_port = htons(myport);
 		server.sin_addr.s_addr = myip;
@@ -606,7 +623,7 @@ int http_open (char* url, char** content_type)
 				if(purl_size < needed_length)
 				{
 					purl_size = needed_length;
-					purl = realloc(purl, purl_size);
+					purl = safe_realloc(purl, purl_size);
 					if(purl == NULL)
 					{
 						http_failure;
@@ -628,24 +645,14 @@ int http_open (char* url, char** content_type)
 			}
 			else
 			{
+				char *tmp;
+				size_t len;
 				/* watch out for content type */
-				debug1("searching for content-type... %s", response);
-				if(!strncasecmp("content-type:", response, 13))
+				debug1("searching for header values... %s", response);
+				if((tmp = get_header_val("content-type", response, &len)))
 				{
 					if(content_type != NULL)
 					{
-						char *tmp = NULL;
-						size_t len = 0;
-						
-						if((tmp = strchr(response, '\r')) != NULL ) tmp[0] = 0;
-						if((tmp = strchr(response, '\n')) != NULL ) tmp[0] = 0;
-						len = strlen(response)-13;
-						tmp = response+13;
-						while(len && ((tmp[0] == ' ') || (tmp[0] == '\t')))
-						{
-							++tmp;
-							--len;
-						}
 						if(len)
 						{
 							if(*content_type != NULL) free(*content_type);
@@ -656,9 +663,27 @@ int http_open (char* url, char** content_type)
 								(*content_type)[len] = 0;
 								debug1("got type %s", *content_type);
 							}
-							else fprintf(stderr, "Error: canno allocate memory for content type!\n");
+							else error("cannot allocate memory for content type!");
 						}
 					}
+				}
+				/* watch out for icy-name */
+				else if((tmp = get_header_val("icy-name", response, &len)))
+				{
+					if(set_stringbuf(&icy.name, tmp)) debug1("got icy-name %s", icy.name.p);
+					else error1("unable to set icy name to %s!", tmp);
+				}
+				/* watch out for icy-url */
+				else if((tmp = get_header_val("icy-url", response, &len)))
+				{
+					if(set_stringbuf(&icy.url, tmp)) debug1("got icy-url %s", icy.name.p);
+					else error1("unable to set icy url to %s!", tmp);
+				}
+				/* watch out for icy-metaint */
+				else if((tmp = get_header_val("icy-metaint", response, &len)))
+				{
+					icy.interval = atoi(tmp);
+					debug1("got icy-metaint %li", (long int)icy.interval);
 				}
 			}
 		} while (response[0] != '\r' && response[0] != '\n');
@@ -677,37 +702,11 @@ exit:
 }
 
 #else /* defined(WIN32) || defined(GENERIC) */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 
-extern int errno;
-
-#include "mpg123.h"
-
-/* stubs for Win32 */
-
-int writestring (int fd, char *string)
-{
-	return 1;
-}
-
-int readstring (char *string, int maxlen, FILE *f)
-{
-}
-
-char *url2hostport (char *url, char **hname, unsigned long *hip, unsigned int *port)
-{
-}
-
-char *proxyurl = NULL;
-unsigned long proxyip = 0;
-unsigned int proxyport;
-
-#define ACCEPT_HEAD "Accept: audio/mpeg, audio/x-mpegurl, */*\r\n"
-
+/* stub */
 int http_open (char* url, char** content_type)
 {
+	return -1;
 }
 #endif
 

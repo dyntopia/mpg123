@@ -1,3 +1,47 @@
+mpg123 (0.67-1) unstable; urgency=low
+
+  * New upsteam version.
+    + Includes fix for VPATH builds from 0.66-1.
+  * debian/rules: Guard against multiple invocations of configure target
+    during build. Fixes failure when building twice in a row. Closes: #442680
+  * debian/rules: Include optimised builds on i386. Closes: #433693
+  * debian/rules: Remove obsolete touch commands needed only when patching
+    configure.ac.
+
+ -- Daniel Kobras <kobras@debian.org>  Wed, 19 Sep 2007 21:24:32 +0200
+
+mpg123 (0.66-1.1) unstable; urgency=low
+
+  * porter NMU
+  * Add armel to architecture list for mpg123-alsa. Closes: #431092
+
+ -- Joey Hess <joeyh@debian.org>  Mon, 10 Sep 2007 16:26:29 -0400
+
+mpg123 (0.66-1) unstable; urgency=low
+
+  * New upstream version.
+    + src/debug.h, src/httpget.c: Debug macro fixes merged upstream.
+  * src/Makefile.am, src/Makefile.in: Fix custom preprocessing directive
+    for asm files during VPATH builds.
+  * debian/rules: Fix incorrect quoting in clean target that prevented
+    reaping of build stamps. Closes: #424580
+  * debian/rules: Man page moved to man1. Make sure to copy from new
+    location.
+
+ -- Daniel Kobras <kobras@debian.org>  Mon, 11 Jun 2007 23:31:30 +0200
+
+mpg123 (0.65-1) unstable; urgency=low
+
+  * New upstream version. Closes: #406842
+    + Includes all our patches outside of the debian/ subdirectory.
+    + Improved ID3v2 handling. Closes: #105329
+  * src/debug.h: Make sure that debug macros evaluate to a single
+    statement. Fix (yet another) compile error in audio_nas.c.
+  * src/httpget.c: Remove special cases in debug macro usage that
+    break with the above fix in place.
+
+ -- Daniel Kobras <kobras@debian.org>  Mon, 16 Apr 2007 22:07:53 +0200
+
 mpg123 (0.61-5) unstable; urgency=high
 
   * src/httpget.c: Fix potential denial of service attack on premature

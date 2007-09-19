@@ -2,22 +2,21 @@
 	audio_portaudio: audio output via PortAudio cross-platform audio API
 
 	copyright 2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Nicholas J. Humfrey
 */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
 
 #include <portaudio.h>
 
-#include "config.h"
 #include "audio.h"
 #include "sfifo.h"
 #include "mpg123.h"
-#include "debug.h"
 
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 #define SAMPLE_SIZE			(2)
 #define FRAMES_PER_BUFFER	(256)
@@ -107,7 +106,11 @@ int audio_play_samples(struct audio_info_struct *ai, unsigned char *buf, int len
 	
 	/* Sleep for half the length of the FIFO */
 	while (sfifo_space( &fifo ) < len ) {
+#ifdef WIN32
+		Sleep( (FIFO_DURATION/2) * 1000);
+#else
 		usleep( (FIFO_DURATION/2) * 1000000 );
+#endif
 	}
 	
 	/* Write the audio to the ring buffer */

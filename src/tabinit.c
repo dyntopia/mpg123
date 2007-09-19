@@ -2,27 +2,25 @@
 	tabinit.c: initialize tables...
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include <stdlib.h>
-
-#include "config.h"
 #include "mpg123.h"
-#include "debug.h"
 
 static unsigned char *conv16to8_buf = NULL;
 unsigned char *conv16to8;
 
-#ifndef USE_MMX
-real decwin[512+32];
-#ifdef USE_ALTIVEC
-static real __attribute__ ((aligned (16))) cos64[16];
-static real __attribute__ ((aligned (16))) cos32[8];
-static real __attribute__ ((aligned (16))) cos16[4];
-static real __attribute__ ((aligned (16))) cos8[2];
-static real __attribute__ ((aligned (16))) cos4[1];
+/* All optimizations share this code - with the exception of MMX */
+#ifndef OPT_MMX_ONLY
+real decwin[512+32]; /* MMX has another one */
+/* that altivec alignment part here should not hurt generic code, I hope */
+#ifdef OPT_ALTIVEC
+static ALIGNED(16) real cos64[16];
+static ALIGNED(16) real cos32[8];
+static ALIGNED(16) real cos16[4];
+static ALIGNED(16) real cos8[2];
+static ALIGNED(16) real cos4[1];
 #else
 static real cos64[16],cos32[8],cos16[4],cos8[2],cos4[1];
 #endif
@@ -58,7 +56,7 @@ static long intwinbase[] = {
  64019, 65290, 66494, 67629, 68692, 69679, 70590, 71420, 72169, 72835,
  73415, 73908, 74313, 74630, 74856, 74992, 75038 };
 
-void make_decode_tables(long scaleval)
+void make_decode_tables(scale_t scaleval)
 {
   int i,j,k,kr,divv;
   real *costab;

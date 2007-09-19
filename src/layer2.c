@@ -2,14 +2,13 @@
 	layer2.c: the layer 2 decoder, root of mpg123
 
 	copyright 1994-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 
 	mpg123 started as mp2 decoder a long time ago...
 */
 
 
-#include "config.h"
 #include "mpg123.h"
 #include "l2tables.h"
 
@@ -53,20 +52,34 @@ void init_layer2(void)
 
   for(k=0;k<27;k++)
   {
-    double m=mulmul[k];
-    table = muls[k];
-#ifdef USE_MMX
-    if(!param.down_sample) 
-        for(j=3,i=0;i<63;i++,j--)
-    *table++ = 16384 * m * pow(2.0,(double) j / 3.0);
-    else
-#endif
-    for(j=3,i=0;i<63;i++,j--)
-      *table++ = m * pow(2.0,(double) j / 3.0);
+    table = opt_init_layer2_table(muls[k], mulmul[k]);
     *table++ = 0.0;
   }
 }
 
+real* init_layer2_table(real *table, double m)
+{
+	int i,j;
+	for(j=3,i=0;i<63;i++,j--)
+	*table++ = m * pow(2.0,(double) j / 3.0);
+
+	return table;
+}
+
+#ifdef OPT_MMXORSSE
+real* init_layer2_table_mmx(real *table, double m)
+{
+	int i,j;
+	if(!param.down_sample) 
+	for(j=3,i=0;i<63;i++,j--)
+	*table++ = 16384 * m * pow(2.0,(double) j / 3.0);
+	else
+	for(j=3,i=0;i<63;i++,j--)
+	*table++ = m * pow(2.0,(double) j / 3.0);
+
+	return table;
+}
+#endif
 
 void II_step_one(unsigned int *bit_alloc,int *scale,struct frame *fr)
 {
@@ -267,7 +280,7 @@ int do_layer2(struct frame *fr,int outmode,struct audio_info_struct *ai)
   int clip=0;
   int i,j;
   int stereo = fr->stereo;
-  real fraction[2][4][SBLIMIT]; /* pick_table clears unused subbands */
+  ALIGNED(16) real fraction[2][4][SBLIMIT]; /* pick_table clears unused subbands */
   unsigned int bit_alloc[64];
   int scale[192];
   int single = fr->single;

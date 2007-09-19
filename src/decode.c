@@ -2,26 +2,22 @@
 	decode.c: decoding samples...
 
 	copyright 1995-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include <stdlib.h>
 #include <math.h>
 #include <string.h>
 
-#include "config.h"
 #include "mpg123.h"
+#include "decode.h"
 
-#define WRITE_SAMPLE(samples,sum,clip) \
-  if( (sum) > REAL_PLUS_32767) { *(samples) = 0x7fff; (clip)++; } \
-  else if( (sum) < REAL_MINUS_32768) { *(samples) = -0x8000; (clip)++; } \
-  else { *(samples) = REAL_TO_SHORT(sum); }
+/* 8bit functions silenced for FLOATOUT */
 
 int synth_1to1_8bit(real *bandPtr,int channel,unsigned char *samples,int *pnt)
 {
-  short samples_tmp[64];
-  short *tmp1 = samples_tmp + channel;
+  sample_t samples_tmp[64];
+  sample_t *tmp1 = samples_tmp + channel;
   int i,ret;
   int pnt1=0;
 
@@ -29,7 +25,11 @@ int synth_1to1_8bit(real *bandPtr,int channel,unsigned char *samples,int *pnt)
   samples += channel + *pnt;
 
   for(i=0;i<32;i++) {
+#ifdef FLOATOUT
+    *samples = 0;
+#else
     *samples = conv16to8[*tmp1>>AUSHIFT];
+#endif
     samples += 2;
     tmp1 += 2;
   }
@@ -40,8 +40,8 @@ int synth_1to1_8bit(real *bandPtr,int channel,unsigned char *samples,int *pnt)
 
 int synth_1to1_8bit_mono(real *bandPtr,unsigned char *samples,int *pnt)
 {
-  short samples_tmp[64];
-  short *tmp1 = samples_tmp;
+  sample_t samples_tmp[64];
+  sample_t *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
@@ -49,7 +49,11 @@ int synth_1to1_8bit_mono(real *bandPtr,unsigned char *samples,int *pnt)
   samples += *pnt;
 
   for(i=0;i<32;i++) {
+#ifdef FLOATOUT
+    *samples++ = 0;
+#else
     *samples++ = conv16to8[*tmp1>>AUSHIFT];
+#endif
     tmp1 += 2;
   }
   *pnt += 32;
@@ -59,8 +63,8 @@ int synth_1to1_8bit_mono(real *bandPtr,unsigned char *samples,int *pnt)
 
 int synth_1to1_8bit_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
 {
-  short samples_tmp[64];
-  short *tmp1 = samples_tmp;
+  sample_t samples_tmp[64];
+  sample_t *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
@@ -68,8 +72,13 @@ int synth_1to1_8bit_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
   samples += *pnt;
 
   for(i=0;i<32;i++) {
+#ifdef FLOATOUT
+    *samples++ = 0;
+    *samples++ = 0;
+#else
     *samples++ = conv16to8[*tmp1>>AUSHIFT];
     *samples++ = conv16to8[*tmp1>>AUSHIFT];
+#endif
     tmp1 += 2;
   }
   *pnt += 64;
@@ -79,8 +88,8 @@ int synth_1to1_8bit_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
 
 int synth_1to1_mono(real *bandPtr,unsigned char *samples,int *pnt)
 {
-  short samples_tmp[64];
-  short *tmp1 = samples_tmp;
+  sample_t samples_tmp[64];
+  sample_t *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
@@ -88,11 +97,11 @@ int synth_1to1_mono(real *bandPtr,unsigned char *samples,int *pnt)
   samples += *pnt;
 
   for(i=0;i<32;i++) {
-    *( (short *)samples) = *tmp1;
-    samples += 2;
+    *( (sample_t *)samples) = *tmp1;
+    samples += sizeof(sample_t);
     tmp1 += 2;
   }
-  *pnt += 64;
+  *pnt += 32*sizeof(sample_t);
 
   return ret;
 }
@@ -103,11 +112,11 @@ int synth_1to1_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
   int i,ret;
 
   ret = synth_1to1(bandPtr,0,samples,pnt);
-  samples = samples + *pnt - 128;
+  samples = samples + *pnt - 64*sizeof(sample_t);
 
   for(i=0;i<32;i++) {
-    ((short *)samples)[1] = ((short *)samples)[0];
-    samples+=4;
+    ((sample_t *)samples)[1] = ((sample_t *)samples)[0];
+    samples+=2*sizeof(sample_t);
   }
 
   return ret;
@@ -119,7 +128,7 @@ int synth_1to1(real *bandPtr,int channel,unsigned char *out,int *pnt)
   static real buffs[2][2][0x110];
   static const int step = 2;
   static int bo = 1;
-  short *samples = (short *) (out+*pnt);
+  sample_t *samples = (sample_t *) (out+*pnt);
 
   real *b0,(*buf)[0x110];
   int clip = 0; 
@@ -152,7 +161,7 @@ int synth_1to1(real *bandPtr,int channel,unsigned char *out,int *pnt)
 
   {
     register int j;
-    real *window = decwin + 16 - bo1;
+    real *window = opt_decwin + 16 - bo1;
  
     for (j=16;j;j--,window+=0x10,samples+=step)
     {
@@ -216,7 +225,7 @@ int synth_1to1(real *bandPtr,int channel,unsigned char *out,int *pnt)
     }
   }
 
-  *pnt += 128;
+  *pnt += 64*sizeof(sample_t);
 
   return clip;
 }

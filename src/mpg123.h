@@ -2,16 +2,25 @@
 	mpg123: main code of the program (not of the decoder...)
 
 	copyright 1995-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 
 	mpg123 defines 
 	used source: musicout.h from mpegaudio package
 */
 
+#ifndef _MPG123_H_
+#define _MPG123_H_
+
+/* everyone needs it */
+#include "config.h"
+#include "debug.h"
+
+#include        <stdlib.h>
 #include        <stdio.h>
 #include        <string.h>
 #include        <signal.h>
+#include        <math.h>
 
 #ifndef WIN32
 #include        <sys/signal.h>
@@ -19,17 +28,26 @@
 #endif
 /* want to suport large files in future */
 #ifdef HAVE_SYS_TYPES_H
-	#include <sys/types.h>
+#include <sys/types.h>
 #endif
-#ifndef off_t
-	#define off_t long
+
+/* More integer stuff, just take what we can get... */
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
 #endif
-#include        <math.h>
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
 
-
-
-#ifndef _AUDIO_H_
-#define _AUDIO_H_
+#ifndef SIZE_MAX
+#define SIZE_MAX ((size_t)-1)
+#endif
+#ifndef ULONG_MAX
+#define ULONG_MAX ((unsigned long)-1)
+#endif
 
 typedef unsigned char byte;
 
@@ -37,29 +55,17 @@ typedef unsigned char byte;
 #include <float.h>
 #endif
 
-#define MPG123_REMOTE
 #define REMOTE_BUFFER_SIZE 2048
-#ifdef HPUX
-#define random rand
-#define srandom srand
-#endif
 
 #define SKIP_JUNK 1
 
-#ifdef _WIN32	/* Win32 Additions By Tony Million */
-# undef WIN32
-# define WIN32
-
+#ifndef M_PI
 # define M_PI       3.14159265358979323846
-# define M_SQRT2	1.41421356237309504880
-# define REAL_IS_FLOAT
-# define NEW_DCT9
-
-# define random rand
-# define srandom srand
-
-# undef MPG123_REMOTE           /* Get rid of this stuff for Win32 */
 #endif
+#ifndef M_SQRT2
+# define M_SQRT2	1.41421356237309504880
+#endif
+
 
 #include "xfermem.h"
 
@@ -112,12 +118,6 @@ typedef unsigned char byte;
 # define REAL_MUL(x, y)                ((x) * (y))
 #endif
 
-#ifdef __GNUC__
-#define INLINE inline
-#else
-#define INLINE
-#endif
-
 #include "audio.h"
 
 /* AUDIOBUFSIZE = n*64 with n=1,2,3 ...  */
@@ -136,8 +136,15 @@ typedef unsigned char byte;
 #define         MPG_MD_DUAL_CHANNEL     2
 #define         MPG_MD_MONO             3
 
+/* float output only for generic decoder! */
+#ifdef FLOATOUT
+#define MAXOUTBURST 1.0
+#define scale_t double
+#else
 /* I suspect that 32767 would be a better idea here, but Michael put this in... */
 #define MAXOUTBURST 32768
+#define scale_t long
+#endif
 
 /* Pre Shift fo 16 to 8 bit converter table */
 #define AUSHIFT (3)
@@ -151,11 +158,9 @@ struct al_table
 
 struct frame {
     struct al_table *alloc;
+    /* could use types from optimize.h */
     int (*synth)(real *,int,unsigned char *,int *);
     int (*synth_mono)(real *,unsigned char *,int *);
-#ifdef USE_3DNOW
-    void (*dct36)(real *,real *,real *,real *,real *);
-#endif
     int stereo; /* I _think_ 1 for mono and 2 for stereo */
     int jsbound;
     int single;
@@ -182,6 +187,12 @@ struct frame {
 		unsigned long num; /* the nth frame in some stream... */
 };
 
+#define VERBOSE_MAX 3
+
+#define MONO_LEFT 1
+#define MONO_RIGHT 2
+#define MONO_MIX 4
+
 struct parameter {
   int aggressive; /* renice to max. priority */
   int shuffle;	/* shuffle/random play */
@@ -205,9 +216,12 @@ struct parameter {
   long doublespeed;
   long halfspeed;
   int force_reopen;
-#ifdef USE_3DNOW
+  /* the testing part shared between 3dnow and multi mode */
+#ifdef OPT_3DNOW
   int stat_3dnow; /* automatic/force/force-off 3DNow! optimized code */
-  int test_3dnow;
+#endif
+#ifdef OPT_MULTI
+  int test_cpu;
 #endif
   long realtime;
   char filename[256];
@@ -215,8 +229,21 @@ struct parameter {
   int gapless; /* (try to) remove silence padding/delay to enable gapless playback */
 #endif
   long listentry; /* possibility to choose playback of one entry in playlist (0: off, > 0 : select, < 0; just show list*/
-  int rva; /* (which) rva to do: <0: nothing, 0: radio/mix/track 1: album/audiophile */
+  int rva; /* (which) rva to do: 0: nothing, 1: radio/mix/track 2: album/audiophile */
   char* listname; /* name of playlist */
+  int long_id3;
+  #ifdef OPT_MULTI
+  char* cpu; /* chosen optimization, can be NULL/""/"auto"*/
+  int list_cpu;
+  #endif
+#ifdef FIFO
+	char* fifo;
+#endif
+#ifndef WIN32
+	long timeout; /* timeout for reading in seconds */
+#endif
+	long loop;    /* looping of tracks */
+	int delay;    /* delay between songs (in seconds) */
 };
 
 /* start to use off_t to properly do LFS in future ... used to be long */
@@ -235,11 +262,13 @@ struct reader {
   off_t filepos;
   int  filept;
   int  flags;
+  long timeout_sec;
   unsigned char id3buf[128];
 };
 #define READER_FD_OPENED 0x1
 #define READER_ID3TAG    0x2
 #define READER_SEEKABLE  0x4
+#define READER_NONBLOCK  0x8
 
 extern struct reader *rd,readers[];
 extern char *equalfile;
@@ -334,15 +363,7 @@ extern int do_layer2(struct frame *fr,int,struct audio_info_struct *);
 extern int do_layer1(struct frame *fr,int,struct audio_info_struct *);
 extern void do_equalizer(real *bandPtr,int channel);
 
-#ifdef PENTIUM_OPT
-extern int synth_1to1_pent (real *,int,unsigned char *);
-#endif
-extern int synth_1to1 (real *,int,unsigned char *,int *);
-extern int synth_1to1_8bit (real *,int,unsigned char *,int *);
-extern int synth_1to1_mono (real *,unsigned char *,int *);
-extern int synth_1to1_mono2stereo (real *,unsigned char *,int *);
-extern int synth_1to1_8bit_mono (real *,unsigned char *,int *);
-extern int synth_1to1_8bit_mono2stereo (real *,unsigned char *,int *);
+/* synth_1to1 in optimize.h, one should also use opts for these here... */
 
 extern int synth_2to1 (real *,int,unsigned char *,int *);
 extern int synth_2to1_8bit (real *,int,unsigned char *,int *);
@@ -370,19 +391,11 @@ extern int  hsstell(void);
 extern void set_pointer(long);
 extern void huffman_decoder(int ,int *);
 extern void huffman_count1(int,int *);
-extern void print_stat(struct frame *fr,unsigned long no,long buffsize,struct audio_info_struct *ai);
 extern int get_songlen(struct frame *fr,int no);
 
 extern void init_layer3(int);
 extern void init_layer2(void);
-extern void make_decode_tables(long scale);
 extern int make_conv16to8_table(int);
-extern void dct64(real *,real *,real *);
-
-#ifdef USE_MMX
-extern void dct64_MMX(short *a,short *b,real *c);
-extern int synth_1to1_MMX(real *, int, short *, short *, int *);
-#endif
 
 extern int synth_ntom_set_step(long,long);
 
@@ -405,10 +418,6 @@ extern int cdr_close(void);
 extern unsigned char *conv16to8;
 extern long freqs[9];
 extern real muls[27][64];
-extern real decwin[512+32];
-#ifndef USE_MMX
-extern real *pnts[5];
-#endif
 
 extern real equalizer[2][32];
 extern real equalizer_sum[2][32];
@@ -418,21 +427,15 @@ extern struct audio_name audio_val2name[];
 
 extern struct parameter param;
 
-/* 486 optimizations */
-#define FIR_BUFFER_SIZE  128
-extern void dct64_486(int *a,int *b,real *c);
-extern int synth_1to1_486(real *bandPtr,int channel,unsigned char *out,int nb_blocks);
-
-/* 3DNow! optimizations */
-#ifdef USE_3DNOW
-extern int getcpuflags(void);
-extern void dct36(real *,real *,real *,real *,real *);
-extern void dct36_3dnow(real *,real *,real *,real *,real *);
-extern int synth_1to1_3dnow(real *,int,unsigned char *,int *);
-#endif
-
 /* avoid the SIGINT in terminal control */
 void next_track(void);
-extern long outscale;
+extern scale_t outscale;
+
+#include "optimize.h"
+
+void *safe_realloc(void *ptr, size_t size);
+#ifndef HAVE_STRERROR
+const char *strerror(int errnum);
+#endif
 
 #endif

@@ -2,24 +2,18 @@
 	audio_aix.c: Driver for IBM RS/6000 with AIX Ultimedia Services
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Juergen Schoew and Tomas Oegren
 */
-
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
 
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/audio.h>
 #include <stropts.h>
-#include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 
-#include "config.h"
 #include "mpg123.h"
 
 /* use AUDIO_BSIZE to set the msec for audio buffering in Ultimedia library

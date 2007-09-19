@@ -1,48 +1,54 @@
-/
-/ decode_3dnow.s - 3DNow! optimized synth_1to1()
-/
-/ copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-/ see COPYING and AUTHORS files in distribution or http://mpg123.de
-/ initially written by Syuuhei Kashiyama
+/*
+	decode_3dnow.s - 3DNow! optimized synth_1to1()
 
-/ This code based 'decode_3dnow.s' by Syuuhei Kashiyama
-/ <squash@mb.kcom.ne.jp>,only two types of changes have been made:
-/
-/ - remove PREFETCH instruction for speedup
-/ - change function name for support 3DNow! automatic detect
-/ - femms moved to before 'call dct64_3dnow'
-/
-/ You can find Kashiyama's original 3dnow! support patch
-/ (for mpg123-0.59o) at
-/ http://user.ecc.u-tokyo.ac.jp/~g810370/linux-simd/ (Japanese).
-/
-/ by KIMURA Takuhiro <kim@hannah.ipc.miyakyo-u.ac.jp> - until 31.Mar.1999
-/                    <kim@comtec.co.jp>               - after  1.Apr.1999
-/
+	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
+	initially written by Syuuhei Kashiyama
 
-///
-/// Replacement of synth_1to1() with AMD's 3DNow! SIMD operations support
-/// 
-/// Syuuhei Kashiyama <squash@mb.kcom.ne.jp>
-/// 
-/// The author of this program disclaim whole expressed or implied
-/// warranties with regard to this program, and in no event shall the
-/// author of this program liable to whatever resulted from the use of
-/// this program. Use it at your own risk.
-/// 
+	This code based 'decode_3dnow.s' by Syuuhei Kashiyama
+	<squash@mb.kcom.ne.jp>,only two types of changes have been made:
 
+	- remove PREFETCH instruction for speedup
+	- change function name for support 3DNow! automatic detect
+	- femms moved to before 'call dct64_3dnow'
+
+	You can find Kashiyama's original 3dnow! support patch
+	(for mpg123-0.59o) at
+	http://user.ecc.u-tokyo.ac.jp/~g810370/linux-simd/ (Japanese).
+
+	by KIMURA Takuhiro <kim@hannah.ipc.miyakyo-u.ac.jp> - until 31.Mar.1999
+                  	<kim@comtec.co.jp>               - after  1.Apr.1999
+
+
+
+	Replacement of synth_1to1() with AMD's 3DNow! SIMD operations support
+
+	Syuuhei Kashiyama <squash@mb.kcom.ne.jp>
+
+	The author of this program disclaim whole expressed or implied
+	warranties with regard to this program, and in no event shall the
+	author of this program liable to whatever resulted from the use of
+	this program. Use it at your own risk.
+*/
+
+#include "mangle.h"
+
+#if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__APPLE__)
+	.comm	buffs.40,4352
+#else
 	.local	buffs.40
 	.comm	buffs.40,4352,32
+#endif
 .data
-	.align 4
-	.type	 bo.42,@object
-	.size	 bo.42,4
+	ALIGN4
+/*	.type	 bo.42,@object */
+/*	.size	 bo.42,4 */
 bo.42:
 	.long 1
 .text
-.globl synth_1to1_3dnow
-	.type	 synth_1to1_3dnow,@function
-synth_1to1_3dnow:
+.globl ASM_NAME(synth_1to1_3dnow)
+/*	.type	 ASM_NAME(synth_1to1_3dnow),@function */
+ASM_NAME(synth_1to1_3dnow):
 	subl $24,%esp
 	pushl %ebp
 	pushl %edi
@@ -57,12 +63,12 @@ synth_1to1_3dnow:
 	movl %esi,16(%esp)
 
 	femms
-	/fixed by Takuhiro	
-	cmpl $0,equalfile
+	/* fixed by Takuhiro	 */
+	cmpl $0,ASM_NAME(equalfile)
 	je .L25
 	pushl %ebx
 	pushl 48(%esp)
-	call do_equalizer_3dnow
+	call ASM_NAME(do_equalizer_3dnow)
 	addl $8,%esp
 .L25:
 	testl %ebx,%ebx
@@ -94,7 +100,7 @@ synth_1to1_3dnow:
 	leal 1088(,%eax,4),%eax
 	addl %ebx,%eax
 	pushl %eax
-	call dct64_3dnow
+	call ASM_NAME(dct64_3dnow)
 	addl $12,%esp
 	jmp .L29
 .L28:
@@ -108,18 +114,18 @@ synth_1to1_3dnow:
 	sall $2,%esi
 	leal (%ecx,%edx,4),%eax
 	pushl %eax
-	call dct64_3dnow
+	call ASM_NAME(dct64_3dnow)
 	addl $12,%esp
 	movl %esi,20(%esp)
 .L29:
-	movl $decwin+64,%edx
+	movl $ASM_NAME(decwin)+64,%edx
 	movl $16,%ecx
 	subl 20(%esp),%edx
 	movl 16(%esp),%edi
 
 	movq (%edx),%mm0
 	movq (%ebx),%mm1
-	.align 32
+	ALIGN32
 .L33:
 	movq 8(%edx),%mm3
         pfmul %mm1,%mm0
@@ -206,7 +212,7 @@ synth_1to1_3dnow:
 	movd -4(%edx),%mm1
 	punpckldq 4(%ebx),%mm0
 	punpckldq -8(%edx),%mm1
-	.align 32
+	ALIGN32
 .L46:						
 	movd 8(%ebx),%mm3
 	movd -12(%edx),%mm4

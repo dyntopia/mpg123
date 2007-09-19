@@ -1,6 +1,6 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 *   mpg123 - MPEG 1.0/2.0/2.5 audio player            *
-*   README for version 0.61, dated at 20.10.2006      *
+*   README for version 0.6x, dated at 03.06.2007      *
 *                                                     *
 * ...still the fastest MPEG audio player for UNIX ;)  *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -21,7 +21,7 @@ Project's official website URL is
 	http://mpg123.org
 (or http://mpg123.orgis.org as fallback address if there is a problem with the DNS forwarding)
 
-for the traditional hope page and
+for the traditional home page and
 
 	http://sourceforge.net/projects/mpg123
 
@@ -60,6 +60,10 @@ Mpg123 is a console program - normally it just plays a list of files you specify
 
 	mpg123 --help
 
+or, for the full story,
+
+	mpg123 --longhelp
+
 on command line syntax/options. I encourage you to check out the --gapless and --rva-album/--rva-mix options:-)
 
 In the simple "mpg123 file1.mp3 file2.mp3" mode, the only thing you can do to interact is to press Ctrl+C to skip to next track or end the whole playback if pressing it twice.
@@ -70,23 +74,30 @@ Note that this Ctrl+C behaviour is special to this mode; when any of the followi
 
 You can specify the option -C to enable a terminal control interface enabling to influence playback on current title/playlist by pressing some key:
 
-'b' to seek back to beginning of track
-'f' to skip to nest track
-'p' for pause (actually, looping current chunk)
-'s' to stop/restart playback (the usual "pause" function...)
-(space bar for the same)
-'q' to quit playback
-',' for rewind seek
-'.' for forward seek
-';' for fast rewind
-':' for fast forward
-'<' for fine rewind
-'>' for fine forward
-'h' for printout of current key bindings
+ -= terminal control keys =-
+[s] or space bar	 interrupt/restart playback (i.e. 'pause')
+[f]	 next track
+[b]	 back to beginning of track
+[p]	 pause while looping current sound chunk
+[.]	 forward
+[,]	 rewind
+[:]	 fast forward
+[;]	 fast rewind
+[>]	 fine forward
+[<]	 fine rewind
+[+]	 volume up
+[-]	 volume down
+[r]	 RVA switch
+[v]	 verbose switch
+[h]	 this help
+[q]	 quit
 
 You can change these bindings to key to your liking by modifying term.h .
 
 Note: This interface needs not to be available on _every_ platform/build.
+
+Another note: The volume up and down is performed by changing the scale factor (like the -f parameter) ... so the audio is scaled digitally in the given range of the output format (usually 16bits). That means the lowering the volume will decrease the dynamic range and possibly lessen the quality while increasing volume can in fact increase the dynamic range and thus make it better, if you deal with a silent source and no clipping is necessary.
+It is a good idea to use RVA values stored in the file for adjusting low volume files, though - mpg123 handles that in addition to your volume setting.
 
 3.3 Control Interface for Frontends
 
@@ -96,14 +107,19 @@ There used to be several interfaces for frontends left over from that past, but 
 
 It contains of communication of textual messages via standard input to mpg123 and responses to standard output unless the -s switch for output of audio data on stdout is used - then the responses come via stderr.
 
-See doc/README.control for usage.
+See doc/README.remote for usage.
 
 
 4. Speed
 
 mpg123 is fast. Any faster software player is probably based on some hacked mpg123;-)
-This is the case with current MPlayer, wich includes mpg123-based code in its mp3lib.
-There are some nice assembler optimizations (SSE, for example) that may make mplayer a faster mp3 decoder in cases where these are applicable - we are preparing to incorporate these into the mpg123 player to make it the fastest mp3 player under all circumstances.
+MPlayer included mpg123 source code in it's mp3lib and we have to be thankful for the MPlayer folks adding SSE, 3DNowExt and AltiVec optimizations over the years, which we were able to backport.
+
+mpg123 includes the AltiVec optimization since version 0.61 and the SSE and 3DNowExt optimizations since 0.66 .
+Also, version 0.66 adds the merged x86 optimization build, which includes every applicable optimization for x86 cpus except the one for i486, wich is a bit special.
+
+Now mpg123 catched up with MPlayer's mp3lib concerning decoding speed on my Pentium M (which supports SSE):
+Decoding a certain album (Queensryche's Rage for Order) to /dev/null took 22.4s user time with mpg123-0.66 compared to 24.7s with MPlayer-1.0rc1 .
 
 
 5. Accuracy
@@ -155,12 +171,12 @@ Code is copyrighted by Michael Hipp, who made it free software under the terms o
 
 Please see doc/ROAD_TO_LGPL, COPYING and AUTHORS for details on that. Note that the only notable legacy non-LGPL file was the old alsa output that didn't work with alsa 0.9/1.0 anymore.
 Also, there has been a libao output in the betas 0.60 for a short period. Libao being generally problematic for us because of its GPL license, this output is not distributed anymore in the release packages. There is now a new, LGPLed alsa output that made both the old alsa and libao obsolete for our purposes.
-So, the distributed mpg123 releases actually only contains LGPL code, but you get the other files from our subversion repository if you checkout the trunk / version tags.
+So, the distributed mpg123 releases actually only contain LGPL code, but you get the other files from our subversion repository if you checkout the trunk / version tags.
 
 There has been quite some confusion about the licensing and "freeness" of mpg123 in the past.
 The initial "free for private use, ask me when you want to do something commercial" license caused some people to avoid mpg123 and even to write a replacement mimicking the interface but using a different decoding engine - what was not actively developed for too long but entered the "free" software sections.
 
-The Debian (non-free section) and Gentoo distributions cared about the last stable and the last development release of mpg123 over the years with mainly  applying security fixes. Thanks go to the distribution maintainers for not letting it alone to bitrot over the years.
+The Debian (non-free section) and Gentoo distributions cared about the last stable and the last development release of mpg123 over the years with mainly applying security fixes. Thanks go to the distribution maintainers for not letting it alone to bitrot over the years.
 
 Thomas Orgis started to hack on mpg123 in 2004 while working on his personal audio experience with mixplayd and later DerMixD, utilizing the generic control interface. In Feb 2005, he crammed control interface improvements together with Debian's r19 fixes and released the personal fork/patch named mpg123-thor.
 Little later that year, Nicholas J. Humphrey independently created the sourceforge project and released an autotooled 0.59r under official GPL flag with Debian and MacOSX fixes.
