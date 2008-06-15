@@ -1,74 +1,78 @@
 #!/usr/bin/make -f
+#
+# TODO:
+# * End-user documentation of what's going on?
+#   Include a NEWS.Debian in the final upload.
+# Non-essentials:
+# * Extend build-deps to include further output plugins (arts, jack...)?
+# * Create a libmpg123-dbg package?
+# * Build xmms2 plugin?
 
 PACKAGE:=mpg123
 
 ARCH:=$(shell dpkg-architecture -qDEB_HOST_GNU_CPU)
 OS:=$(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 
-TARGETS:=mpg123-oss mpg123-esd mpg123-nas
+WRAPPER_TARGETS:=mpg123-oss mpg123-esd mpg123-nas
 
 ifeq ($(ARCH),i486)
-TARGETS += mpg123-oss-i486
+WRAPPER_TARGETS += mpg123-oss-i486
 endif
 
 ifeq ($(OS),linux)
-TARGETS += mpg123-alsa
+WRAPPER_TARGETS += mpg123-alsa
 endif
 
-CACHE_FILE:="$(CURDIR)/config.cache"
-
-CONF_COMMON:=--prefix=/usr --cache-file=$(CACHE_FILE)
+CONF_COMMON:=--prefix=/usr --enable-static --enable-shared --disable-ltdl-install
 
 CONF_i486:=--with-cpu=x86_dither
 CONF_arm:=--with-cpu=generic_nofpu
 
-CONF_oss:=--with-audio=oss
-CONF_oss-i486:=--with-audio=oss --with-cpu=i486
-CONF_esd:=--with-audio=esd
-CONF_alsa:=--with-audio=alsa
-CONF_nas:=--with-audio=nas
+SOVERSION:=0
+LIB_PKG:=libmpg123-$(SOVERSION)
+DEV_PKG:=libmpg123-dev
+LIB_PKGSTR:=-p$(LIB_PKG) -p$(DEV_PKG)
+ARCH_PKGSTR=-pmpg123
+ALL_PKGSTR=$(LIB_PKGSTR) $(ARCH_PKGSTR)
 
-PKGNAME_mpg123-oss:=mpg123
-PKGNAME_mpg123-oss-i486:=mpg123-oss-i486
-PKGNAME_mpg123-esd:=mpg123-esd
-PKGNAME_mpg123-alsa:=mpg123-alsa
-PKGNAME_mpg123-nas:=mpg123-nas
-
-ARCH_PKGSTR=$(foreach pkg,$(TARGETS),-p$(PKGNAME_$(pkg)))
-ifeq ($(ARCH),i486)
+DUMMY_PKGSTR=-pmpg123-esd -pmpg123-nas
 ifeq ($(OS),linux)
-ARCH_PKGSTR += -pmpg123-oss-3dnow
+DUMMY_PKGSTR += -pmpg123-alsa
+ifeq ($(ARCH),i486)
+DUMMY_PKGSTR += -pmpg123-oss-3dnow -pmpg123-oss-i486
+endif
+else
+ifeq ($(OS),kfreebsd)
+ifeq ($(ARCH),i486)
+DUMMY_PKGSTR += -pmpg123-oss-i486
 endif
 endif
-
-# We assume if the user installs esd/nas, he wants
-# esd/nas, and if he installs alsa, he wants
-# alsa. For both alsa and esd/nas installed, assume
-# he has an esd-alsa installed and wants to use it.
-# i486 is used by default only if it's the only provider.
-ALTPRIO_mpg123-oss:=30
-ALTPRIO_mpg123-oss-i486:=60
-ALTPRIO_mpg123-alsa:=40
-ALTPRIO_mpg123-esd:=50
-ALTPRIO_mpg123-nas:=50
+endif
 
 #export DH_VERBOSE=1
 
-mpg123-%:
+mpg123: $(WRAPPER_TARGETS)
 	dh_testdir
 
-	test -d "$(CURDIR)/obj" || mkdir "$(CURDIR)/obj"
-	-rm -rf "$(CURDIR)/obj/$@"
-	mkdir "$(CURDIR)/obj/$@"
-	cd "$(CURDIR)/obj/$@" && \
-		../../configure $(CONF_COMMON) $(CONF_$(ARCH)) $(CONF_$*) && \
-		$(MAKE) && \
-		mv src/mpg123 "$@" && \
-		cp ../../man1/mpg123.1 "$@".1
-	touch "$@"
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
+	mv $(CURDIR)/debian/tmp/usr/bin/mpg123 \
+	   $(CURDIR)/debian/tmp/usr/bin/mpg123.bin
+	mv $(CURDIR)/debian/tmp/usr/share/man/man1/mpg123.1 \
+	   $(CURDIR)/debian/tmp/usr/share/man/man1/mpg123.bin.1
+	install $(WRAPPER_TARGETS) $(CURDIR)/debian/tmp/usr/bin/
+	for i in $(WRAPPER_TARGETS); do \
+		install debian/mpg123-wrapper.1 \
+		        $(CURDIR)/debian/tmp/usr/share/man/man1/$$i.1; \
+	done
+
+mpg123-%: debian/mpg123-wrapper.in
+	dh_testdir
+	o=`echo $@ | sed -e 's/^mpg123-\([^-]\+\).*/\1/'`; \
+	sed -e "s/@OUTPUT@/$$o/g" < debian/mpg123-wrapper.in > $@
 
 build: build-stamp
-build-stamp: configure $(TARGETS)
+build-stamp: configure mpg123
 	touch build-stamp
 
 configure: configure-stamp
@@ -85,6 +89,8 @@ configure-stamp:
 	ln -sf /usr/share/misc/config.sub "$(CURDIR)/build/"
 	ln -sf /usr/share/misc/config.guess "$(CURDIR)/build/"
 
+	./configure $(CONF_COMMON) $(CONF_$(ARCH))
+
 	touch configure-stamp
 
 clean:
@@ -92,16 +98,8 @@ clean:
 	dh_testroot
 
 	-rm -f build-stamp configure-stamp
-	-rm -f $(TARGETS)
-	-rm -rf "$(CURDIR)/obj"
-	-rm -f $(CACHE_FILE)
-
-	-rm -f "$(CURDIR)/debian/*.install"
-	-rm -f "$(CURDIR)/debian/*.manpages"
-	-rm -f "$(CURDIR)/debian/*.mime"
-	-rm -f "$(CURDIR)/debian/*.postinst"
-	-rm -f "$(CURDIR)/debian/*.prerm"
-	-rm -f "$(CURDIR)/debian/*.postrm"
+	-rm -f $(WRAPPER_TARGETS)
+	test ! -f Makefile || $(MAKE) distclean
 
 	if test -L "$(CURDIR)/build/config.sub"; then \
 		rm -f "$(CURDIR)/build/config.sub"; \
@@ -120,46 +118,46 @@ clean:
 
 binary-indep: build
 
-binary-pkg-%: build
-	dh_testdir
-	dh_testroot
-
-	echo "obj/$*/$* /usr/bin/" > "$(CURDIR)/debian/$(PKGNAME_$*).install"
-	echo "obj/$*/$*.1" > "$(CURDIR)/debian/$(PKGNAME_$*).manpages"
-	cat "$(CURDIR)/debian/mime" > "$(CURDIR)/debian/$(PKGNAME_$*).mime"
-
-	sed \
-		-e 's/@PACKAGE@/$(PKGNAME_$*)/g' \
-		-e 's/@FILENAME@/$*/g' \
-		-e 's/@PRIORITY@/$(ALTPRIO_$*)/g' \
-		< "$(CURDIR)/debian/postinst.in" \
-		> "$(CURDIR)/debian/$(PKGNAME_$*).postinst"
-	sed \
-		-e 's/@PACKAGE@/$(PKGNAME_$*)/g' \
-		-e 's/@FILENAME@/$*/g' \
-		< "$(CURDIR)/debian/prerm.in" \
-		> "$(CURDIR)/debian/$(PKGNAME_$*).prerm"
-
 install: build
 	dh_testdir
 	dh_testroot
-	dh_install $(ARCH_PKGSTR)
+	dh_install $(ALL_PKGSTR)
+	dh_installdocs $(LIB_PKGSTR) $(DUMMY_PKGSTR)
 	dh_installdocs $(ARCH_PKGSTR) -A \
 	               README AUTHORS doc/BENCHMARKING doc/CONTACT \
 	               doc/README.gain doc/README.remote doc/THANKS 
+	dh_installexamples $(LIB_PKGSTR)
 	dh_installman $(ARCH_PKGSTR)
+	dh_installchangelogs $(DUMMY_PKGSTR)
 	dh_installchangelogs $(ARCH_PKGSTR) NEWS
+	dh_installchangelogs $(LIB_PKGSTR) NEWS.libmpg123
 	dh_installmime $(ARCH_PKGSTR)
-	dh_strip $(ARCH_PKGSTR)
-	dh_compress $(ARCH_PKGSTR)
-	dh_fixperms $(ARCH_PKGSTR)
-	dh_installdeb $(ARCH_PKGSTR)
-	dh_shlibdeps $(ARCH_PKGSTR)
-	dh_gencontrol $(ARCH_PKGSTR)
-	dh_md5sums $(ARCH_PKGSTR)
-	dh_builddeb $(ARCH_PKGSTR)
+	dh_strip $(ALL_PKGSTR)
+	dh_compress $(ALL_PKGSTR) $(DUMMY_PKGSTR)
+	dh_fixperms $(ALL_PKGSTR) $(DUMMY_PKGSTR)
+	dh_makeshlibs $(LIB_PKGSTR)
+	dh_installdeb $(ALL_PKGSTR)
+	dh_shlibdeps $(ALL_PKGSTR) -Xdebian/mpg123/usr/lib/mpg123/ -- \
+		-dSuggests `find debian/mpg123/usr/lib/mpg123/ -name "output_*.so" -type f` -dDepends
+	for n in alsa dummy esd nas oss; do \
+		i="debian/mpg123/usr/lib/mpg123/output_$$n.so"; \
+		test -e "$$i" || continue; \
+		dh_shlibdeps $(ARCH_PKGSTR) $(DUMMY_PKGSTR) -Xdebian/mpg123/usr/lib/mpg123 debian/mpg123 -- -p"$$n"plugin -dRecommends "$$i" -dDepends; \
+	done
+	if grep '^alsaplugin:Recommends' debian/mpg123.substvars | grep -q ',' || \
+	   grep -q '^ossplugin:Recommends' debian/mpg123.substvars || \
+	   grep '^dummyplugin:Recommends' debian/mpg123.substvars | grep -q ','; then \
+		echo "BUG: Build system cannot handle more than one substitution for first-class plugins. Giving up."; \
+		echo "debian/substvars:"; \
+		cat debian/substvars; \
+		exit 1; \
+	fi
+	dh_gencontrol $(ALL_PKGSTR) -- -V'plugin:Recommends=$${alsaplugin:Recommends} | oss-compat | $${dummyplugin:Recommends}'
+	dh_gencontrol $(DUMMY_PKGSTR) -- -Tdebian/mpg123.substvars
+	dh_md5sums $(ALL_PKGSTR) $(DUMMY_PKGSTR)
+	dh_builddeb $(ALL_PKGSTR) $(DUMMY_PKGSTR)
 
-binary-arch: build $(TARGETS:%=binary-pkg-%) install
+binary-arch: build install
 
 binary: binary-indep binary-arch
 

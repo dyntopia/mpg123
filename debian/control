@@ -2,14 +2,16 @@ Source: mpg123
 Section: sound
 Priority: optional
 Maintainer: Daniel Kobras <kobras@debian.org>
-Standards-Version: 3.7.2
+Standards-Version: 3.8.0
 Build-Depends: debhelper (>> 5), autotools-dev, pkg-config, libesd0-dev, libaudio-dev, libasound2-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386]
 
 Package: mpg123
 Architecture: any
-Depends: ${shlibs:Depends}, oss-compat
+Depends: ${shlibs:Depends}
+Recommends: ${shlibs:Recommends}, ${plugin:Recommends}
+Suggests: ${shlibs:Suggests}
 Provides: mp3-decoder, mpg123-oss-3dnow
-Replaces: mpg123-oss-3dnow
+Replaces: mpg123-oss-3dnow, mpg123-alsa, mpg123-esd, mpg123-nas, mpg123-oss-i486
 Description: MPEG layer 1/2/3 audio player
  Mpg123 is a fast and portable MPEG audio player for Unix.  It supports
  MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
@@ -18,16 +20,47 @@ Description: MPEG layer 1/2/3 audio player
  SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
  quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.
  .
- This version uses the OSS/Lite drivers for sound output.
- If you don't know which version of mpg123 you want, you probably
- want this version.
+ This package contains output plugins for several audio systems, including
+ OSS/Lite, the Advanced Linux Sound Architecture (ALSA) on Linux systems,
+ the Enlightened Sound Daemon (esound), the Network Audio System (NAS),
+ and others.
+
+Package: libmpg123-0
+Architecture: any
+Section: libs
+Depends: ${shlibs:Depends}
+Description: MPEG layer 1/2/3 audio decoder -- runtime library
+ Mpg123 is a fast and portable MPEG audio decoder for Unix.  It supports
+ MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
+ . 
+ For full CD quality playback (44 kHz, 16 bit, stereo) a Pentium,
+ SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
+ quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.
+ .
+ This package contains the C libraries needed to run executables that use
+ the mpg123 library.
+
+Package: libmpg123-dev
+Architecture: any
+Section: libdevel
+Depends: ${shlibs:Depends}, libmpg123-0 (= ${binary:Version})
+Description: MPEG layer 1/2/3 audio decoder -- development files
+ Mpg123 is a fast and portable MPEG audio decoder for Unix.  It supports
+ MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
+ . 
+ For full CD quality playback (44 kHz, 16 bit, stereo) a Pentium,
+ SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
+ quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.
+ .
+ This package contains the C development headers and library files needed to
+ compile programs using the mpg123 library.
 
 Package: mpg123-oss-i486
 Architecture: i386 kfreebsd-i386
-Depends: ${shlibs:Depends}, oss-compat
+Depends: mpg123 (>= 1.4.3-1), oss-compat
 Provides: mpg123, mp3-decoder
 Conflicts: mpg123 (<< 0.59r-2)
-Description: MPEG layer 1/2/3 audio player for i486 machines
+Description: MPEG layer 1/2/3 audio player for i486 machines - dummy package
  Mpg123 is a fast and portable MPEG audio player for Unix.  It supports
  MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
  . 
@@ -35,9 +68,9 @@ Description: MPEG layer 1/2/3 audio player for i486 machines
  SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
  quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.
  .
- This version uses the OSS/Lite drivers for sound output, and
- is specially optimized for i486 processors. It may fail on other
- CPUs.
+ This package used to contain an executable specially optimized for i486
+ processors, but nowadays just depends on the generic package mpg123. It is
+ an empty dummy package to facilitate upgrades and can be safely removed.
 
 Package: mpg123-oss-3dnow
 Architecture: i386
@@ -56,11 +89,9 @@ Description: MPEG layer 1/2/3 audio player for 3DNow! machines - dummy package
 
 Package: mpg123-esd
 Architecture: any
-Depends: ${shlibs:Depends}
-Provides: mpg123, mp3-decoder
-Conflicts: mpg123 (<< 0.59r-2)
+Depends: mpg123 (>= 1.4.3-1), ${esdplugin:Recommends}
 Suggests: esound
-Description: MPEG layer 1/2/3 audio player with Esound support
+Description: MPEG layer 1/2/3 audio player with Esound support - dummy package
  Mpg123 is a fast and portable MPEG audio player for Unix.  It supports
  MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
  . 
@@ -68,15 +99,15 @@ Description: MPEG layer 1/2/3 audio player with Esound support
  SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
  quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.
  .
- This version uses the Enlightened Sound Daemon (esound) for sound output.
+ The main mpg123 nowadays already contains an esd output plugin by default.
+ This is an empty dummy package to facilitate upgrades. It can be safely
+ removed afterwards.
 
 Package: mpg123-nas
 Architecture: any
-Depends: ${shlibs:Depends}
-Provides: mpg123, mp3-decoder
-Conflicts: mpg123 (<< 0.59r-2)
+Depends: mpg123 (>= 1.4.3-1), ${nasplugin:Recommends}
 Suggests: nas
-Description: MPEG layer 1/2/3 audio player with NAS support
+Description: MPEG layer 1/2/3 audio player with NAS support - dummy package
  Mpg123 is a fast and portable MPEG audio player for Unix.  It supports
  MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
  . 
@@ -84,14 +115,14 @@ Description: MPEG layer 1/2/3 audio player with NAS support
  SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
  quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.
  .
- This version uses the Network Audio System (NAS) for output.
+ The main mpg123 nowadays already contains an output plugin for NAS by default.
+ This is an empty dummy package to facilitate upgrades. It can be safely
+ removed afterwards.
 
 Package: mpg123-alsa
-Architecture: alpha amd64 arm armel armeb hppa i386 ia64 m68k mips mipsel powerpc ppc64 s390 sh sparc
-Depends: ${shlibs:Depends}
-Provides: mpg123, mp3-decoder
-Conflicts: mpg123 (<< 0.59r-2)
-Description: MPEG layer 1/2/3 audio player with ALSA support
+Architecture: any
+Depends: mpg123 (>= 1.4.3-1), ${alsaplugin:Recommends}
+Description: MPEG layer 1/2/3 audio player with ALSA support - dummy package
  Mpg123 is a fast and portable MPEG audio player for Unix.  It supports
  MPEG 1.0/2.0 layers 1, 2 and 3 (those famous "mp3" files).
  . 
@@ -99,5 +130,6 @@ Description: MPEG layer 1/2/3 audio player with ALSA support
  SPARCstation10, DEC Alpha or similar CPU is required.  Mono and/or reduced
  quality playback (22 kHz or 11 kHz) is even possible on 486 CPUs.
  .
- This version uses the Advanced Linux Sound Architecture (ALSA)
- for sound output.
+ The main mpg123 nowadays already contains an output plugin for ALSA by default.
+ This is an empty dummy package to facilitate upgrades. It can be safely
+ removed afterwards.

@@ -1,0 +1,51 @@
+#!/bin/sh -e
+
+install_alternative()
+{
+	test -n "$1" || continue
+	test -n "$2" || continue
+
+	FILENAME="$1"
+	PRIORITY="$2"
+
+	test -e "/usr/bin/$FILENAME" || continue
+
+	# Not a typo: For mpg123, we effectively add 100 to the
+	# priority used for mp3-decoder to get us atop of mpg321.
+	# We /are/ mpg123, after all, and we are no longer non-free.
+	# This hack can be dropped if mpg321 chooses to lower its
+	# mpg123 priority.
+	update-alternatives --install \
+		/usr/bin/mpg123 mpg123 "/usr/bin/$FILENAME" \
+		"1$PRIORITY" \
+		--slave /usr/share/man/man1/mpg123.1.gz mpg123.1.gz \
+		"/usr/share/man/man1/$FILENAME.1.gz"
+
+	update-alternatives --install \
+		/usr/bin/mp3-decoder mp3-decoder "/usr/bin/$FILENAME" \
+		"$PRIORITY" \
+		--slave /usr/share/man/man1/mp3-decoder.1.gz \
+		mp3-decoder.1.gz \
+		"/usr/share/man/man1/$FILENAME.1.gz"
+}
+
+case "$1" in
+	configure)
+		FILEPRIOS="mpg123.bin/20 mpg123-oss/30 mpg123-alsa/40 mpg123-esd/50 mpg123-nas/50 mpg123-oss-i486/60"
+		for i in $FILEPRIOS; do
+			FILE="${i%/*}"
+			PRIO="${i#*/}"
+			install_alternative "$FILE" "$PRIO"
+		done
+		;;
+	abort-upgrade|abort-remove|abort-deconfigure)
+		;;
+	*)
+		echo "postinst called with unknown argument \'$1\'" >&2
+		exit 0
+esac
+
+#DEBHELPER#
+
+exit 0
+

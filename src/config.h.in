@@ -9,14 +9,26 @@
 /* Define if debugging is enabled. */
 #undef DEBUG
 
+/* The default audio output module(s) to use */
+#undef DEFAULT_OUTPUT_MODULE
+
+/* Define if building with dynamcally linked libmpg123 */
+#undef DYNAMIC_BUILD
+
 /* Define if FIFO support is enabled. */
 #undef FIFO
 
 /* Define if gapless is enabled. */
 #undef GAPLESS
 
+/* Define to 1 if you have the <Alib.h> header file. */
+#undef HAVE_ALIB_H
+
 /* Define to 1 if you have the <asm/audioio.h> header file. */
 #undef HAVE_ASM_AUDIOIO_H
+
+/* Define to 1 if you have the <audios.h> header file. */
+#undef HAVE_AUDIOS_H
 
 /* Define to 1 if you have the <AudioToolbox/AudioToolbox.h> header file. */
 #undef HAVE_AUDIOTOOLBOX_AUDIOTOOLBOX_H
@@ -26,6 +38,12 @@
 
 /* Define to 1 if you have the <CoreServices/CoreServices.h> header file. */
 #undef HAVE_CORESERVICES_CORESERVICES_H
+
+/* Define to 1 if you have the <CUlib.h> header file. */
+#undef HAVE_CULIB_H
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
 
 /* Define to 1 if you have the `getpagesize' function. */
 #undef HAVE_GETPAGESIZE
@@ -48,6 +66,9 @@
 /* Define to 1 if you have the <linux/soundcard.h> header file. */
 #undef HAVE_LINUX_SOUNDCARD_H
 
+/* Define if LTDL library is available. */
+#undef HAVE_LTDL
+
 /* Define to 1 if you have the <machine/soundcard.h> header file. */
 #undef HAVE_MACHINE_SOUNDCARD_H
 
@@ -59,6 +80,24 @@
 
 /* Define to 1 if you have a working `mmap' system call. */
 #undef HAVE_MMAP
+
+/* Define to 1 if you have the <netdb.h> header file. */
+#undef HAVE_NETDB_H
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#undef HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#undef HAVE_NETINET_TCP_H
+
+/* Define to 1 if you have the <os2me.h> header file. */
+#undef HAVE_OS2ME_H
+
+/* Define to 1 if you have the <os2.h> header file. */
+#undef HAVE_OS2_H
+
+/* Define to 1 if you have the `random' function. */
+#undef HAVE_RANDOM
 
 /* Define to 1 if you have the <sched.h> header file. */
 #undef HAVE_SCHED_H
@@ -77,6 +116,9 @@
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdio.h> header file. */
+#undef HAVE_STDIO_H
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
@@ -150,8 +192,14 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Define if portaudio v18 API is wanted. */
+#undef PORTAUDIO18
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Define if modules are enabled */
+#undef USE_MODULES
 
 /* Version number of package */
 #undef VERSION

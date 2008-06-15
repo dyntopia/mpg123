@@ -1,3 +1,33 @@
+mpg123 (1.4.3-1) unstable; urgency=low
+
+  * New upstream version. Closes: #469110
+    + Core engine provided as a library now. Closes: #52020
+    + Different audio output systems can now be selected at runtime via a
+      plugin mechanism.
+    + Fixed parsing of ICY streams. Closes: #449319
+  * debian/*: Major packaging overhaul.
+    + Output-specific packages are turned into dummy packages as plugins in
+      the main package mpg123 now provide all the required funtionality.
+    + In a default installation, dependencies for the ALSA and OSS output
+      plugins are pulled in via Recommends. Dependencies for the other
+      output plugins are provided in Suggests. Closes: #391669
+    + A package with i486-specific optimisations is no longer built. Instead,
+      a dummy package will pull in the main package mpg123 providing generic
+      optimisations.
+    + As different output backends and CPU optimisations used to be accessible
+      through separate binaries, wrapper skripts are provided using the old
+      names. These wrappers are likely to be removed in the next release
+      cycle, though.
+
+ -- Daniel Kobras <kobras@debian.org>  Sun, 15 Jun 2008 19:18:58 +0200
+
+mpg123 (1.1.0-1) unstable; urgency=low
+
+  * New upstream version.
+    + Includes support for delay option. Dropped Debian-specific changes.
+
+ -- Daniel Kobras <kobras@debian.org>  Wed, 16 Jan 2008 20:20:13 +0100
+
 mpg123 (0.67-1) unstable; urgency=low
 
   * New upsteam version.
@@ -7,8 +37,11 @@ mpg123 (0.67-1) unstable; urgency=low
   * debian/rules: Include optimised builds on i386. Closes: #433693
   * debian/rules: Remove obsolete touch commands needed only when patching
     configure.ac.
+  * src/mpg123.[ch],man1/mpg123.1: New option -D to add delay between
+    songs. Modified version of patch supplied by Cédric Augonnet.
+    Closes: #50110
 
- -- Daniel Kobras <kobras@debian.org>  Wed, 19 Sep 2007 21:24:32 +0200
+ -- Daniel Kobras <kobras@debian.org>  Wed, 19 Sep 2007 22:02:39 +0200
 
 mpg123 (0.66-1.1) unstable; urgency=low
 

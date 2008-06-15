@@ -4,22 +4,21 @@
 ## see COPYING and AUTHORS files in distribution or http://mpg123.org
 ## initially written by Nicholas J. Humfrey
 
-AM_CFLAGS = @AUDIO_CFLAGS@
-#AM_LDFLAGS = 
-mpg123_LDADD = @AUDIO_OBJ@ @CPU_TYPE_LIB@ @AUDIO_LIBS@
-mpg123_DEPENDENCIES = @AUDIO_OBJ@ @CPU_TYPE_LIB@
+AM_CPPFLAGS = -DPKGLIBDIR="\"$(pkglibdir)\""
+mpg123_LDADD = $(LIBLTDL) libmpg123/libmpg123.la @MODULE_OBJ@ @OUTPUT_OBJ@ @OUTPUT_LIBS@
+mpg123_LDFLAGS = @LT_LDFLAGS@ @OUTPUT_LDFLAGS@
+# Just mpg123_INCLUDES has no effect on build! Trying that before reverting to AM_CPPFLAGS.
+INCLUDES = $(LTDLINCL) -I$(top_builddir)/src/libmpg123 -I$(top_srcdir)/src/libmpg123
+# libltdl is not mentioned here... it's not that trivial
+mpg123_DEPENDENCIES = @OUTPUT_OBJ@ @MODULE_OBJ@ libmpg123/libmpg123.la
 
-EXTRA_DIST = Makefile.legacy config.h.legacy
+SUBDIRS = output libmpg123
+EXTRA_DIST = Makefile.legacy config.h.legacy legacy_module.c module.c
 
 CLEANFILES = *.a
 
 bin_PROGRAMS = mpg123
-EXTRA_PROGRAMS = testcpu
 
-testcpu_SOURCES = \
-	testcpu.c \
-	getcpuflags.S
-	
 mpg123_SOURCES = \
 	audio.c \
 	audio.h \
@@ -27,241 +26,103 @@ mpg123_SOURCES = \
 	buffer.h \
 	common.c \
 	common.h \
+	libmpg123/compat.c \
+	libmpg123/compat.h \
 	control_generic.c \
-	debug.h \
-	decode.h \
-	decode_2to1.c \
-	decode_4to1.c \
-	decode_ntom.c \
-	equalizer.c \
-	getbits.c \
-	getbits.h \
 	getlopt.c \
 	getlopt.h \
 	httpget.c \
-	huffman.h \
-	icy.c \
-	icy.h \
-	id3.c \
-	id3.h \
+	httpget.h \
 	genre.h \
-	l2tables.h \
-	layer1.c \
-	layer2.c \
-	layer3.c \
-	layer3.h \
-	mangle.h \
+	genre.c \
+	module.h \
 	mpg123.c \
-	mpg123.h \
-	optimize.h \
-	optimize.c \
+	mpg123app.h \
+	id3print.c \
+	id3print.h \
 	playlist.c \
 	playlist.h \
-	readers.c \
-	tabinit.c \
 	sfifo.c \
 	sfifo.h \
-	stringbuf.c \
-	stringbuf.h \
 	term.c \
 	term.h \
 	wav.c \
 	xfermem.c \
 	xfermem.h
 
-EXTRA_mpg123_SOURCES = \
-	audio_aix.c \
-	audio_alib.c \
-	audio_alsa.c \
-	audio_dummy.c \
-	audio_esd.c \
-	audio_hp.c \
-	audio_jack.c \
-	audio_coreaudio.c \
-	audio_mint.c \
-	audio_nas.c \
-	audio_os2.c \
-	audio_oss.c \
-	audio_portaudio.c \
-	audio_sdl.c \
-	audio_sgi.c \
-	audio_sun.c \
-	audio_win32.c \
-	getcpuflags.h
+# That is not nice... but it is how I manage to get the dependency on output/alsa.o without error about .deps/output/alsa.Tpo .
+# Did I mention that recursive make sucks?
+# `%'-style pattern rules are a GNU make extension
+#find output/ -name '*.c' | perl -ne 'chomp; $mod=$_; $mod=~s/\.c$/.\$(OBJEXT)/;
+#print "$mod: $_ audio.h module.h\n";
+#print "\tcd output && \$(MAKE)\n\n";'
+
+output/coreaudio.$(OBJEXT): output/coreaudio.c audio.h module.h
+	cd output && $(MAKE)
+
+output/win32.$(OBJEXT): output/win32.c audio.h module.h
+	cd output && $(MAKE)
+
+output/alsa05.$(OBJEXT): output/alsa05.c audio.h module.h
+	cd output && $(MAKE)
+
+output/sdl.$(OBJEXT): output/sdl.c audio.h module.h
+	cd output && $(MAKE)
+
+output/dummy.$(OBJEXT): output/dummy.c audio.h module.h
+	cd output && $(MAKE)
+
+output/alib.$(OBJEXT): output/alib.c audio.h module.h
+	cd output && $(MAKE)
+
+output/libao.$(OBJEXT): output/libao.c audio.h module.h
+	cd output && $(MAKE)
+
+output/sun.$(OBJEXT): output/sun.c audio.h module.h
+	cd output && $(MAKE)
+
+output/aix.$(OBJEXT): output/aix.c audio.h module.h
+	cd output && $(MAKE)
+
+output/oss.$(OBJEXT): output/oss.c audio.h module.h
+	cd output && $(MAKE)
+
+output/mint.$(OBJEXT): output/mint.c audio.h module.h
+	cd output && $(MAKE)
+
+output/pulse.$(OBJEXT): output/pulse.c audio.h module.h
+	cd output && $(MAKE)
+
+output/jack.$(OBJEXT): output/jack.c audio.h module.h
+	cd output && $(MAKE)
+
+output/os2.$(OBJEXT): output/os2.c audio.h module.h
+	cd output && $(MAKE)
+
+output/nas.$(OBJEXT): output/nas.c audio.h module.h
+	cd output && $(MAKE)
+
+output/sgi.$(OBJEXT): output/sgi.c audio.h module.h
+	cd output && $(MAKE)
+
+output/portaudio.$(OBJEXT): output/portaudio.c audio.h module.h
+	cd output && $(MAKE)
+
+output/arts.$(OBJEXT): output/arts.c audio.h module.h
+	cd output && $(MAKE)
+
+output/esd.$(OBJEXT): output/esd.c audio.h module.h
+	cd output && $(MAKE)
+
+output/alsa.$(OBJEXT): output/alsa.c audio.h module.h
+	cd output && $(MAKE)
+
+output/hp.$(OBJEXT): output/hp.c audio.h module.h
+	cd output && $(MAKE)
 
 
-# Processor dependent decoder code
-EXTRA_LIBRARIES = \
-	libcpu_generic.a \
-	libcpu_generic_fpu.a \
-	libcpu_generic_nofpu.a \
-	libcpu_altivec.a \
-	libcpu_i386.a \
-	libcpu_i386_fpu.a \
-	libcpu_i386_nofpu.a \
-	libcpu_i486.a \
-	libcpu_i586.a \
-	libcpu_i586_dither.a \
-	libcpu_3dnow.a \
-	libcpu_3dnowext.a \
-	libcpu_3dnowext_alone.a \
-	libcpu_mmx.a \
-	libcpu_mmx_alone.a \
-	libcpu_sse.a \
-	libcpu_sse_alone.a \
-	libcpu_x86.a \
-	libcpu_x86_dither.a
+# Would have to mention _all_ source files... Dammit, that's what the libmpg123/Makefile.am does!
+# But again, the a make $something here needs that stupid rule... WHY???
+libmpg123/libmpg123.la: config.h libmpg123/mpg123.h
+	cd libmpg123 && $(MAKE)
 
-libcpu_generic_a_SOURCES = \
-	decode.c \
-	dct64.c
-
-libcpu_generic_fpu_a_SOURCES = \
-	decode.c \
-	dct64.c
-
-libcpu_generic_nofpu_a_SOURCES = \
-	decode.c \
-	dct64.c
-
-libcpu_altivec_a_SOURCES = \
-	decode_altivec.c \
-	dct64_altivec.c
-
-libcpu_i386_a_SOURCES = \
-	decode_i386.c \
-	dct64_i386.c
-
-libcpu_i386_fpu_a_SOURCES = \
-	decode_i386.c \
-	dct64_i386.c
-
-libcpu_i386_nofpu_a_SOURCES = \
-	decode_i386.c \
-	dct64_i386.c
-
-libcpu_i486_a_SOURCES = \
-	decode_i386.c \
-	dct64_i386.c \
-	decode_i486.c \
-	dct64_i486.c
-
-libcpu_i586_a_SOURCES = \
-	decode_i386.c \
-	dct64_i386.c \
-	decode_i586.S
-
-libcpu_i586_dither_a_SOURCES = \
-	decode_i386.c \
-	dct64_i386.c \
-	dnoise.c \
-	decode_i586_dither.S
-
-libcpu_3dnow_a_SOURCES = \
-	decode_i386.c \
-	decode_3dnow.S \
-	decode_i586.S \
-	dct64_i386.c \
-	dct64_3dnow.S \
-	dct36_3dnow.S \
-	equalizer_3dnow.S \
-	getcpuflags.S
-
-libcpu_mmx_alone_a_SOURCES = \
-	decode_i386.c \
-	dct64_mmx.S \
-	tabinit_mmx.S \
-	decode_mmx.S
-
-libcpu_mmx_a_SOURCES = \
-	decode_i386.c \
-	dct64_mmx.S \
-	tabinit_mmx.S \
-	decode_mmx.S \
-	dct64_i386.c \
-	decode_i586.S \
-	getcpuflags.S
-
-libcpu_sse_alone_a_SOURCES = \
-	decode_i386.c \
-	dct64_sse.S \
-	dct64_mmx.S \
-	tabinit_mmx.S \
-	decode_mmxsse.S
-
-libcpu_sse_a_SOURCES = \
-	decode_i386.c \
-	dct64_sse.S \
-	dct64_mmx.S \
-	tabinit_mmx.S \
-	decode_mmxsse.S \
-	dct64_i386.c \
-	decode_i586.S \
-	getcpuflags.S
-
-libcpu_3dnowext_alone_a_SOURCES = \
-	decode_i386.c \
-	dct64_3dnowext.S \
-	dct36_3dnowext.S \
-	dct64_mmx.S \
-	tabinit_mmx.S \
-	decode_mmxsse.S
-
-libcpu_3dnowext_a_SOURCES = \
-	decode_i386.c \
-	dct64_3dnowext.S \
-	dct36_3dnowext.S \
-	dct64_mmx.S \
-	tabinit_mmx.S \
-	decode_mmxsse.S \
-	decode_3dnow.S \
-	dct64_i386.c \
-	dct64_3dnow.S \
-	dct36_3dnow.S \
-	equalizer_3dnow.S \
-	getcpuflags.S
-
-libcpu_x86_dither_a_SOURCES = \
-	decode.c \
-	decode_i386.c \
-	decode_i586.S \
-	dnoise.c \
-	decode_i586_dither.S \
-	decode_3dnow.S \
-	decode_mmx.S \
-	decode_mmxsse.S \
-	dct64.c \
-	dct64_i386.c \
-	dct64_sse.S \
-	dct64_mmx.S \
-	dct64_3dnow.S \
-	dct36_3dnow.S \
-	dct64_3dnowext.S \
-	dct36_3dnowext.S \
-	tabinit_mmx.S \
-	equalizer_3dnow.S \
-	getcpuflags.S
-
-libcpu_x86_a_SOURCES = \
-	decode.c \
-	decode_i386.c \
-	decode_i586.S \
-	decode_3dnow.S \
-	decode_mmx.S \
-	decode_mmxsse.S \
-	dct64.c \
-	dct64_i386.c \
-	dct64_sse.S \
-	dct64_mmx.S \
-	dct64_3dnow.S \
-	dct36_3dnow.S \
-	dct64_3dnowext.S \
-	dct36_3dnowext.S \
-	tabinit_mmx.S \
-	equalizer_3dnow.S \
-	getcpuflags.S
-
-# explicit preprocessing since mingw32 does not honor the big .S
-.S.o:
-	$(CPP) $(AM_CPPFLAGS) $(DEFAULT_INCLUDES) $(CPPFLAGS) $< > $<.s
-	$(CCAS) $(CCASFLAGS) -c -o $@ $<.s && rm $<.s
