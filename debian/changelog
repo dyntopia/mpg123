@@ -1,3 +1,12 @@
+mpg123 (1.4.3-2) unstable; urgency=medium
+
+  * debian/control: Add build-dependency on libltdl-dev to fix build
+    failures.
+  * debian/control: Include build-dependencies for arts, jack, and
+    pulseaudio output plugins.
+
+ -- Daniel Kobras <kobras@debian.org>  Sat, 21 Jun 2008 18:07:34 +0200
+
 mpg123 (1.4.3-1) unstable; urgency=low
 
   * New upstream version. Closes: #469110

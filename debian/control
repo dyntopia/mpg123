@@ -3,7 +3,7 @@ Section: sound
 Priority: optional
 Maintainer: Daniel Kobras <kobras@debian.org>
 Standards-Version: 3.8.0
-Build-Depends: debhelper (>> 5), autotools-dev, pkg-config, libesd0-dev, libaudio-dev, libasound2-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386]
+Build-Depends: debhelper (>> 5), autotools-dev, pkg-config, libltdl3-dev, libesd0-dev, libaudio-dev, libasound2-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386], libartsc0-dev, libjack-dev, libpulse-dev [!hurd-i386]
 
 Package: mpg123
 Architecture: any
