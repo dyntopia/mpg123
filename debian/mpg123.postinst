@@ -1,5 +1,15 @@
 #!/bin/sh -e
 
+remove_alternative()
+{
+	test -n "$1" || continue
+
+	FILENAME="$1"
+
+	update-alternatives --remove mpg123 "/usr/bin/$FILENAME"
+	update-alternatives --remove mp3-decoder "/usr/bin/$FILENAME"
+}
+
 install_alternative()
 {
 	test -n "$1" || continue
@@ -31,12 +41,15 @@ install_alternative()
 
 case "$1" in
 	configure)
-		FILEPRIOS="mpg123.bin/20 mpg123-oss/30 mpg123-alsa/40 mpg123-esd/50 mpg123-nas/50 mpg123-oss-i486/60"
-		for i in $FILEPRIOS; do
-			FILE="${i%/*}"
-			PRIO="${i#*/}"
-			install_alternative "$FILE" "$PRIO"
+		# Specific alternatives are no longer required with
+		# output auto-detection.
+		OBSOLETES="mpg123-oss mpg123-alsa mpg123-esd mpg123-nas mpg123-oss-i486"
+		for i in $OBSOLETES; do
+			remove_alternative "$i"
 		done
+
+		# Install generic binary as the only alternative.
+		install_alternative mpg123.bin 20
 		;;
 	abort-upgrade|abort-remove|abort-deconfigure)
 		;;

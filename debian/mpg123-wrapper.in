@@ -1,4 +1,4 @@
 #!/bin/sh
 
-/usr/bin/mpg123.bin -o @OUTPUT@ "$@"
+exec /usr/bin/mpg123.bin -o @OUTPUT@ "$@"
 

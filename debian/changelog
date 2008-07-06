@@ -1,3 +1,16 @@
+mpg123 (1.4.3-3) unstable; urgency=medium
+
+  * src/libmpg123/id3.c: Apply upstream fix for out-of-bounds error in
+    id3 parser.
+  * debian/mpg123.postinst: Output auto-detection is no good as long as
+    output-specific wrappers are still listed as alternatives with higher
+    priority. Remove alternative setting for all wrapper scripts, therefore.
+    Closes: #391669
+  * debian/mpg123-wrapper.in: Call mpg123 binary with exec to avoid stray
+    shell process as suggested by Shane Wegner.
+
+ -- Daniel Kobras <kobras@debian.org>  Sun, 06 Jul 2008 18:46:38 +0200
+
 mpg123 (1.4.3-2) unstable; urgency=medium
 
   * debian/control: Add build-dependency on libltdl-dev to fix build
