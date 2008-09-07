@@ -152,7 +152,11 @@ install: build
 		cat debian/substvars; \
 		exit 1; \
 	fi
-	dh_gencontrol $(ALL_PKGSTR) -- -V'plugin:Recommends=$${alsaplugin:Recommends} | oss-compat | $${dummyplugin:Recommends}'
+	if test -e debian/mpg123/usr/lib/mpg123/output_alsa.so; then \
+		dh_gencontrol $(ALL_PKGSTR) -- -V'plugin:Recommends=$${alsaplugin:Recommends} | oss-compat | $${dummyplugin:Recommends}'; \
+	else \
+		dh_gencontrol $(ALL_PKGSTR) -- -V'plugin:Recommends=oss-compat | $${dummyplugin:Recommends}'; \
+	fi
 	dh_gencontrol $(DUMMY_PKGSTR) -- -Tdebian/mpg123.substvars
 	dh_md5sums $(ALL_PKGSTR) $(DUMMY_PKGSTR)
 	dh_builddeb $(ALL_PKGSTR) $(DUMMY_PKGSTR)

@@ -1,3 +1,13 @@
+mpg123 (1.4.3-4) unstable; urgency=medium
+
+  * src/wav.c: Backport upstream patch for writing WAV output to stdout
+    via '-w -'. Fixes regression from etch. Closes: #493285
+  * debian/rules: Only include ALSA dependencies when respective plugin has
+    been built. Original patch thanks to Petr Salinger. Fixes build failure
+    on GNU/kFreeBSD. Closes: #493423
+
+ -- Daniel Kobras <kobras@debian.org>  Sun, 07 Sep 2008 17:02:54 +0200
+
 mpg123 (1.4.3-3) unstable; urgency=medium
 
   * src/libmpg123/id3.c: Apply upstream fix for out-of-bounds error in
