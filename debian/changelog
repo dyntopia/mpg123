@@ -1,3 +1,11 @@
+mpg123 (1.4.3-4lenny1) stable; urgency=medium
+
+  * src/module.c: Backport upstream patch to fix regression in module
+    loading when a libltdl with a fix for CVE-2009-3736 is in place.
+    Closes: #572920
+
+ -- Daniel Kobras <kobras@debian.org>  Mon, 29 Mar 2010 11:56:52 +0200
+
 mpg123 (1.4.3-4) unstable; urgency=medium
 
   * src/wav.c: Backport upstream patch for writing WAV output to stdout
