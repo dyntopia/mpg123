@@ -1,6 +1,4496 @@
-2008-04-07 23:05  thor
+2010-03-31 08:51  thor
 
-	* tags/1.4.1: taggin 1.4.1
+	* tags/1.12.1/INSTALL: There was still a sentence referring the
+	  twinlibs...
+
+2010-03-31 08:32  thor
+
+	* tags/1.12.1: tagging 1.12.1
+	* trunk/INSTALL, trunk/NEWS, trunk/configure.ac: Forgot to update
+	  INSTALL for 1.12.0 ... re-releasing as 1.12.1 now.
+
+2010-03-29 01:41  thor
+
+	* trunk/src/libmpg123/Makefile.am: Add aligncheck.h to Makefile.am
+	  .
+
+2010-03-29 01:38  thor
+
+	* trunk/Makefile.am, trunk/NEWS, trunk/NEWS.libmpg123,
+	  trunk/configure.ac, trunk/libmpg123_large.pc.in,
+	  trunk/src/Makefile.am, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/lfs_wrap.c: Here it is: Proof that I don't
+	  want a normal life, apparently. mpg123 1.12.0 will switch to a
+	  dual-mode library for large file support. I have it all: -
+	  simple argument conversion - overflow detection - temporary
+	  storage for arrays of off_t / long - crazy callback-stacking to
+	  get that dual-modal, too What I don't have: - sleep
+
+2010-03-29 01:27  thor
+
+	* trunk/src/control_generic.c: Check for error in sample offset
+	  operation.
+
+2010-03-29 01:26  thor
+
+	* trunk/src/libmpg123/aligncheck.h,
+	  trunk/src/libmpg123/libmpg123.c: Outsource aligncheck.
+
+2010-03-28 23:42  thor
+
+	* trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: Add MPG123_LFS_OVERFLOW,
+	  cleanup a debugging print.
+
+2010-03-28 23:41  thor
+
+	* trunk/src/libmpg123/readers.c: Fix a debugging print for type.
+
+2010-03-28 21:13  thor
+
+	* trunk/NEWS.libmpg123, trunk/src/libmpg123/mpg123.h.in: Add
+	  mpg123_framebyframe_decode to the off_t-sensitive functions, to
+	  be renamed with LFS.
+
+2010-03-28 21:10  thor
+
+	* trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: Enforce mpg123_close() on the
+	  replace_reader calls, introduce new error for ill-prepared
+	  handle I/O.
+
+2010-03-28 10:55  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/reader.h,
+	  trunk/src/libmpg123/readers.c: Introduce handle-based custom I/O.
+
+2010-03-26 12:40  thor
+
+	* trunk/INSTALL: fix typo
+
+2010-03-23 15:39  thor
+
+	* trunk/Makefile.am: Add libmpg123_@LARGEFILE_BITS@.pc explicitly
+	  to files to be cleaned up... it's a mystery why automake is not
+	  doing that. Or isn't it? Now make distcheck should work again on
+	  x86 systems.
+
+2010-03-23 08:54  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/m4/addrconfig.m4,
+	  trunk/src/resolver.c: Add configure check for AI_ADDRCONFIG ...
+	  that hopefully makes mpg123 work again on OpenBSD (among others).
+
+2010-03-21 21:34  thor
+
+	* trunk/NEWS: Add note to NEWS ... going to re-release.
+
+2010-03-21 21:32  thor
+
+	* trunk, trunk/INSTALL, trunk/Makefile.am, trunk/NEWS,
+	  trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/doc/examples/Makefile, trunk/libmpg123_large.pc.in,
+	  trunk/src/Makefile.am, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/feature.c, trunk/src/libmpg123/ntom.c,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth.h,
+	  trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/wavhead.h: How
+	  embarrassing... I messed up the release -- forgot to merge the
+	  soname change!!
+
+2010-03-20 16:54  thor
+
+	* trunk/NEWS, trunk/configure.ac: last rites for version 1.11.0
+
+2010-03-10 21:03  patr3ck
+
+	* trunk/configure.ac: increase LIBMPG123_VERSION
+
+2010-03-10 21:02  patr3ck
+
+	* trunk/NEWS: Add an entry for the fixed potential icy reading
+	  problem
+
+2010-03-10 20:31  patr3ck
+
+	* trunk/src/libmpg123/readers.c: Shoutcast reading Only read the
+	  rest of the bytes if there is no possibility to reach a metadata
+	  boundary
+
+2010-03-06 12:44  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/mpg123.h.in: Add
+	  mpg123_replace_reader to the list of largefile-sensitive
+	  functions. Also, add some commentry... the whole thing is still
+	  a mess. I have the situation that libmpg123 can be
+	  binary-incompatible in a new version because large file support
+	  is enabled. Now, additionally, there is an incompatibility when
+	  upgrading from a largefile build to the new one with
+	  mpg123_replace_reader_64(). That one is really nasty, but it's
+	  been an API bug in the current mindset. What should one do? I am
+	  contemplating making a new library interface that drops usage of
+	  off_t. No backwards compatibility... though, this is a pity,
+	  since this is just a custom problem of Solaris/Linux in 32 bit
+	  mode. This SUCKS!
+
+2010-02-28 11:10  thor
+
+	* trunk/NEWS, trunk/src/resolver.c: Specify AI_ADDRCONFIG for
+	  new-style name resolution. Helps to prevent any IPv6 action on
+	  IPv4-only network.
+
+2010-02-27 19:18  thor
+
+	* trunk/doc/ROAD_TO_LGPL: inserted a "the"
+
+2010-02-27 19:13  thor
+
+	* trunk/src/libmpg123/layer1.c, trunk/src/libmpg123/layer2.c,
+	  trunk/src/libmpg123/layer3.c: Update copyright years on layerN.c
+
+2010-02-27 19:11  thor
+
+	* trunk/src/libmpg123/layer3.c: Typo in license header.
+
+2010-02-25 23:53  thor
+
+	* trunk/NEWS: Note some NEWS.
+
+2010-02-25 23:50  thor
+
+	* trunk/NEWS: Import the complete NEWS for 1.10.1 .
+
+2010-02-25 23:49  thor
+
+	* trunk/configure.ac: Next version will be 1.11.0 .
+
+2010-02-25 23:48  thor
+
+	* trunk, trunk/NEWS, trunk/configure.ac,
+	  trunk/src/libmpg123/feature.c, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/ntom.c, trunk/src/libmpg123/parse.c,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth.h,
+	  trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/wavhead.h: Import the
+	  final (?) fix for bug 33217340 from 1.10.1 tag. More fixup for
+	  the feeder, propagation of read errors (including NEED_MORE)
+	  from decode_header() and fi xup of endless looping in reading
+	  again from the beginning all the time. The latter is correlated
+	  with dangerous memory behaviour -- now we minimize storage of
+	  bytes that are n ot needed again by forgetting buffers early.
+
+2010-02-25 23:45  thor
+
+	* trunk, trunk/src/libmpg123/feature.c,
+	  trunk/src/libmpg123/ntom.c, trunk/src/libmpg123/parse.c,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth.h,
+	  trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/wavhead.h: More OFF_P
+	  in debug messages... plus some commenting.
+
+2010-02-25 23:43  thor
+
+	* trunk, trunk/NEWS, trunk/configure.ac,
+	  trunk/src/libmpg123/feature.c, trunk/src/libmpg123/ntom.c,
+	  trunk/src/libmpg123/parse.c, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth.h, trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/wavhead.h: Import fix
+	  for bug 2951334 from 1.10.1 tag.
+
+2010-02-25 23:40  thor
+
+	* trunk, trunk/NEWS, trunk/configure.ac,
+	  trunk/src/libmpg123/feature.c, trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/libmpg123/ntom.c, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth.h, trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/wavhead.h: Import
+	  largefile changes from 1.10.1 tag. The header is not tied to the
+	  actual library build anymore.
+
+2010-02-15 20:19  patr3ck
+
+	* test/regression/helpers.h, trunk/ports/MSVC++/mpg123.h: only
+	  include inttypes.h for non msvc++ compilers and manually define
+	  the needed types
+
+2010-02-14 20:16  thor
+
+	* trunk/configure.ac: Lib changed... version is not 1.10.0.
+
+2010-02-14 20:15  thor
+
+	* trunk/src/libmpg123/readers.c: Finally found that bug that
+	  troubled Patrick: The optimization for seeks into data that is
+	  alread in the feeder bufferchain was flawed: It incorrectly
+	  always demanded data to be fed one buffer size after the current
+	  position... where it should be the length of that part of the
+	  buffer that has not been decoded yet. Totally my fault, I
+	  guess... well, all I can do is to see it and finally fix it.
+	  Plus, we now do have at least that regression test now.
+
+2010-02-14 20:11  thor
+
+	* trunk/src/libmpg123/frame.c: Explicitly invalidate bit reservoir
+	  on seek.
+
+2010-02-14 20:09  thor
+
+	* trunk/src/libmpg123/parse.c: Fixup some debugging lines for
+	  off_t.
+
+2010-02-13 14:04  thor
+
+	* trunk/src/libmpg123/libmpg123.c: Been changed in 2010.
+
+2010-02-13 13:51  thor
+
+	* trunk/src/libmpg123/libmpg123.c: Correct gapless code when
+	  firstframe == lastframe (bug 2950218). The fix is rather simple:
+	  Just do the lastframe cut before the firstframe cut.
+
+2010-02-10 17:06  jon_y
+
+	* trunk/src/win32_net.c: Fix some warnings when -Wall and DEBUG
+	  mode is used for win64
+
+2010-02-07 18:44  thor
+
+	* trunk/src/libmpg123/compat.c: Another accidental commit
+	  reverted... debugging statements in compat.c .
+
+2010-02-07 16:53  thor
+
+	* trunk/src/libmpg123/readers.c: Some code change in the reader
+	  slipped through... it is not for the public.
+
+2010-02-07 16:52  thor
+
+	* trunk/src/httpget.c, trunk/src/libmpg123/compat.c,
+	  trunk/src/libmpg123/readers.c: Fix some pedantic compiler
+	  complaints.
+
+2010-02-07 16:51  thor
+
+	* trunk/src/mpg123.c: Fix preprocessor logic for timeout
+	  parameter... please double check, JonY.
+
+2010-02-07 16:50  thor
+
+	* trunk/src/output/openal.c: Force a type cast to make nagging
+	  build succeed.
+
+2010-02-07 15:15  jon_y
+
+	* trunk, trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/httpget.c, trunk/src/httpget.h,
+	  trunk/src/libmpg123/feature.c, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/ntom.c, trunk/src/libmpg123/reader.h,
+	  trunk/src/libmpg123/readers.c, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth.h, trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123app.h, trunk/src/output/Makefile.am,
+	  trunk/src/playlist.c, trunk/src/playlist.h,
+	  trunk/src/resolver.c, trunk/src/wavhead.h,
+	  trunk/src/win32_net.c, trunk/src/win32_support.c,
+	  trunk/src/win32_support.h: merge win32_networking branch
+
+2009-12-30 19:01  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Enable image
+	  relocation again, fixing it causes problems in some environments
+
+2009-12-30 18:44  patr3ck
+
+	* trunk/ports/MSVC++/config.h: We use c style comments
+
+2009-12-30 18:40  patr3ck
+
+	* trunk/ports/MSVC++/2008clr/examples/ReplaceReaderclr/ReplaceReaderclr.csproj,
+	  trunk/ports/MSVC++/2008clr/examples/feedseekclr/feedseekclr.csproj,
+	  trunk/ports/MSVC++/2008clr/examples/scanclr/scanclr.csproj,
+	  trunk/ports/MSVC++/config.h: Change clr examples build target
+	  from any cpu to x86 to prevent problems on 64bit cpus
+
+2009-12-30 15:46  patr3ck
+
+	* trunk/src/libmpg123/readers.c: Remove leftover comment end
+
+2009-12-29 22:59  patr3ck
+
+	* trunk/src/libmpg123/libmpg123.c, trunk/src/libmpg123/parse.c:
+	  Only take gapless into account if it is runtime-activated
+
+2009-12-29 16:00  patr3ck
+
+	* trunk/src/libmpg123/readers.c: Don't try to decode partial mp3
+	  frames at the end of a file
+
+2009-12-29 15:58  patr3ck
+
+	* trunk/src/libmpg123/libmpg123.c: Reset fresh also if GAPLESS is
+	  not defined
+
+2009-12-29 13:05  patr3ck
+
+	* trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/parse.c:
+	  New runtime flag MPG123_IGNORE_STREAMLENGTH. If this flag is set
+	  the frames and bytes information from Xing headers will be
+	  ignored
+
+2009-12-28 16:00  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/libmpg123.c: A
+	  step towards nailing the issue about inconsistent gapless
+	  info... fragments of formely gapless mpeg files. It is just a
+	  step, stuff is still broken for feeder, where we cannot detect
+	  track end inside libmpg123 without help. But even after
+	  scanning, we don't get the correct number of samples predicted.
+	  Further investigation follows.
+
+2009-12-28 14:25  thor
+
+	* trunk/src/libmpg123/libmpg123.c: Fix end sample ignoring for
+	  padding that's larger than one frame. But that again throws up
+	  the issue of validating / adapting gapless setup when the stream
+	  does not match the gapless info from the header frame, like, it
+	  is longer. We need to revisit that stuff, gapless code should
+	  generally be restructured to be more clear.
+
+2009-12-23 08:03  patr3ck
+
+	* trunk/src/libmpg123/parse.c: jon_y pointed out that win32 socket
+	  code needs the include of winsock2 not winsock 1.x
+
+2009-12-22 20:01  patr3ck
+
+	* trunk/src/libmpg123/parse.c: VS2005 wants the winsock.h instead
+	  of ws2tcpip.h. All other MSVC versions still compile properly
+	  with winsock.h
+
+2009-12-22 19:36  patr3ck
+
+	* trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2010/libmpg123/libmpg123.vcxproj: The new
+	  file feature.c was missing from the project files. This fixes
+	  tracker item with id 2919416.
+
+2009-12-18 13:22  jon_y
+
+	* trunk/src/mpg123.c: Fix GENERIG typo
+
+2009-12-10 15:57  patr3ck
+
+	* trunk/ports/MSVC++/config.h, trunk/src/libmpg123/compat.c: Add
+	  HAVE_WINDOWS_H define for msvc++ builds Add WANT_WIN32_UNICODE
+	  for unicode msvc++ builds Move win32 unicode related includes to
+	  the top of compat.c, defining them inline gave compile time
+	  errors on msvc++
+
+2009-12-08 15:43  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/layer1.c, trunk/src/libmpg123/layer2.c,
+	  trunk/src/libmpg123/layer3.c: Remove the last ALIGNED() stack
+	  variabls in favor of manually-aligned heap blocks. That helps
+	  som compilers (Sun Studio) work with our assembly codes, as they
+	  don't do stack alignment. This also speeds up mpg123 by about 9%
+	  on my Linux/x86-64 box! The code is probably not that pretty...
+	  I'm adding to the growing frame handle, funny pointer casting.
+	  But it works.
+
+2009-12-05 20:38  thor
+
+	* trunk/NEWS: Note about autotools change.
+
+2009-12-05 20:27  thor
+
+	* trunk/NEWS: updated NEWS
+
+2009-12-05 20:26  thor
+
+	* trunk/configure.ac: There been changes in lib.
+
+2009-12-05 14:13  thor
+
+	* trunk/configure.ac: More stuff for the os2me.h detection.
+
+2009-12-03 15:38  jon_y
+
+	* trunk/src/win32_support.h: Update header details
+
+2009-12-03 15:21  thor
+
+	* trunk/src/libmpg123/parse.c: Change || for &&, prevent that
+	  windows header on unix.
+
+2009-12-03 14:15  jon_y
+
+	* trunk/src/win32_support.h: Add missing header includes
+
+2009-12-03 14:05  jon_y
+
+	* trunk/configure.ac, trunk/src/common.c,
+	  trunk/src/control_generic.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/libmpg123.c, trunk/src/libmpg123/parse.c,
+	  trunk/src/libmpg123/reader.h, trunk/src/libmpg123/readers.c,
+	  trunk/src/mpg123.c, trunk/src/mpg123app.h, trunk/src/term.c,
+	  trunk/src/term.h: * Add support for Cygwin builds * Remove
+	  --enable-win32_unicode, check now based on _wopen being
+	  available * Use ws2tcpip.h instead of winsock.h
+
+2009-12-03 09:50  thor
+
+	* trunk/src/libmpg123/id3.c: Don't complain about empty ID3 tags.
+	  Jamendo does those for some reason.
+
+2009-12-02 17:33  thor
+
+	* trunk/configure.ac: More elaborate header check for OS/2, with
+	  os2.h as prerequesite of os2me.h.
+
+2009-12-02 16:01  patr3ck
+
+	* trunk/ports/MSVC++/2008clr/mpg123clr/AssemblyInfo.cpp,
+	  trunk/ports/MSVC++/2008clr/mpg123clr/enum.h,
+	  trunk/ports/MSVC++/2008clr/mpg123clr/id3v2.cpp,
+	  trunk/ports/MSVC++/2008clr/mpg123clr/mpg123clr.cpp,
+	  trunk/ports/MSVC++/2008clr/mpg123clr/mpg123clr.h,
+	  trunk/ports/MSVC++/2008clr/mpg123clr/mpg123clr.rc: Added
+	  mpg123_feature and check for uninitialized string pointer. Patch
+	  by Malcolm Boczek.
+
+2009-12-02 12:06  thor
+
+	* trunk/configure.ac: Assembly doesn't work as such on our OS/2
+	  setup: 08:06 < TeLLie> synth_i586.S: Assembler messages: 08:06 <
+	  TeLLie> synth_i586.S:37: Error: unknown pseudo-op: `.section' So
+	  let's focus on streamlined build for generic CPU for now.
+
+2009-12-01 23:38  thor
+
+	* trunk/NEWS, trunk/configure.ac: Improve OS/2 support according
+	  to latest report from Tellie, added heuristic for detecting OS/2
+	  where the buffering is buildable.
+
+2009-11-30 15:27  patr3ck
+
+	* trunk/AUTHORS: Add JonY, Malcolm and fix Taihei
+
+2009-11-30 10:40  thor
+
+	* trunk/src/win32_support.h: Don't define preprocessor symbols
+	  starting with _.
+
+2009-11-30 10:39  thor
+
+	* trunk/src/libmpg123/compat.h: Tellie was missing socklen_t on
+	  OS/2 (with klibc), added to compat.h .
+
+2009-11-30 10:37  thor
+
+	* trunk/AUTHORS: Add a line for Tellie as OS/2 guy.
+
+2009-11-30 10:32  thor
+
+	* trunk/src/output/os2.c: OS/2 audio fixes from Tellie.
+
+2009-11-30 10:30  thor
+
+	* trunk/src/output/os2.c: Convert os2.c to UNIX line ending.
+
+2009-11-29 12:12  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: Add experimentality markers to
+	  framebyframe functions.
+
+2009-11-28 22:10  patr3ck
+
+	* trunk/NEWS: Add win32 related new
+
+2009-11-28 21:56  thor
+
+	* trunk/NEWS, trunk/src/mpg123.c: Use debunk_mime() also for plain
+	  file URLs. In future playlist or file should be detected
+	  automatically and the need for the -@ option be removed.
+
+2009-11-28 21:52  thor
+
+	* trunk/src/httpget.c: At last, incorporate the suggestion from
+	  bug 2836904, ignoring auxilliary info of MIME types (like
+	  charset). A warning is emitted, though, because there could be
+	  playlists in funny encoding that should be handled for real by
+	  mpg123.
+
+2009-11-28 21:37  thor
+
+	* trunk/NEWS, trunk/src/httpget.c: Make HTTP header field parsing
+	  (and MIME types, while at it) case-insensitive. Fixes bug
+	  2904736.
+
+2009-11-28 21:23  thor
+
+	* trunk/NEWS: Decision: We are doing 1.10, updated NEWS.
+
+2009-11-28 21:03  thor
+
+	* trunk/NEWS.libmpg123, trunk/configure.ac: increasing lib version
+
+2009-11-28 21:01  thor
+
+	* trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: Merge Patrick's framebyframe
+	  functions. This is an experimental API add-on for now.
+
+2009-11-28 20:53  thor
+
+	* trunk/src/win32conv.c, trunk/src/win32conv.h: Remove obsolete
+	  win32conv, stuff moved.
+	* trunk/configure.ac, trunk/src/Makefile.am, trunk/src/mpg123.c,
+	  trunk/src/mpg123app.h, trunk/src/win32_support.c,
+	  trunk/src/win32_support.h, trunk/src/win32conv.c,
+	  trunk/src/win32conv.h: Merge JonY's Win32 priority patch.
+
+2009-11-28 16:48  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am: Prevent
+	  -export-dynamic for the mpg123 binary ... it borks up LTO build.
+
+2009-11-27 17:47  patr3ck
+
+	* trunk, trunk/ports/MSVC++/2008clr,
+	  trunk/src/libmpg123/feature.c, trunk/src/libmpg123/ntom.c,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth.h,
+	  trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/wavhead.h: A brand
+	  new common language runtime wrapper written by Malcolm Boczek
+
+2009-11-27 11:01  thor
+
+	* trunk/src/httpget.c: More verbosity on HTTP action (print all
+	  server responses with -vvv) and bail out early when relocation
+	  headers don't provide a new location. This is related to issue
+	  2904736: The server in that case does not give Location:
+	  http://some/place but location: http://some/place All other
+	  headers are uppercase as it should be, so, rather than making
+	  mpg123 fuzzy match the broken header, I decided to make it
+	  quickly error out with a better assessment of the situation. The
+	  server should be fixed to put out correct headers.
+
+2009-11-26 01:12  thor
+
+	* trunk/src/output/Makefile.am: Export only mpg123_* symbol(s)
+	  from modules. That prevents export of spurious LTO-symbols from
+	  gcc. (Patch by JonY.)
+
+2009-11-23 10:42  thor
+
+	* trunk/NEWS, trunk/src/module.c: Fix modules with libtool 2.2.6b,
+	  see issue 2901661. What I wonder about: Seems like libdir in .la
+	  files is now ingnored? Does that work in Windows, too?
+
+2009-11-23 10:13  thor
+
+	* trunk/NEWS: Import NEWS from 1.9.2 tag.
+
+2009-11-18 17:20  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/libmpg123/libmpg123.c:
+	  Fix gapless logic to cut trailing silence also on multiple
+	  decodings of one file.
+
+2009-11-07 06:15  taihei
+
+	* trunk/configure.ac: Changed linker flags for OSX 10.6 Good, 10.6
+	  linker seems to be compatible with non-PIC assembly code!
+
+2009-10-22 07:36  thor
+
+	* trunk/src/libmpg123/libmpg123.c, trunk/src/libmpg123/parse.c: Do
+	  not anticipate track end on reaching an expected number of
+	  frames (from Xing header). Only end when there is nothing to
+	  read anymore. This is to support http streams that like to
+	  prepend an intro piece with Xing header (that tells mpg123 that
+	  the stream is about to end in a few seconds). An optimal
+	  solution would check for that case in the parser (seeing that we
+	  are done with a sub-track and thus look out anew for a first
+	  frame and Xing/Lame header, tags), but there is potential
+	  trouble with gapless state... and audio_start .. seek index.
+	  Well, one might get away with non-seekable streams, but when you
+	  dump the webradio, you got a seekable file on disk.
+
+2009-10-21 20:24  patr3ck
+
+	* trunk/ports/MSVC++/2010/scan/scan.vcxproj,
+	  trunk/ports/MSVC++/2010/scan/scan.vcxproj.filters: Visual Studio
+	  2010 project files
+
+2009-10-21 15:20  patr3ck
+
+	* trunk/ports/MSVC++/2010, trunk/ports/MSVC++/2010/feedseek,
+	  trunk/ports/MSVC++/2010/feedseek/feedseek.vcxproj,
+	  trunk/ports/MSVC++/2010/feedseek/feedseek.vcxproj.filters,
+	  trunk/ports/MSVC++/2010/libmpg123,
+	  trunk/ports/MSVC++/2010/libmpg123/libmpg123.vcxproj,
+	  trunk/ports/MSVC++/2010/mpg123.sln,
+	  trunk/ports/MSVC++/2010/scan,
+	  trunk/ports/MSVC++/2010/scan/scan.vcxproj,
+	  trunk/ports/MSVC++/2010/scan/scan.vcxproj.filters: Visual Studio
+	  2010 project files for libmpg123 itself and the feedseek
+	  example. scan and mpglib examples are still a work in progress.
+
+2009-10-20 20:31  patr3ck
+
+	* trunk/src/mpg123.c: Switch stdin to binary mode on win32. Patch
+	  provided by smack32.
+
+2009-10-16 00:18  thor
+
+	* trunk/src/libmpg123/dct64_sse.S,
+	  trunk/src/libmpg123/dct64_sse_float.S,
+	  trunk/src/libmpg123/dct64_x86_64.S,
+	  trunk/src/libmpg123/dct64_x86_64_float.S,
+	  trunk/src/libmpg123/synth_3dnow.S,
+	  trunk/src/libmpg123/synth_sse_accurate.S,
+	  trunk/src/libmpg123/synth_sse_float.S,
+	  trunk/src/libmpg123/synth_sse_s32.S,
+	  trunk/src/libmpg123/synth_stereo_sse_accurate.S,
+	  trunk/src/libmpg123/synth_stereo_sse_float.S,
+	  trunk/src/libmpg123/synth_stereo_sse_s32.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_accurate.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_float.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_s32.S,
+	  trunk/src/libmpg123/synth_x86_64.S,
+	  trunk/src/libmpg123/synth_x86_64_accurate.S,
+	  trunk/src/libmpg123/synth_x86_64_float.S,
+	  trunk/src/libmpg123/synth_x86_64_s32.S: remove redundant
+	  alignment extra arguments (that also disturb some assemblers)
+
+2009-10-14 13:33  thor
+
+	* trunk/configure.ac: Add entries to choose default CPU on
+	  solaris/x86.
+
+2009-10-14 13:32  thor
+
+	* trunk/configure.ac: Reshuffle some checks, namely get socket
+	  libraries sorted out before checking for IPv6 support.
+
+2009-10-08 22:48  thor
+
+	* trunk, trunk/NEWS, trunk/src/libmpg123/ntom.c,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth.h,
+	  trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/wavhead.h: import
+	  NEWS for 1.9.1
+
+2009-10-08 22:37  thor
+
+	* trunk, trunk/src/libmpg123/compat.c, trunk/src/libmpg123/ntom.c,
+	  trunk/src/libmpg123/readers.c, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth.h, trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/wavhead.h: Typo in
+	  debugging message, bc-> was missing.
+
+2009-10-08 12:41  thor
+
+	* trunk/src/libmpg123/compat.c: Include fcntl.h so that open() and
+	  close() are defined properly on UNIX.
+
+2009-10-08 12:40  thor
+
+	* trunk/src/libmpg123/index.c: no C++ comments
+
+2009-10-08 08:44  jon_y
+
+	* trunk/src/libmpg123/compat.c, trunk/src/libmpg123/compat.h,
+	  trunk/src/libmpg123/readers.c: * src/libmpg123/compat.c
+	  (compat_open): Use _open() instead of open() for windows hosts.
+	  (compat_close): New. * src/libmpg123/compat.h (compat_close):
+	  Declared and documented. * src/libmpg123/readers.c
+	  (stream_close): Use compat_close() instead of close().
+
+2009-10-06 06:27  thor
+
+	* trunk/NEWS: update NEWS about RVA from ID3
+
+2009-10-06 06:25  thor
+
+	* trunk/src/libmpg123/id3.c: Got the do-not-translate flag to
+	  store_id3_text wrong! Since the MPG123_PLAIN_ID3TEXT feature
+	  additon, the parsing of RVA info from comments and TXXX has been
+	  broken. Splendit. Thanks to Jeroen for spotting the breakage.
+
+2009-10-06 05:50  thor
+
+	* trunk/src/libmpg123/readers.c: Oops, someone been in C++ mode
+	  while adding a comment...
+
+2009-10-06 05:49  thor
+
+	* trunk/src/libmpg123/frame.h: Adding descripton of
+	  frame_expect_outsamples. Plus note to self: gcc can't be arsed
+	  to complain about the missing declaration unless -Wall is
+	  specified.
+
+2009-10-05 13:18  patr3ck
+
+	* trunk/src/libmpg123/frame.h: Add missing frame_expect_outsamples
+	  function declaration
+
+2009-10-04 22:30  thor
+
+	* trunk/AUTHORS, trunk/NEWS, trunk/doc/README.remote,
+	  trunk/src/audio.c, trunk/src/audio.h,
+	  trunk/src/control_generic.c, trunk/src/term.c: Add the pitch
+	  command to the control interface, like envisioned by Jeroen.
+
+2009-10-04 13:18  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/libmpg123.c, trunk/src/libmpg123/ntom.c,
+	  trunk/src/tests/seek_accuracy.c: Fix the CPU creep with NtoM
+	  decoding by introducing simpler computation of the expected
+	  output samples per frame. Also made the seek_accuracy test a bit
+	  more verbose while verifying that it yields the same results as
+	  before.
+
+2009-09-30 11:17  jon_y
+
+	* trunk/configure.ac: Remove some bashism
+
+2009-09-28 21:11  thor
+
+	* trunk/src/libmpg123/readers.c: Fix back-to-beginning for
+	  feed_skip (fixes bug 2859531)/
+
+2009-09-26 12:24  thor
+
+	* trunk/src/module.c: Be more verbose (on request) about module
+	  failures... mainly to remind me about that nonsense with
+	  absolute paths in .la files.
+
+2009-09-26 08:53  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: update the year
+
+2009-09-24 21:36  patr3ck
+
+	* trunk/src/libmpg123/layer3.c: Add NOQUIET where it was missing,
+	  patch provided by Christian Heckendorf
+
+2009-09-22 19:59  patr3ck
+
+	* trunk/src/libmpg123/index.c, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: mpg123_set_index Setting
+	  offsets to NULL and fill > 0 will allocate space for fill
+	  entries in the index. Setting offsets to NULL and fill to 0 will
+	  clear the index and free the allocated memory.
+
+2009-09-22 15:11  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/mpg123.sln: Remove decoder build targets
+	  bloat. Keep only Generic, Generic Dll, X86, X86 dll and Minimal
+	  Dll builds in Debug and Release configurations.
+
+2009-09-16 09:26  jon_y
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/libmpg123.sym.in: Simplify libmpg123 export
+	  mechanism and make feature report optional.
+
+2009-09-15 15:37  patr3ck
+
+	* trunk/src/libmpg123/mpg123.h.in: Update the documentation of
+	  MPG123_BAD_INDEX_PAR to reflect its use in mpg123_set_index
+
+2009-09-15 12:51  patr3ck
+
+	* trunk/src/libmpg123/feature.c: Cosmetics: Remove unneeded indent
+	  whitespace
+
+2009-09-15 12:11  patr3ck
+
+	* trunk/src/libmpg123/feature.c, trunk/src/libmpg123/index.c,
+	  trunk/src/libmpg123/index.h, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/libmpg123.sym.in,
+	  trunk/src/libmpg123/mpg123.h.in: New mpg123_set_index function
+	  which allows replacing of the formerly internal seek index
+
+2009-09-14 01:56  jon_y
+
+	* trunk/src/win32conv.c, trunk/src/win32conv.h: Add missing win32
+	  utf8 conversion files.
+
+2009-09-13 15:27  jon_y
+
+	* trunk/src/libmpg123/feature.c: fix lots of typos
+
+2009-09-13 15:04  jon_y
+
+	* trunk/src/libmpg123/feature.c, trunk/src/libmpg123/mpg123.h.in:
+	  expand feature report function
+
+2009-09-12 14:01  patr3ck
+
+	* trunk/src/libmpg123/compat.c: Cosmetics: line endings
+
+2009-09-12 13:53  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Minimal
+	  build: Make sure the new VS2008 SP1 c runtime is used if
+	  VS2008SP1 is installed. This prevents a obscure binding problem
+	  in side-by-side installation scenarios
+
+2009-09-12 13:48  patr3ck
+
+	* trunk/src/libmpg123/compat.c: MSVC wants io.h if plain open is
+	  used
+
+2009-09-08 15:35  jon_y
+
+	* trunk/src/libmpg123/libmpg123.sym.in: Cosmetics: sort in
+	  alphabetical order.
+
+2009-09-07 07:17  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c: Prevent
+	  possible discarding of decoded output when new format is
+	  discovered ... remember: the bytes done until you get NEW_FORMAT
+	  are there to be handled with the old format, these number of
+	  bytes does not have to be zero.
+
+2009-09-06 10:28  thor
+
+	* trunk/NEWS: Add first NEWS for next release, win32 unicode.
+
+2009-09-06 10:23  thor
+
+	* trunk, trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/ports/MSVC++/CMP3Stream/INCLUDE,
+	  trunk/ports/MSVC++/CMP3Stream/README,
+	  trunk/ports/MSVC++/CMP3Stream/SOURCE,
+	  trunk/ports/MSVC++/CMP3Stream/libMPG123, trunk/src/Makefile.am,
+	  trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/compat.c,
+	  trunk/src/libmpg123/compat.h, trunk/src/libmpg123/feature.c,
+	  trunk/src/libmpg123/libmpg123.sym.in,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/ntom.c,
+	  trunk/src/libmpg123/readers.c, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth.h, trunk/src/libmpg123/synth_3dnow.S,
+	  trunk/src/libmpg123/synth_3dnowext.S,
+	  trunk/src/libmpg123/synth_8bit.c,
+	  trunk/src/libmpg123/synth_altivec.c,
+	  trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c,
+	  trunk/src/libmpg123/synth_sse.S,
+	  trunk/src/libmpg123/synth_sse3d.h, trunk/src/mpg123.c,
+	  trunk/src/tests/plain_id3.c, trunk/src/tests/testtext.h,
+	  trunk/src/tests/testtext.sh, trunk/src/tests/text.c,
+	  trunk/src/wavhead.h, trunk/windows-builds.sh: Merge in the win32
+	  unicode feature branch.
+
+2009-09-03 13:07  patr3ck
+
+	* trunk/src/libmpg123/id3.c: Fix a signed/unsigned mismatch
+	  compiler warning on VS2008
+
+2009-09-03 05:50  thor
+
+	* trunk/Makefile.am, trunk/autogen.sh, trunk/configure.ac:
+	  Resorting to mpg123.spec generation in configure, while still
+	  distributing the result (thanks to Leandro Nini to push us in
+	  that direction). Also, preparing for next version.
+
+2009-09-03 05:49  thor
+
+	* trunk/TODO: feeder and free format
+
+2009-08-25 21:02  taihei
+
+	* trunk/configure.ac: buildsystem fix for upcoming OSX 10.6 10.6
+	  is weird, host is "i386-apple-darwin10.0.0" but the default
+	  target of gcc is x86-64 on 64-bit CPUs. so we should detect
+	  x86-64 capability dynamically. still broken on 32-bit CPUs with
+	  the default gcc(4.2); 32-bit users should use gcc-4.0 instead.
+
+2009-08-19 09:40  taihei
+
+	* trunk/src/output/openal.c: fix for the issue of openal output
+	  (Bug 2840085) get_formats_openal() returned an invalid value due
+	  to the wrong operator priority. I don't know why this didn't
+	  happen on x86 gccs...
+
+2009-08-14 11:53  jon_y
+
+	* trunk/windows-builds.sh: Make windows-builds.sh executable.
+
+2009-08-13 23:38  thor
+
+	* trunk/autogen.sh: Simplifying autogen.sh to use autoreconf ...
+	  and this seems to solve the issue of including the m4 directory
+	  in the distribution.
+
+2009-08-13 10:45  thor
+
+	* trunk/src/libmpg123/id3.c: typo in comment
+
+2009-08-12 13:40  thor
+
+	* trunk, trunk/NEWS, trunk/ports/MSVC++/CMP3Stream/INCLUDE,
+	  trunk/ports/MSVC++/CMP3Stream/README,
+	  trunk/ports/MSVC++/CMP3Stream/SOURCE,
+	  trunk/ports/MSVC++/CMP3Stream/libMPG123,
+	  trunk/src/libmpg123/ntom.c, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth.h, trunk/src/libmpg123/synth_3dnow.S,
+	  trunk/src/libmpg123/synth_3dnowext.S,
+	  trunk/src/libmpg123/synth_8bit.c,
+	  trunk/src/libmpg123/synth_altivec.c,
+	  trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_ntom.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c,
+	  trunk/src/libmpg123/synth_sse.S,
+	  trunk/src/libmpg123/synth_sse3d.h, trunk/src/wavhead.h: Merging
+	  in the NEWS typo fix. ...and a lot of very strange svn:mergeinfo
+	  updates. What's the deal about these nonexistent paths in mhipp/
+	  ?
+
+2009-08-10 01:12  thor
+
+	* trunk/TODO: note about JACK isue
+
+2009-08-10 00:27  thor
+
+	* trunk/NEWS, trunk/src/libmpg123/id3.c: handle bug 2834636:
+	  misdetection of string separator in id3
+
+2009-08-10 00:03  thor
+
+	* trunk/NEWS: typo
+
+2009-08-05 13:19  thor
+
+	* trunk/NEWS: little nudging of NEWS
+
+2009-08-04 20:52  thor
+
+	* trunk/windows-builds.sh: Less builds for windows (dithering is
+	  inside now).
+
+2009-08-04 20:51  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/libmpg123/sample.h,
+	  trunk/src/libmpg123/synth.c: Make generic dither always use
+	  accurate rounding.
+
+2009-08-02 17:08  thor
+
+	* trunk/configure.ac: Yes, one needs to remove duplicates from the
+	  list(s)... now with grep -w (is that portable?)
+
+2009-08-02 16:28  thor
+
+	* trunk/configure.ac: fix configure.ac for dither.lo ... why was
+	  that grep there anyway?
+
+2009-08-02 16:01  thor
+
+	* trunk/NEWS: dithering needs fix
+
+2009-08-02 15:26  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/src/Makefile.am, trunk/src/libmpg123/icy2utf8.c,
+	  trunk/src/libmpg123/icy2utf8.h, trunk/src/libmpg123/id3.c,
+	  trunk/src/libmpg123/id3.h, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/libmpg123.sym.in,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/metaprint.c,
+	  trunk/src/tests/plain_id3.c, trunk/src/tests/testtext.h,
+	  trunk/src/tests/testtext.sh, trunk/src/tests/text.c: It started
+	  out simple :-/ ... A switch to preserve the original data in
+	  ID3v2 text fields, with accompanied API additions to access the
+	  encoding translations libmpg123 can do. With tests. Some testing
+	  at least...
+
+2009-08-02 09:11  thor
+
+	* trunk/src/libmpg123/id3.c: Yeah, make it const, does not really
+	  matter...
+	* trunk/configure.ac: More platforms defaulting to x86-64_all
+	  (linux, too;-).
+
+2009-08-02 08:50  thor
+
+	* trunk/configure.ac: Make combined builds with dithering the
+	  default, now, that this does not add this bload anymore.
+
+2009-08-02 00:33  thor
+
+	* trunk/configure.ac: Lib bugfix version increased with the
+	  unicode stuff, among others...
+
+2009-08-02 00:32  thor
+
+	* trunk/Makefile.am, trunk/configure.ac, trunk/m4: Silence some
+	  warnings from libtool... it is happier with m4/ present (merge
+	  from r2252).
+
+2009-08-02 00:24  thor
+
+	* trunk/configure.ac: Merge in r2251: Use host instead of target
+	  in configure; the book suggests that.
+
+2009-08-01 22:14  thor
+
+	* trunk/NEWS, trunk/src/libmpg123/id3.c: Be more tolerant with
+	  UTF16: always check for BOM, in case of multiple BOMs, always
+	  use the last one.
+
+2009-08-01 21:43  thor
+
+	* trunk/src/legacy_module.c: cleanup a debugging line
+
+2009-07-29 14:13  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Fix a
+	  compile error on VS2008 in SSE related release builds. The
+	  object file for synth_sse_accurate.asm was picked up from debug
+	  folder instead of the release folder.
+
+2009-07-29 05:08  taihei
+
+	* trunk/configure.ac: fixed a compiling issue of altivec decoder
+	  on macosx
+
+2009-07-28 12:07  thor
+
+	* trunk/NEWS: newer NEWS
+
+2009-07-28 11:54  thor
+
+	* trunk/configure.ac: Increase bugfix number for the lib,
+	  respecting the zero fill for 8bit encodings.
+	* trunk/NEWS: announce the term_hint
+
+2009-07-28 11:52  thor
+
+	* trunk/src/mpg123.c, trunk/src/term.c, trunk/src/term.h: handle
+	  bug 2800832 (feature request): give note about terminal control
+	  being active and how to get help
+
+2009-07-28 11:33  thor
+
+	* trunk/configure.ac: try to apply -faltivec only on macos, so
+	  that altivec compile works under linux
+
+2009-07-27 23:50  thor
+
+	* trunk/NEWS: some news
+
+2009-07-27 23:37  thor
+
+	* trunk/src/libmpg123/libmpg123.c: fix bug 2805665: zero fillup
+	  was wrong for unsigned 8 bit
+
+2009-07-26 09:43  taihei
+
+	* trunk/src/libmpg123/dither.c: comment about the IIR generator
+
+2009-07-26 08:42  thor
+
+	* trunk/src/tests/noise, trunk/src/tests/noise.c: Of course adding
+	  the _source_ of the test program!
+
+2009-07-26 08:41  thor
+
+	* trunk/src/Makefile.am, trunk/src/libmpg123/dither.c,
+	  trunk/src/libmpg123/dither.h, trunk/src/tests/noise: Structure
+	  noise stuff a bit... add hooks to export the noise, with test
+	  program using that. This could become part of the mpg123 API...
+
+2009-07-26 06:45  taihei
+
+	* trunk/src/libmpg123/dither.c: code cleanup
+
+2009-07-25 20:36  taihei
+
+	* trunk/src/libmpg123/dither.c: fixed a discontinuity issue in the
+	  dither noise table, and adjusted IIR coeffs a bit
+
+2009-07-25 07:22  taihei
+
+	* trunk/src/libmpg123/synth_arm.S: fixed a dumb mistake in arm asm
+	  code, a cause for cracklings in some files
+
+2009-07-23 11:45  patr3ck
+
+	* trunk/ports/MSVC++/examples/feedseek.c: Support all samplerates
+	  libmpg123 supports, not only 44100.
+
+2009-07-22 22:28  thor
+
+	* trunk/src/libmpg123/dnoise.dat, trunk/src/libmpg123/dnoise.sh:
+	  remove old dnoise files
+
+2009-07-22 22:25  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/optimize.c: Allocate dither table only on
+	  demand. Still missing: Some sampling-frequency mojo. And proper
+	  evaluation of the dithering.
+
+2009-07-22 22:07  thor
+
+	* trunk/src/libmpg123/dither.c: add boilerplate
+
+2009-07-22 22:06  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/dither.c, trunk/src/libmpg123/dither.h,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/optimize.h: Move dither noise generation
+	  code to separate files.
+
+2009-07-07 18:33  thor
+
+	* trunk/AUTHORS, trunk/src/libmpg123/id3.c: Integrating patch from
+	  Andy Hefner to fix another crash for (invalid) UTF16 strings.
+	  One modification: I replaced (l & ~1) with (l / 2)*2, because I
+	  am wary of bit operations with the rather unspecific type size_t
+	  (will every compiler make a 64bit ~1 if it's needed?).
+
+2009-07-04 09:40  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/synth_arm.S,
+	  trunk/src/libmpg123/synth_arm_accurate.S: replaced ARM pseudo
+	  asm instructions, which are not supported by older gccs
+
+2009-07-01 00:47  thor
+
+	* trunk/src/Makefile.am, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/tests/seek_whence.c: An attempt to fix trouble with
+	  files that do not have gapless info in headers... mpg123_seek
+	  with SEEK_END issues a scan if possible, scans update gapless
+	  info so that we have at least some value for the "end of
+	  samples". SEEK_END used to be just broken for files without
+	  gapless info (though there's an easy workaroudn with SEEK_SET
+	  and mpg123_length...).
+
+2009-06-25 11:24  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Use the
+	  correct build directory in the new minimal dll build Make sure
+	  the dependency is the new VS2008 SP1 c runtime if VS2008SP1 is
+	  installed. This prevents a obscure binding problem in
+	  side-by-side installation scenarios
+
+2009-06-23 06:35  taihei
+
+	* trunk/src/libmpg123/frame.c: dither_table_init should be
+	  activated only when OPT_DITHER is defined
+
+2009-06-22 20:11  taihei
+
+	* trunk/src/libmpg123/frame.c: dither table initialization is
+	  separated out, and better frequency response of the noise
+
+2009-06-22 17:28  taihei
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/optimize.h: run-time dither noise
+	  generation: no more binary bloating! at this moment high pass
+	  TPDF noise is applied, but still there will be a room for
+	  argument about the optimum shape of the noise.
+
+2009-06-20 15:41  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/parse.c: Some cleaning
+	  work for free format: - Remove now defunct check for
+	  un-supported free format header. - Initialize the header
+	  variable in the free format framesize guesser. - Also let the
+	  free format code fail early for non-seekable unbuffered streams.
+	  - Mark this as new lib version... new format support is a new
+	  feature. FIXME: We need to ensure correct behaviour for feeder
+	  API (MPG123_NEED_MORE).
+
+2009-06-20 14:49  thor
+
+	* trunk/src/libmpg123/parse.c: little typo
+
+2009-06-20 14:46  thor
+
+	* trunk/src/output/Makefile.am: add openal to the generator script
+	  in Makefile.am
+
+2009-06-20 14:08  taihei
+
+	* trunk/configure.ac, trunk/src/common.c,
+	  trunk/src/output/Makefile.am, trunk/src/output/openal.c: a new
+	  output module: OpenAL currently tested on Linux and OSX
+
+2009-06-20 13:07  taihei
+
+	* trunk/src/common.c: print_header now shows bitrate of freeformat
+	  files correctly
+
+2009-06-20 06:16  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/synth.h: sorry, the previous commit included
+	  some garbages
+
+2009-06-20 06:11  taihei
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/parse.c, trunk/src/libmpg123/synth.h: first
+	  attempt to support freeformat
+
+2009-06-14 20:26  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Add a
+	  minimal decoding only dll build.
+
+2009-06-14 12:39  thor
+
+	* trunk/NEWS, trunk/ports/Sony_PSP/Makefile.psp,
+	  trunk/ports/Sony_PSP/config.h: update Sony PSP build files
+
+2009-06-14 12:37  thor
+
+	* trunk/configure.ac: we are working on 1.9.0
+	* trunk/NEWS: import NEWS for 1.8.1
+
+2009-06-14 12:13  thor
+
+	* trunk/README: update README for accuracy and x86-64 stuff
+
+2009-06-14 11:59  thor
+
+	* trunk/configure.ac: Merge r2182: really fix configure with
+	  modules...
+
+2009-06-14 11:11  taihei
+
+	* trunk/src/libmpg123/synth_altivec.c: fix for the compilation
+	  failure on older gcc
+
+2009-06-13 10:40  thor
+
+	* trunk/src/mpg123.c: Combine conflicting code for binpath and
+	  program name extraction into one piece of code that works
+	  together. See bug #2805663.
+
+2009-06-11 09:29  thor
+
+	* trunk/configure.ac: fixup of libltdl stuff with
+	  --enable-modules, that had been broken...
+
+2009-06-10 08:00  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: reminder about return codes
+	  also for decoding routines specifically
+
+2009-06-10 07:55  thor
+
+	* trunk/NEWS, trunk/doc/examples/dumb_decoder.c,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: Fix MPG123_NEW_FORMAT behaviour
+	  ... clients are not forced to call mpg123_getformat(), it is
+	  just a one-time hint.
+
+2009-06-08 17:51  taihei
+
+	* trunk/src/libmpg123/l12_integer_tables.h,
+	  trunk/src/libmpg123/l3_integer_tables.h: missing files for the
+	  previous commit...
+
+2009-06-08 17:48  taihei
+
+	* trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/layer2.c, trunk/src/libmpg123/layer3.c,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/tabinit.c: - introduced pre-calculated
+	  tables for integer decoders run-time table initialization which
+	  includes many expensive FP operations is a very heavy task for
+	  the CPUs without FPU (sometimes takes more cpu time than
+	  decoding itself, the cause of stuttering at startup). the binary
+	  size increases(about +32KB), but significantly faster on those
+	  CPUs. undef PRECALC_TABLES macro in mpg123lib_intern.h to
+	  suppress this behavior. - faster decwin table initialization for
+	  integer decoders we can't adopt pre-calculation for this table
+	  due to RVA, so replaced some floating-point maths with
+	  fixed-point ones for faster initialization. - removed COS1 table
+	  from layer3.c, which is no longer used anywhere.
+
+2009-06-08 03:02  taihei
+
+	* trunk/src/libmpg123/synth_stereo_x86_64_s32.S: a fix for the
+	  crash in s32 stereo synth, on win64
+
+2009-06-07 12:31  taihei
+
+	* trunk/src/libmpg123/synth_arm.S,
+	  trunk/src/libmpg123/synth_arm_accurate.S: ...and software
+	  pipelining
+
+2009-06-07 11:43  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/synth_arm.S,
+	  trunk/src/libmpg123/synth_arm_accurate.S: minor optimizations
+	  for arm decoder
+
+2009-06-06 20:51  thor
+
+	* trunk/configure.ac: another attempt to keep up with lib version
+
+2009-06-06 18:49  taihei
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/optimize.c, trunk/src/libmpg123/optimize.h,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth_arm.S,
+	  trunk/src/libmpg123/synth_arm_accurate.S,
+	  trunk/src/libmpg123/tabinit.c: "full" asm optimized synths for
+	  ARM processors
+
+2009-06-05 15:34  taihei
+
+	* trunk/src/libmpg123/synth_stereo_x86_64.S: fix for the 16bit
+	  stereo synth bug, in win64
+
+2009-06-04 16:43  taihei
+
+	* trunk/configure.ac: slight change of the arm target name
+
+2009-06-03 12:27  taihei
+
+	* trunk/configure.ac: arm code works (confirmed on qemu), change
+	  the default decoder for arm
+
+2009-06-03 11:18  taihei
+
+	* trunk/configure.ac, trunk/src/libmpg123/mpg123lib_intern.h:
+	  added asm optimizations for ppc and arm, enabled with
+	  --with-cpu={ppc|arm}_nofpu. ppc code is tested and works, but
+	  arm code isn't tested yet.
+
+2009-06-03 05:03  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: faster inline asm
+
+2009-06-02 21:53  thor
+
+	* trunk/NEWS: could not resist the lame pun
+
+2009-06-02 21:32  thor
+
+	* trunk/NEWS: note some NEWS for tomorriw
+
+2009-06-02 18:37  thor
+
+	* trunk/configure.ac: new lib version... there have been changes
+
+2009-06-02 18:36  thor
+
+	* trunk/NEWS: note OS/2 state
+
+2009-06-02 16:48  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: use macro style inline
+	  asm
+
+2009-06-01 19:43  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/sample.h: tuned the fast fixed-point
+	  decoder; now fully compliant in layer3 test
+
+2009-06-01 17:50  taihei
+
+	* trunk/src/libmpg123/dct64.c, trunk/src/libmpg123/dct64_i386.c,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/sample.h, trunk/src/libmpg123/synth.h,
+	  trunk/src/libmpg123/synth_ntom.h, trunk/src/libmpg123/tabinit.c:
+	  introducing the same technique as the MMX/SSE integer decoder.
+	  now limited accracy, but faster decoder is used for the
+	  fixed-point decoders when the "--enable-int-quality" switch is
+	  not specified.
+
+2009-06-01 15:56  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: faster i386_nofpu
+	  decoder with inline asm; about 20% faster on core2
+
+2009-06-01 08:01  thor
+
+	* trunk/configure.ac: more lib changes... now fully compliant
+	  integer code
+
+2009-06-01 07:53  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: more accurate
+	  double-to-int rounding
+
+2009-06-01 05:45  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/sample.h: finally, fully compliant fixed
+	  point decoder
+
+2009-05-31 18:57  taihei
+
+	* trunk/src/libmpg123/dct64.c, trunk/src/libmpg123/dct64_i386.c,
+	  trunk/src/libmpg123/layer1.c, trunk/src/libmpg123/layer2.c,
+	  trunk/src/libmpg123/layer3.c,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/sample.h, trunk/src/libmpg123/tabinit.c:
+	  tuned integer decoder again; significantly better than the
+	  previous one.
+
+2009-05-31 17:05  thor
+
+	* trunk/man1/mpg123.1, trunk/src/mpg123.c: The --gain parameter is
+	  deprecated (works, but only there for backwards compatibility).
+	  Applied patch from Andreas Neustifter (with one added witty
+	  bootnote in the man page).
+
+2009-05-31 09:35  thor
+
+	* trunk/configure.ac: increase version for the past integer
+	  decoder fixes
+
+2009-05-31 04:46  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: fixed a bug in integer
+	  layer2 decoder; should be correct now.
+
+2009-05-30 19:06  taihei
+
+	* trunk/src/libmpg123/dct64.c, trunk/src/libmpg123/dct64_i386.c,
+	  trunk/src/libmpg123/layer3.c,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/sample.h, trunk/src/libmpg123/tabinit.c:
+	  improve accuracy of integer decoders
+
+2009-05-30 15:49  thor
+
+	* trunk/NEWS, trunk/src/audio.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123app.h: re-enable the gain parameter... neets
+	  testing on a system that actually features hardware gain
+
+2009-05-30 14:53  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/layer3.c: increase
+	  library version, plus one small piece of conditional code for
+	  REAL_IS_FIXED
+
+2009-05-30 14:09  thor
+
+	* trunk/src/audio.c, trunk/src/buffer.c: enable buffer to work
+	  with any audio output type (that actually helped me debugging
+	  for the previous commit)
+
+2009-05-30 14:05  thor
+
+	* trunk/NEWS, trunk/src/audio.c, trunk/src/buffer.c,
+	  trunk/src/xfermem.c, trunk/src/xfermem.h: fix bug 2796802
+	  (awaiting confirmation): we need to wait for the buffer to be
+	  ready, not just let it loose
+
+2009-05-30 07:11  taihei
+
+	* trunk/src/libmpg123/layer1.c, trunk/src/libmpg123/layer2.c,
+	  trunk/src/libmpg123/layer3.c,
+	  trunk/src/libmpg123/mpg123lib_intern.h: more accurate fixed
+	  point decoder; still not perfect, but quite good. also fixes
+	  totally broken fixed point layer 1/2 decoder.
+
+2009-05-27 16:18  taihei
+
+	* trunk/configure.ac, trunk/src/libmpg123/dct64_i386.c: fix for
+	  i386_nofpu decoder; real and s32 output should be disabled for
+	  it, and dct64_i386 should use REAL_MUL macro for multiplications
+
+2009-05-26 06:26  thor
+
+	* trunk/man1/mpg123.1: add space between --pitch and its parameter
+
+2009-05-24 00:37  thor
+
+	* trunk/configure.ac: that is a new lib version
+
+2009-05-24 00:30  thor
+
+	* trunk/configure.ac: provide means to enable buffer where system
+	  whitelist fails (we do not have proper tests for the needed
+	  features yet)
+
+2009-05-23 11:48  taihei
+
+	* trunk/src/libmpg123/dct64_x86_64.S,
+	  trunk/src/libmpg123/dct64_x86_64_float.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_accurate.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_float.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_s32.S,
+	  trunk/src/libmpg123/synth_x86_64.S,
+	  trunk/src/libmpg123/synth_x86_64_accurate.S,
+	  trunk/src/libmpg123/synth_x86_64_float.S,
+	  trunk/src/libmpg123/synth_x86_64_s32.S: added support for
+	  windows x64 calling convention (why is it totally different from
+	  the standard one? :p) in x86-64 asm functions; I'm not sure if
+	  this works well, but I hope this helps...
+
+2009-05-21 22:39  thor
+
+	* trunk/Makefile.am, trunk/NEWS.libmpg123, trunk/doc/Makefile.am:
+	  merge changes from 1.8rc1 branch: Makefile.am updates, libmpg123
+	  17.0.17 news
+
+2009-05-21 20:32  thor
+
+	* trunk/doc/libmpg123_speed.txt: update speed notes
+
+2009-05-21 11:03  thor
+
+	* trunk/doc/THANKS: at least some thanks to JonY
+
+2009-05-21 10:56  thor
+
+	* trunk/src/module.c, trunk/src/mpg123.c: proper fix for the
+	  no-path case, this time
+
+2009-05-21 10:08  thor
+
+	* trunk/src/module.c: actually tell the complete current moddir to
+	  be tested in debug output
+
+2009-05-21 09:54  thor
+
+	* trunk/src/module.c, trunk/src/mpg123.c: Try to handle empty
+	  binary path for finding modules (windows needs it? -- we want
+	  testing).
+
+2009-05-20 22:01  thor
+
+	* trunk/TODO: Some TODOs are done.
+
+2009-05-20 21:57  thor
+
+	* trunk/doc/ACCURACY, trunk/doc/README.WIN32: doc update Remove
+	  outdated win32 README, update accuracy info.
+	* trunk/doc/THANKS: More alphabetical, a small passage to cover
+	  people I did not name.
+
+2009-05-19 22:39  patr3ck
+
+	* trunk/ports/MSVC++/config.h, trunk/src/libmpg123/sample.h:
+	  define __inline as inline in config.h to make static inline
+	  declarations work as sugested by sobukus
+
+2009-05-19 22:38  thor
+
+	* trunk/NEWS: An attempt to get the NEWS for 1.8.0 written down.
+	* trunk/AUTHORS: be more specific about Taihei;-)
+
+2009-05-19 21:33  thor
+
+	* trunk/src/tests: ignore
+
+2009-05-19 21:31  thor
+
+	* trunk/xmms2-plugin: xmms2 plugin is in xmms2 upstream source
+
+2009-05-19 21:14  thor
+
+	* trunk/src/libmpg123/readers.c: also do nott check for
+	  anticipated file end in the ICY reader...
+
+2009-05-19 14:35  thor
+
+	* trunk/src/libmpg123/readers.c: Do not anticipate file end,
+	  always wait for read() indicating real EOF (hopefully fixes bug
+	  2793677 with embedded ID3v1).
+
+2009-05-19 09:55  thor
+
+	* trunk/src/mpg123.c: do nott included unnecessary headers in
+	  mpg123.c
+
+2009-05-18 14:15  thor
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: load config.h earlier to
+	  make the ABI_ALIGN_FUN work again, thanks to Leandro for
+	  spotting this (still needs testing)
+
+2009-05-18 08:21  taihei
+
+	* trunk/src/libmpg123/synth_3dnow.S: supported accurate rounding
+	  for 3dnow decoder
+
+2009-05-17 21:42  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Catch up
+	  with Taihai's latest additions to SSE optimized decoding
+
+2009-05-17 19:38  thor
+
+	* trunk/configure.ac: there is no synth_stereo_sse.S
+
+2009-05-17 13:29  thor
+
+	* trunk/configure.ac: organize the --with-int-quality code...
+	  choose either set of sources, not always both
+
+2009-05-17 11:19  thor
+
+	* trunk/src/libmpg123/Makefile.am: Enable RPATH builds for
+	  dithering decoders by using full path to dnoise.sh. Just a note
+	  again, for funny paths: Spaces in source path will blow up with
+	  autoconf. Do not forget that.
+
+2009-05-17 06:21  taihei
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth_s32.c,
+	  trunk/src/libmpg123/synth_sse_accurate.S,
+	  trunk/src/libmpg123/synth_sse_s32.S,
+	  trunk/src/libmpg123/synth_stereo_sse_accurate.S,
+	  trunk/src/libmpg123/synth_stereo_sse_s32.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_accurate.S,
+	  trunk/src/libmpg123/synth_x86_64_accurate.S: - added accurate
+	  16bit decoder for SSE and x86-64 -- should be used when
+	  --enable-int-quality=yes is specified - added optimized s32
+	  synth for SSE
+
+2009-05-17 00:36  thor
+
+	* trunk/man1/mpg123.1, trunk/src/mpg123.c, trunk/src/mpg123app.h:
+	  add --preframes, update documentation
+
+2009-05-17 00:22  thor
+
+	* trunk/src/libmpg123/readers.c: do not seek back to an index
+	  position when we are already closer to the aim
+
+2009-05-16 23:44  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c: Be smarter
+	  about seeking.. prevent unnecessary back-seeks when we are on
+	  track already.
+
+2009-05-16 22:58  thor
+
+	* trunk/src/libmpg123/format.c: reduce verbosity of format
+	  matching code... people get irritated by mentioning of
+	  resampling where there is no resampling
+
+2009-05-16 22:26  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/sample.h: compile-time choice for integer
+	  accuracy default is the truncation as before, as it's the
+	  fastest and casual people won't notice, but there is ./configure
+	  --enable-int-quality to make integer conversion more proper and
+	  improve the accuracy in the LSB.
+
+2009-05-16 09:25  thor
+
+	* trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/readers.c:
+	  Non-seekable streams can still go forwards, that idea has been
+	  in the code, but not used. This is hard on the border for things
+	  one should not add during stabilizing a release. I know.
+
+2009-05-16 09:23  thor
+
+	* trunk/src/mpg123.c: Do not try to skip 0 frames, that can
+	  unnecessarily break playback of non-seekable streams.
+
+2009-05-16 09:17  thor
+
+	* trunk/src/libmpg123/id3.c: fix ID3v2 RVA2 parsing of negative
+	  values, see bug #2792417
+
+2009-05-16 09:14  thor
+
+	* trunk/configure.ac: for completeness, add int16_t
+
+2009-05-14 15:49  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Add .S files
+	  and mpg123.h.in to the project to make MSVC SVN plugins work
+	  correctly. Suggested by TheVinn.
+
+2009-05-14 14:43  patr3ck
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: I should have removed
+	  the inline and leave the static in place.
+
+2009-05-14 14:41  patr3ck
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: Removed static before
+	  inline. It gave compile errors on MSVC++. Spotted and fix
+	  suggested by TheVinn on IRC.
+
+2009-05-14 07:25  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: faster accurate rounding
+
+2009-05-13 07:47  taihei
+
+	* trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/synth_altivec.c: REAL_TO_SHORT should round
+	  fp value to the nearest integer, without truncation. This makes
+	  16-bit integer output of the generic (and altivec) decoder fully
+	  compliant with the standard (but slower). ==== Layer 1 ====
+	  layer 1 16bit compliance (unlikely...) RMS=4.36437e-06 (PASS)
+	  maxdiff=7.62939e-06 (PASS) layer 1 float compliance (hopefully
+	  fine) RMS=1.97436e-08 (PASS) maxdiff=1.49012e-07 (PASS) ====
+	  Layer 2 ==== layer 2 16bit compliance (unlikely...)
+	  RMS=3.5121e-06 (PASS) maxdiff=7.62939e-06 (PASS) layer 2 float
+	  compliance (hopefully fine) RMS=1.78736e-08 (PASS)
+	  maxdiff=8.28877e-08 (PASS) ==== Layer 3 ==== layer 3 16bit
+	  compliance (unlikely...) RMS=4.30092e-06 (PASS)
+	  maxdiff=7.689e-06 (PASS) layer 3 float compliance (hopefully
+	  fine) RMS=2.14814e-08 (PASS) maxdiff=1.67638e-07 (PASS)
+
+2009-05-12 08:38  taihei
+
+	* trunk/src/libmpg123/layer3.c: a fix for the HF cutoff problem
+
+2009-05-12 07:10  thor
+
+	* trunk/src/libmpg123/parse.c: document that I did test the
+	  halfspeed stuff
+
+2009-05-11 12:19  thor
+
+	* trunk/NEWS, trunk/src/playlist.c: Wow, the last playlist fix
+	  disabled random play! Man, you have to test that stuff... Now
+	  hopefully fine and also the randomness enhancement documented.
+
+2009-05-11 12:16  thor
+
+	* trunk/NEWS.libmpg123: lib news... MPG123_PREFRAMES
+	* trunk/configure.ac: fix nofpu decoder build (disable 32bit and
+	  float output in configure already)
+
+2009-05-10 23:36  thor
+
+	* trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/optimize.c, trunk/src/libmpg123/optimize.h:
+	  fix configure for generic_nofpu
+
+2009-05-10 22:17  thor
+
+	* trunk/src/libmpg123/frame.c: Settling on preframes=4 per
+	  default, with fixed upper limit of 2 for layer 1 and 2, as well
+	  as lower limit 1 for layer 3.
+
+2009-05-10 21:56  thor
+
+	* trunk/src/libmpg123/libmpg123.c: Reset frame buffers before
+	  seeks. That helps to get the first sample accurately... and
+	  generally. Now I need 2 preframes for layer 1 and 2 compliance
+	  bitstreams, 4 for layer 3.
+
+2009-05-10 21:46  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/tests/seek_accuracy.c:
+	  Resuming work on seek accuracy. Layer 3 is mostly fine, layer 1
+	  and 2 gives me creeps. They work now basically, but also only
+	  with certain preframes values. Also, getting the first sample
+	  again always fails. Will try to reinit decoder for that case...
+	  or in any case...
+
+2009-05-10 21:20  thor
+
+	* trunk/src/libmpg123/getbits.h: Importing a C version of getbits.
+	  That fixes layer1 decoding. I am not sure what exactly went
+	  wrong with the macro, but the C code makes mpg123 a compliant
+	  layer 1 decoder again. This should be no performance regression,
+	  at least it is none on my system. The C code is still in the
+	  header, ready to be inlined for the same result. Maybe I will
+	  move all getbits macros to static C functions...
+
+2009-05-10 21:17  thor
+
+	* trunk/src/libmpg123/libmpg123.c: does not need getbits
+
+2009-05-10 19:27  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/parse.c: Fix the
+	  breakage that the layer2 testing brought to light: The parser
+	  screamed header change on changes between stereo modes. I got
+	  that check wrong... funny, that this doesn't jump on your feet
+	  with real world files... that much, at least. To elaborate a
+	  bit: The breakage meant too many decoder buffer
+	  reinitializations during the stream, introducing some tickling,
+	  and, of course, breaking seek sample value accuracy.
+
+2009-05-04 09:07  thor
+
+	* trunk/NEWS.libmpg123: working on the libmpg123 version jump NEWS
+
+2009-05-04 09:06  thor
+
+	* trunk/src/tests/seek_accuracy.c: more informative test report
+
+2009-05-03 21:46  thor
+
+	* trunk/NEWS: import the NEWS for the 1.7.x bugfix releases
+
+2009-05-03 19:38  patr3ck
+
+	* trunk/ports/MSVC++/2008/mpg123.sln: Switch default build from
+	  x86 to generic.
+
+2009-05-03 15:36  taihei
+
+	* trunk/configure.ac: a fix for configure help message
+
+2009-05-03 13:14  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/optimize.c: move SSE up
+	  in the list of decoders as shown to the outside workd
+
+2009-05-02 07:33  thor
+
+	* trunk/Makefile.am: include the CPU benchmark script in
+	  distribution
+
+2009-05-01 16:08  taihei
+
+	* trunk/configure.ac: disable modules automatically when libltdl
+	  not found
+
+2009-05-01 06:02  taihei
+
+	* trunk/src/libmpg123/dct64_sse.S,
+	  trunk/src/libmpg123/dct64_sse_float.S,
+	  trunk/src/libmpg123/synth_sse3d.h: a new dct64 with SSE
+	  optimization, written from scratch
+
+2009-05-01 00:06  thor
+
+	* trunk/scripts/benchmark-cpu.pl: update the CPU benchmark...
+	  producing some formatted text output (for plotting, for example)
+
+2009-04-30 23:24  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/optimize.c: Make SSE the
+	  first choice for x86. It is generally faster than 3DNowExt on
+	  AMD CPUs that support both (especially once Taihei brings in the
+	  improved dct64 for SSE). The optimized dct36 seems even to make
+	  it _slower_ for K7 and K8. On K6 it is faster than plain dct36.
+	  Need to check how it is on early K7 without SSE unit.
+
+2009-04-30 14:50  thor
+
+	* trunk/configure.ac: further fixing of configure... now runs with
+	  --disable-shared again
+
+2009-04-30 14:28  thor
+
+	* trunk/configure.ac: check for sys/types.h explicitly
+
+2009-04-30 14:21  thor
+
+	* trunk/Makefile.am, trunk/src/Makefile.am: Remove legacy build
+	  system from distribution, too.
+
+2009-04-30 14:17  thor
+
+	* trunk/INSTALL, trunk/MakeLegacy.sh, trunk/src/Makefile.legacy,
+	  trunk/src/Makefile.win32, trunk/src/config.h.legacy: Legacy
+	  build system is gone for now.
+
+2009-04-30 14:10  thor
+
+	* trunk/configure.ac: Quickfix for configure... libtool uses
+	  $EGREP without checking for it. This is apparently collateral
+	  damage from libltdl removal ... and it seems wrong having to
+	  check for that program manually.
+
+2009-04-29 10:17  thor
+
+	* trunk/src/libmpg123/optimize.c: Use the SSE-optimized real
+	  synths in 3DNowExt decoder when CPU can do SSE, too. Still open
+	  is the question of SSE being faster on some CPUs that can do
+	  3DNowExt (namely AMD64). AthlonXPs are a bit faster on
+	  3DNowExt... but the margin is so tigth that some tweaked
+	  optimization to the SSE code would overcome it easily, I guess.
+
+2009-04-29 10:13  thor
+
+	* trunk/windows-builds.sh: x86-64, not x86_64
+
+2009-04-28 22:02  patr3ck
+
+	* trunk/src/libmpg123/layer2.c, trunk/src/libmpg123/layer3.c,
+	  trunk/src/libmpg123/tabinit.c: Fix a few MSVC++ compiler
+	  warnings.
+
+2009-04-28 21:44  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/mpg123.sln: Add MSVC builds with
+	  combined, runtime selected optimizations in Debug/Release
+	  Dll/Lib variants. Dither optimizations are not yet included.
+
+2009-04-28 21:38  patr3ck
+
+	* trunk/ports/MSVC++/examples/feedseek.c: Make feedseek output
+	  more verbose
+
+2009-04-28 21:37  patr3ck
+
+	* trunk/src/libmpg123/synth_i586_dither.S: Change fadd to fadds to
+	  make yasm happy
+
+2009-04-28 16:28  thor
+
+	* trunk/windows-builds.sh: switch to manual libltdl copying for
+	  now...
+
+2009-04-28 15:34  patr3ck
+
+	* trunk/ports/MSVC++/2008/feedseek/feedseek.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/mpg123.sln,
+	  trunk/ports/MSVC++/2008/mpglib/mpglib.vcproj,
+	  trunk/ports/MSVC++/2008/scan/scan.vcproj: Add more assembler
+	  optimized builds in preparation for the combining OPT_MULTI
+	  build. We now have the following builds in MSVC++ 2008:
+	  OPT_GENERIC (Debug/Release, Dll/Lib) OPT_I386 (Debug/Release,
+	  Dll/Lib) OPT_I586 (Debug/Release, Dll/Lib) OPT_MMX
+	  (Debug/Release, Dll/Lib) OPT_MULTI OPT_3DNOW (Debug/Release,
+	  Dll/Lib) OPT_MULTI OPT_3DNOWEXT (Debug/Release, Dll/Lib) OPT_SSE
+	  (Debug/Release, Dll/Lib)
+
+2009-04-28 14:35  patr3ck
+
+	* trunk/windows-builds.sh: Adapt 64bit cross-compiler settings
+
+2009-04-27 23:49  thor
+
+	* trunk/NEWS.libmpg123: do not forget...
+
+2009-04-27 23:44  thor
+
+	* trunk/Makefile.am, trunk/configure.ac,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/tests/seek_accuracy.c: Making the preframes count (aka
+	  IGNORESHIFT) runtime-tunable via MPG123_PREFRAMES paramter.
+	  There is no command-line paramter for the mpg123 app yet. Also,
+	  increasing the default preframes count to 13, based on
+	  observation of another Queens$ Perhaps I need to make the test
+	  check _every_ sample position... anyhow: Think about the best
+	  default value for the 1.8.0 realease! 13 is quite big, where 3
+	  may be fine for th$ Slow machines would prefer 1 or 2, I guess.
+	  Of course mpg123 needs a command line parameter, too.
+
+2009-04-27 23:25  thor
+
+	* trunk/autogen.sh: Bye, bye libltdl part 2: autogen.sh
+	* trunk/configure.ac, trunk/libltdl: Bye, bye, libtldl. Really,
+	  get it installed in your system or forget about it. It is mostly
+	  harmful to have the libltdl as a copy in mpg123. We seem to get
+	  rpms with libltdl in it where there is a libtool rpm for that...
+	  needless nuisance. Get your libltdl and then mpg123 -- it's Free!
+
+2009-04-27 07:01  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/frame.c: Increasing
+	  IGNORESHIFT to stay sample-accurate on seeks also for some more
+	  tricky layer 3 files. I am still not sure what the
+	  theoretical/practical maximum number of intermangled (via bit
+	  reservoir) frames is.
+
+2009-04-27 06:55  thor
+
+	* trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: Documenting the fallacy of
+	  MPG123_UPSPEED and friends together with sample-accurate seeking.
+
+2009-04-27 06:53  thor
+
+	* trunk/configure.ac: increase lib version for last fix
+	* trunk/src/Makefile.am, trunk/src/tests,
+	  trunk/src/tests/seek_accuracy.c: Now properly working with seek
+	  accuracy: There is a test!
+
+2009-04-27 05:43  thor
+
+	* trunk/src/libmpg123/libmpg123.c: Another thing broke with the
+	  doublespeed fix: minimal-glitch seeking! Fixing that regression
+	  from 1.6.x series. Now it should be as good/bad as before...
+
+2009-04-22 19:48  patr3ck
+
+	* trunk/src/libmpg123/parse.c: Discard bitreservoir of previous
+	  frames if a resync is needed
+
+2009-04-20 12:43  taihei
+
+	* trunk/src/libmpg123/synth_stereo_x86_64_s32.S,
+	  trunk/src/libmpg123/synth_x86_64_s32.S: a bit more optimum way
+	  for the previous commit
+
+2009-04-20 11:37  taihei
+
+	* trunk/src/libmpg123/synth_altivec.c,
+	  trunk/src/libmpg123/synth_stereo_x86_64_s32.S,
+	  trunk/src/libmpg123/synth_x86_64_s32.S: Fixed optimized s32
+	  synth functions to detect and treat clipped samples more
+	  accurately; positive overflow should be rounded to 2147483647
+
+2009-04-18 16:20  taihei
+
+	* trunk/configure.ac, trunk/src/audio.c,
+	  trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/synth_altivec.c,
+	  trunk/src/libmpg123/synth_s32.c,
+	  trunk/src/libmpg123/synth_stereo_x86_64_s32.S,
+	  trunk/src/libmpg123/synth_x86_64_s32.S, trunk/src/wav.c: - Added
+	  x86-64 & AltiVec optimizations for s32 output - Added support
+	  for s32 output in wav writer module - Cleaned up AltiVec synth
+	  functions
+
+2009-04-18 08:09  taihei
+
+	* trunk/src/output/coreaudio.c: updated coreaudio module to
+	  support float and s32 output
+
+2009-04-17 17:22  taihei
+
+	* trunk/src/libmpg123/synth_stereo_x86_64.S: fixed an issue in
+	  clip sample counting
+
+2009-04-17 06:36  taihei
+
+	* trunk/src/libmpg123/synth_altivec.c: Also fixed an alignment
+	  issue in altivec stereo synths
+
+2009-04-16 18:35  taihei
+
+	* trunk/src/libmpg123/synth_stereo_sse_float.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_float.S: fixed stereo
+	  synth functions to assume unaligned output buffers; a bit
+	  slower, but safe
+
+2009-04-16 09:40  patr3ck
+
+	* trunk/ports/MSVC++/2008/feedseek/feedseek.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/mpg123.sln,
+	  trunk/ports/MSVC++/2008/mpglib/mpglib.vcproj,
+	  trunk/ports/MSVC++/2008/scan/scan.vcproj: Update the MSVC++ SSE
+	  build to include the new 32 bit float optimizations, this is
+	  only working in the debug build at the moment Add new
+	  Debug_SSE_Dll build Remove the invalid "Debug Asm" build that
+	  should not be part of the project files Add debug symbols to the
+	  release builds where it was missing
+
+2009-04-15 15:08  taihei
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_stereo_sse_float.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_float.S,
+	  trunk/src/libmpg123/synth_x86_64.S,
+	  trunk/src/libmpg123/synth_x86_64_float.S: Added stereo version
+	  of SSE float synth
+
+2009-04-15 12:08  taihei
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/dct64_sse_float.S,
+	  trunk/src/libmpg123/dct64_x86_64_float.S,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_sse_float.S,
+	  trunk/src/libmpg123/tabinit.c: - Added 32-bit version of SSE
+	  optimized synth for float output - Optimized x86-64 float dct64
+	  a bit
+
+2009-04-14 11:04  taihei
+
+	* trunk/src/libmpg123/synth_stereo_x86_64.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_float.S,
+	  trunk/src/libmpg123/synth_x86_64.S,
+	  trunk/src/libmpg123/synth_x86_64_float.S: optimized x86-64 synth
+	  a bit
+
+2009-04-14 08:38  taihei
+
+	* trunk/src/libmpg123/decode.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/synth_altivec.c: added stereo optimized
+	  synth for altvec
+
+2009-04-13 20:28  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/optimize.c: A single
+	  comma, its absence causing trouble for standalone 3DNowExt build.
+
+2009-04-13 00:45  thor
+
+	* trunk/configure.ac: Another merge from Taihei's branch: MacOS
+	  build fixes (configure).
+
+2009-04-13 00:37  thor
+
+	* trunk/INSTALL: note about incomplete configure (wrt minimal
+	  builds with optimizations)
+
+2009-04-13 00:30  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_stereo_x86_64.S,
+	  trunk/src/libmpg123/synth_stereo_x86_64_float.S: Merge from
+	  Taihei's branch: The x86-64 stereo synths. The huge benefit is
+	  to be observed for the float stereo synth, but it is also
+	  noticable for the 16bit one. In any case: We are _fast_!
+
+2009-04-13 00:04  thor
+
+	* trunk/configure.ac: give this a unique library version
+
+2009-04-13 00:03  thor
+
+	* trunk/src/libmpg123/dct64_altivec.c,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/synth_altivec.c,
+	  trunk/src/libmpg123/synth_x86_64_float.S,
+	  trunk/src/libmpg123/tabinit.c: Merges from Taihei's branch: -
+	  modified decwin initialization code for float SSE and AltiVec -
+	  improved float SSE synth - improved AltiVec synth and dct64,
+	  including a new float output function This includes adaptions to
+	  the improved synth selection structure, so in effect the AltiVec
+	  code is untested currently.
+
+2009-04-12 23:31  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/layer1.c,
+	  trunk/src/libmpg123/layer2.c, trunk/src/libmpg123/layer3.c,
+	  trunk/src/libmpg123/optimize.c, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synths.h: prepare for Taihei's stereo
+	  optimizations ... using one generic stereo wrapper instead of
+	  lots of specific ones.
+
+2009-04-12 22:36  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/config.h, trunk/src/libmpg123/dct64_sse.S:
+	  MSVC SSE build Move REAL_IS_FLOAT from project defines into
+	  config.h
+
+2009-04-12 22:00  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/optimize.c: fix / clean
+	  up active decoder detection This helps the sse-only x86 build to
+	  work with float output...
+
+2009-04-12 21:41  thor
+
+	* trunk/configure.ac: yeah, there have been changes to libmpg123
+	* trunk/Makefile.am: do not include test/ stuff anymore
+
+2009-04-12 20:44  thor
+
+	* test, test/compliance.sh, test/rmsdouble.c, trunk/test: moving
+	  the test stuff to its own place
+
+2009-04-12 20:41  thor
+
+	* trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/optimize.c, trunk/src/libmpg123/optimize.h,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth_8bit.c,
+	  trunk/src/libmpg123/synth_8bit.h,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/libmpg123/synths.h:
+	  Restructure the synth function choosing; removing a good deal of
+	  ugly code. After realizing that the synth function calls are via
+	  the pointer in fr->synth (usually), the opt_synth_ macros have
+	  been eliminated. The frame struct now hosts a struct with arrays
+	  of all synth functions that are available for the chosen decoder
+	  -- instead of lots if individual pointer variables. That way,
+	  the code in optimize.c could be simplified. Also, the changes
+	  for stereo synths are hopefully small, and even the i486 code
+	  should then be able to be integrated in a x86 build; though one
+	  can debate on how much sense this makes.
+
+2009-04-12 20:04  thor
+
+	* trunk/test/compliance.sh, trunk/test/rmsdouble.c: update
+	  rmsdouble and include script for instant ISO MPEG compliance
+	  testing
+
+2009-04-12 19:46  thor
+
+	* trunk/src/libmpg123/dct64_3dnowext.S,
+	  trunk/src/libmpg123/dct64_mmx.S, trunk/src/libmpg123/mangle.h,
+	  trunk/src/libmpg123/synth_i586_dither.S: Remove occurences of
+	  $ASM_NAME, use a fixed ASM_VALUE instead.
+
+2009-04-12 19:12  thor
+
+	* trunk/src/libmpg123/tabinit.c: explicit debug message for MMX
+	  tables
+
+2009-04-12 19:11  thor
+
+	* trunk/src/playlist.c: fix breakage with --loop introduced with
+	  my changes to random mode
+
+2009-04-09 07:44  thor
+
+	* trunk/src/libmpg123/synth_sse3d.h: make proper comments out of
+	  the APP markers, msvc did not like it
+
+2009-04-09 07:29  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Use project
+	  instead of solution relative path's to generate and compile asm
+	  files.
+
+2009-04-09 00:06  patr3ck
+
+	* trunk/ports/MSVC++/examples/feedseek.c: Undo the last commit for
+	  feedseek.c, it should have not been included
+
+2009-04-08 23:51  patr3ck
+
+	* trunk/windows-builds.sh: Add missing in, spotted by jon_y
+
+2009-04-08 23:27  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/examples/feedseek.c, trunk/ports/README:
+	  First asm build for MSVC++ using the yasm compiler. Thanks go to
+	  jon_y for the idea how to integrate this build into MSVC++.
+
+2009-04-08 23:09  patr3ck
+
+	* trunk/src/libmpg123/dct64_mmx.S: Replace all fistp/fist with
+	  fistps/fists to make yasm happy, thanks go to Taihei Monma for
+	  the solution suggestion
+
+2009-04-08 20:07  patr3ck
+
+	* trunk/src/output/win32.c: Don't swallow output buffers at the
+	  end of playing an audio. One buffer is still not played.
+
+2009-04-08 15:19  patr3ck
+
+	* trunk/src/libmpg123/mangle.h: Add assembler-preprocessor support
+	  for MSVC (courtesy of JonY).
+
+2009-04-07 10:16  thor
+
+	* trunk/src/playlist.c, trunk/src/playlist.h: Increasing perceived
+	  randomness of random play by decreasing mathematical randomness
+	  (prevent repetition of tracks within half of total playlist
+	  size).
+
+2009-04-06 22:28  thor
+
+	* trunk/windows-builds.sh: untested attempt to merge in the x86-64
+	  cross compilation script from JonY
+
+2009-04-05 17:45  thor
+
+	* trunk/src/libmpg123/dct64_x86_64_float.S,
+	  trunk/src/libmpg123/synth_x86_64_float.S: add the missing
+	  assembler files for floating point x86-64 SSE
+
+2009-04-05 17:32  thor
+
+	* trunk/src/libmpg123/id3.c: again, printf format for the unsigned
+	  encoding
+
+2009-04-05 17:31  thor
+
+	* trunk/src/libmpg123/id3.c: proper format for unsigned encoding
+	  value
+
+2009-04-05 16:41  thor
+
+	* trunk/src/libmpg123/optimize.c: Oh, yeah... let the
+	  floating-point SSE use the floating-point tables! The float
+	  output with x86-64 optimization works fine now, also passes MPEG
+	  1 layer 3 ISO conformity. A note on that: Indeed, x86-64 looks a
+	  bit worse here than x86 (also the generic code) because of the
+	  switch from x87's internal 80 bits.
+
+2009-04-05 16:32  thor
+
+	* trunk/test/s16_double.c: faster s16_double too
+
+2009-04-05 15:38  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/optimize.h,
+	  trunk/src/libmpg123/synth_real.c: Add x86_64 decoder with float
+	  output form Taihei. It is about 10% faster than generic, and not
+	  net properly working (high-pitch noise in output).
+
+2009-04-05 15:37  thor
+
+	* trunk/test/f32_double.c, trunk/test/rmsdouble.c: Speed up the
+	  RMS and float conversion stuff.
+
+2009-04-05 14:04  thor
+
+	* trunk/src/libmpg123/synth.c: code formatting
+
+2009-04-05 12:25  thor
+
+	* trunk/src/libmpg123/id3.c: fix potential invalid buffer access
+	  with negative encoding values
+
+2009-04-05 11:02  thor
+
+	* trunk/configure.ac: increase lib patchlevel
+
+2009-04-05 11:01  thor
+
+	* trunk/src/libmpg123/libmpg123.c: prevent multiple needless
+	  mpg123_init() work
+	* trunk/src/libmpg123/frame.c: Fix weird performance issue by
+	  increasing decwin alignment to 64 bytes, matching (effective)
+	  cacheline size of current x86 CPUs. Have to wonder if a) one
+	  should make this (compile time, run time?) tunable b) system
+	  malloc() should actually take care of this.
+
+2009-04-04 07:37  thor
+
+	* trunk/src/libmpg123/id3.c: catch l==0 earlier in the UTF16
+	  conversion; this was a possible crash/overflow
+
+2009-04-03 09:20  thor
+
+	* trunk/src/control_generic.c: the same RVA fix for generic control
+
+2009-04-03 09:12  thor
+
+	* trunk/src/term.c: fix the silence on RVA change, stupid bug
+
+2009-04-03 08:37  thor
+
+	* trunk/NEWS: note x86-64
+
+2009-04-03 08:30  thor
+
+	* trunk/configure.ac: fix help message to mention correct x86-64
+	  decoder choice
+
+2009-04-03 07:11  thor
+
+	* trunk/src/libmpg123/synth_x86_64.S: a little fix from Taihei
+
+2009-04-02 22:31  thor
+
+	* trunk/AUTHORS, trunk/configure.ac,
+	  trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/dct64_x86_64.S,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/optimize.h, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth_x86_64.S,
+	  trunk/src/libmpg123/tabinit.c: add shiny new x86-64 SSE
+	  optimizations by Taihai Monma
+
+2009-04-02 20:18  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/id3.c,
+	  trunk/src/libmpg123/layer1.c, trunk/src/libmpg123/layer2.c,
+	  trunk/src/libmpg123/layer3.c, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/parse.c, trunk/src/libmpg123/readers.c: by
+	  Patrick: add various casts and type corrections to make
+	  compilers feel more comfy
+
+2009-03-29 23:10  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Add debug
+	  symbols
+
+2009-03-29 23:05  patr3ck
+
+	* trunk/ports/MSVC++/2008/mpglib/mpglib.vcproj: Disable warning
+	  4996 (deprecated open/close etc)
+
+2009-03-29 10:55  thor
+
+	* trunk/NEWS, trunk/configure.ac: update version for next target,
+	  lib changed a bit again, too
+
+2009-03-29 10:53  thor
+
+	* trunk/src/module.c: Optional environment variable MPG123_MODDIR
+	  to replace the compiled-in PKGLIBDIR for finding modules...
+	  still, a module build does not work from the source directory
+	  and that sucks.
+
+2009-03-29 10:26  patr3ck
+
+	* trunk/src/libmpg123/synth_ntom.h: Fix a few C4018:
+	  signed/unsigned mismatch warnings on MSVC
+
+2009-03-27 07:10  thor
+
+	* trunk/src/output/arts.c: Fix arts custom data type... use a
+	  proper storage place of the correct type and size instead of
+	  ao->fn. Also using arts_free now, what does not prevent the
+	  artsc lib from leaking memory. Well, arts is dead anyway.
+
+2009-03-27 07:08  thor
+
+	* trunk/src/audio.c: fix output types for WAV
+
+2009-03-25 23:34  patr3ck
+
+	* trunk/src/libmpg123/sample.h: Fix the C4146 compiler warnings as
+	  suggested by Thomas
+
+2009-03-25 18:09  thor
+
+	* trunk/src/libmpg123/dnoise.sh: fix dither noise script
+	  portability (Solaris)
+
+2009-03-23 11:51  patr3ck
+
+	* trunk/Makefile.am: Include the new feedseek.c to source
+	  distributions
+
+2009-03-23 11:39  patr3ck
+
+	* trunk/ports/MSVC++/2005/feedseek/feedseek.vcproj,
+	  trunk/ports/MSVC++/2008/feedseek/feedseek.vcproj,
+	  trunk/ports/MSVC++/examples/feedseek.c: Add unicode feedseek to
+	  MSVC++ 2005/ 2008 projects. Patch contributed by JonY
+	  (10walls@gmail.com).
+
+2009-03-23 11:31  patr3ck
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: Add explicit cast in the
+	  DOUBLE_TO_REAL and REAL_TO_SHORT macros as sugested by Thomas.
+	  This fixes around 30 warnings on MSVC.
+
+2009-03-23 11:08  thor
+
+	* trunk/src/output/aix.c, trunk/src/output/jack.c,
+	  trunk/src/output/sun.c: remove usage of the mpg123 param struct
+	  in modules... we need a proper interface for that
+
+2009-03-23 11:04  thor
+
+	* trunk/src/libmpg123/sample.h: remove unneeded sample macro
+
+2009-03-22 23:41  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/optimize.c: hotfix for build without 8bit
+
+2009-03-22 22:44  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/layer3.c: less verbose
+
+2009-03-22 08:55  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/libmpg123.c: Make the combination of
+	  doublespeed and halfspeed work as with 0.59r: -d 2 -h 2 is a
+	  noop again. The other variant where that is every 2nd frame
+	  repeated is also a valid interpretation, of course.
+
+2009-03-21 15:40  thor
+
+	* trunk/src/output/Makefile.am, trunk/src/output/coreaudio.c:
+	  include sfifo in coreaudio like for the other modules that need
+	  it to reduce link issues, extra flags not needed (hopefully)
+
+2009-03-21 14:50  thor
+
+	* trunk/src/libmpg123/optimize.c, trunk/src/output/Makefile.am:
+	  MacOS fixes by Taihai Monma
+
+2009-03-21 11:20  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123: news update
+
+2009-03-21 11:13  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/libmpg123.c:
+	  Fix the decoding bug that surfaced with the doublespeed action
+	  -- a set_pointer(512) has been removed where it was needed when
+	  skipping frames.
+
+2009-03-11 10:41  thor
+
+	* trunk/NEWS: added NEWS about sndio
+
+2009-03-11 10:12  thor
+
+	* trunk/configure.ac: giving the lib a new verison, marking the
+	  first libmpg123 with actually working MPG123_UPSPEED
+
+2009-03-11 07:51  thor
+
+	* trunk/NEWS, trunk/src/libmpg123/libmpg123.c: fix doublespeed
+	  paramter, was a no-op in all 1.x mpg123 so far
+
+2009-03-10 22:27  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/mpg123.sln: Added dll builds Removed
+	  i486 builds Got rid of the many different output directories.
+	  Build results can now be found in a Debug/Release directory
+
+2009-03-10 22:05  thor
+
+	* trunk/windows-builds.sh: .dll, not .so
+
+2009-03-09 01:01  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/mpg123.c: Prevent error message for setting frame
+	  index when frame index is disabled. Now you only get the error
+	  when actually trying to set the index size to something non-zero.
+
+2009-03-09 00:48  thor
+
+	* trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/mpg123lib_intern.h: fixed point decoder
+	  builds again... OUT_REAL and OUT_S32 are always needed
+
+2009-03-09 00:47  thor
+
+	* trunk/windows-builds.sh: trying to get the needed libltdl.dll
+	  into the win32 binpacks
+
+2009-03-05 09:50  thor
+
+	* trunk/configure.ac: repair the modules switch, deleted too much
+	  earlier
+
+2009-03-05 08:22  thor
+
+	* trunk/configure.ac: do not disable modules on windows anymore
+
+2009-03-05 08:20  thor
+
+	* trunk/Makefile.am: include the msvc example stuff in distribution
+
+2009-03-03 22:26  patr3ck
+
+	* trunk/doc/examples/scan.c,
+	  trunk/ports/MSVC++/2008/scan/scan.vcproj,
+	  trunk/ports/MSVC++/examples, trunk/ports/MSVC++/examples/scan.c:
+	  Split scan.c into a general and a MSVC specific one to get rid
+	  of #ifdefs
+
+2009-03-03 13:14  thor
+
+	* trunk/NEWS: document sizes of libmpg123 with reduced features
+
+2009-03-03 12:57  thor
+
+	* trunk/NEWS, trunk/TODO: updated NEWS and TODO for immanent 1.7.0
+
+2009-03-03 12:53  thor
+
+	* trunk/configure.ac: Added --disable-messages.
+
+2009-03-03 12:40  thor
+
+	* trunk/configure.ac: patchlevel
+
+2009-03-03 12:33  thor
+
+	* trunk/src/libmpg123/format.c, trunk/src/module.c: (c) 2009
+
+2009-03-03 12:32  thor
+
+	* trunk/windows-builds.sh: Added plugin handling to the windows
+	  build script. Needs testing.
+
+2009-03-03 11:57  thor
+
+	* trunk/NEWS, trunk/src/module.c: More flexible search for plugin
+	  dirs, now working on a list (added "plugins" relative to binary).
+
+2009-03-02 14:11  patr3ck
+
+	* trunk/doc/examples/scan.c,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/mpg123.sln,
+	  trunk/ports/MSVC++/2008/scan,
+	  trunk/ports/MSVC++/2008/scan/scan.vcproj,
+	  trunk/ports/MSVC++/mpg123.h, trunk/ports/MSVC++/msvc.c: Handles
+	  which are opened by _topen must be used with _read and _close
+	  functions Added a MSVC++ scan project for the scan.c example
+
+2009-03-02 13:57  thor
+
+	* trunk/src/module.c: more module verbosity on error
+
+2009-02-19 11:36  thor
+
+	* trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/dct36_3dnow.S,
+	  trunk/src/libmpg123/dct36_3dnow.sx,
+	  trunk/src/libmpg123/dct36_3dnowext.S,
+	  trunk/src/libmpg123/dct36_3dnowext.sx,
+	  trunk/src/libmpg123/dct64_3dnow.S,
+	  trunk/src/libmpg123/dct64_3dnow.sx,
+	  trunk/src/libmpg123/dct64_3dnowext.S,
+	  trunk/src/libmpg123/dct64_3dnowext.sx,
+	  trunk/src/libmpg123/dct64_mmx.S,
+	  trunk/src/libmpg123/dct64_mmx.sx,
+	  trunk/src/libmpg123/dct64_sse.S,
+	  trunk/src/libmpg123/dct64_sse.sx,
+	  trunk/src/libmpg123/equalizer_3dnow.S,
+	  trunk/src/libmpg123/equalizer_3dnow.sx,
+	  trunk/src/libmpg123/getcpuflags.S,
+	  trunk/src/libmpg123/getcpuflags.sx,
+	  trunk/src/libmpg123/synth_3dnow.S,
+	  trunk/src/libmpg123/synth_3dnow.sx,
+	  trunk/src/libmpg123/synth_3dnowext.S,
+	  trunk/src/libmpg123/synth_3dnowext.sx,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586.sx,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_i586_dither.sx,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_mmx.sx,
+	  trunk/src/libmpg123/synth_sse.S,
+	  trunk/src/libmpg123/synth_sse.sx,
+	  trunk/src/libmpg123/tabinit_mmx.S,
+	  trunk/src/libmpg123/tabinit_mmx.sx: Revert the rename of .S to
+	  .sx. This .sx ending only works with current gcc, older gccs
+	  choke badly on the files, thinking there's some linker fodder.
+	  While directly calling cpp on these files works fine,
+	  libtool/automake insist on calling gcc -E, which does _not_
+	  work. What's the portable way to handle this? I am sick of this
+	  mess. Users of MinGW please use csmake, that hoepfully detects
+	  the big .S . We do not support assembler optimizations on
+	  systems that cannot handle .S (and the possible temporary file
+	  with .s).
+
+2009-02-18 15:07  thor
+
+	* trunk/autogen.sh, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/dct36_3dnow.S,
+	  trunk/src/libmpg123/dct36_3dnow.sx,
+	  trunk/src/libmpg123/dct36_3dnowext.S,
+	  trunk/src/libmpg123/dct36_3dnowext.sx,
+	  trunk/src/libmpg123/dct64_3dnow.S,
+	  trunk/src/libmpg123/dct64_3dnow.sx,
+	  trunk/src/libmpg123/dct64_3dnowext.S,
+	  trunk/src/libmpg123/dct64_3dnowext.sx,
+	  trunk/src/libmpg123/dct64_mmx.S,
+	  trunk/src/libmpg123/dct64_mmx.sx,
+	  trunk/src/libmpg123/dct64_sse.S,
+	  trunk/src/libmpg123/dct64_sse.sx,
+	  trunk/src/libmpg123/equalizer_3dnow.S,
+	  trunk/src/libmpg123/equalizer_3dnow.sx,
+	  trunk/src/libmpg123/getcpuflags.S,
+	  trunk/src/libmpg123/getcpuflags.sx,
+	  trunk/src/libmpg123/synth_3dnow.S,
+	  trunk/src/libmpg123/synth_3dnow.sx,
+	  trunk/src/libmpg123/synth_3dnowext.S,
+	  trunk/src/libmpg123/synth_3dnowext.sx,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586.sx,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_i586_dither.sx,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_mmx.sx,
+	  trunk/src/libmpg123/synth_sse.S,
+	  trunk/src/libmpg123/synth_sse.sx,
+	  trunk/src/libmpg123/tabinit_mmx.S,
+	  trunk/src/libmpg123/tabinit_mmx.sx: Rename the .S files to .sx,
+	  preventing trouble on non-case-sensitive platforms. Now we also
+	  don't need the explicit .S preprocessing rule anymore and thus
+	  automake-1.10 is no problem.
+
+2009-02-17 10:10  thor
+
+	* trunk/configure.ac: try to autodetect -lnsl and -lsocket (for
+	  solaris, gethostbyname is() in one, socket() in the other)
+
+2009-02-15 10:00  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/output/Makefile.am:
+	  Supposedly, modules work out of the box under MinGW when one
+	  includes the -no-undefined flag...
+
+2009-02-15 00:55  thor
+
+	* trunk/src/buffer.c, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/libmpg123.c, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/parse.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123app.h, trunk/src/output/portaudio.c,
+	  trunk/src/output/pulse.c, trunk/src/output/sdl.c: update some
+	  years to 2009
+
+2009-02-15 00:53  thor
+
+	* trunk/NEWS, trunk/man1/mpg123.1, trunk/src/buffer.c,
+	  trunk/src/mpg123.c, trunk/src/mpg123app.h: add that preload
+	  tuning parameter
+
+2009-02-14 19:38  thor
+
+	* trunk/src/libmpg123/Makefile.am: re-enable RPATH builds,
+	  libmpg123.sym is a local file now, being generated
+
+2009-02-14 19:27  thor
+
+	* trunk/configure.ac: add win32 to default audio help, sort
+	  alphabetically
+
+2009-02-14 19:09  thor
+
+	* trunk/configure.ac: try to settle the socket library issue
+	  (note: one could make it conditional on ipv6 usage)
+
+2009-02-14 18:53  thor
+
+	* trunk/configure.ac: Will not disable posix/callback input so
+	  soon... not that much gain anyway
+	* trunk/src/output/sdl.c: include windows.h for Sleep()
+
+2009-02-14 18:44  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/readers.c: Make the
+	  feeder/buffer code disable-able.
+
+2009-02-14 18:42  thor
+
+	* trunk/src/output/win32.c: Try to fix the HWAVEOUT mess... it's
+	  no integer!
+
+2009-02-14 18:03  thor
+
+	* trunk/configure.ac: Only enable the ABI alignment stuff on i386
+	  arches... (together with the change in mpg123lib_intern.h from
+	  last commit)
+
+2009-02-14 18:02  thor
+
+	* trunk/src/audio.c, trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/optimize.c: C90 fixes
+
+2009-02-14 17:50  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/readers.c: prevent
+	  timeout reader setup with user-replaced read function
+
+2009-02-14 17:39  thor
+
+	* trunk/configure.ac: yeah, bugfix happened, increment version
+	* trunk/src/libmpg123/readers.c: Let the feed reader error out on
+	  open when ICY interval is set. It is not that trivial to support
+	  this and handle MPG123_NEED_MORE properly. I advise users to
+	  employ mpg123_replace_reader when custom I/O and ICY is needed.
+	  If that's not possible... well, gotta filter ICY yourself:-/
+
+2009-02-14 17:19  thor
+
+	* trunk/src/libmpg123/layer3.c, trunk/src/libmpg123/libmpg123.c: a
+	  bit less default verbosity
+
+2009-02-14 17:14  thor
+
+	* trunk/src/Makefile.am, trunk/src/output/portaudio.c,
+	  trunk/src/output/sdl.c, trunk/src/sfifo.c, trunk/src/sfifo.h:
+	  MAke the sfifo code statically local to the few output modules
+	  that need it.
+
+2009-02-14 16:43  thor
+
+	* trunk/src/output/alsa.c, trunk/src/output/os2.c,
+	  trunk/src/output/pulse.c, trunk/src/output/sgi.c,
+	  trunk/src/output/win32.c: internal module functions are static,
+	  marking leftovers
+
+2009-02-14 10:38  thor
+
+	* trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: attempt to
+	  update the project files for added sample.h
+
+2009-02-14 10:34  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h: Reuse
+	  rawdecwin if possible (realloc-like, like rawbuffs).
+
+2009-02-14 10:13  thor
+
+	* trunk/src/libmpg123/libmpg123.c, trunk/src/libmpg123/optimize.c:
+	  Make sure that frame_buffers is only called in the synth
+	  function setup, where it's followed by make_decode_tables. Also,
+	  changed the error of frame_buffers failing in
+	  set_synth_functions to indicate buffer (memory) problem.
+
+2009-02-14 10:06  thor
+
+	* trunk/src/libmpg123/optimize.c: Most probably pinned bug
+	  2472726. I finally have been able to reproduce it with the help
+	  of valgrind, which changed the memory management. After a
+	  resync, the frame buffers get (re)allocated, in case of the
+	  decwin, that's a free() of the old and immediately malloc() of
+	  the new. With normal glibc memory management that resulted in
+	  the same block of memory than before being assigned (when the
+	  size did not change). Thus, the failure to call
+	  make_decode_tables on the new memory ws hidden because the old
+	  values were still there. So, the easy fix is to call
+	  make_decode_tables everytime after changing the frame buffers.
+	  Waiting for confirmation from the Windows folks...
+
+2009-02-14 10:00  thor
+
+	* trunk/src/libmpg123/frame.c: error protection got not initialized
+
+2009-02-14 09:59  thor
+
+	* trunk/src/libmpg123/libmpg123.c: debug message format fixed
+
+2009-02-13 15:41  thor
+
+	* trunk/src/libmpg123/Makefile.am: also distribute the sample.h...
+
+2009-02-13 15:40  thor
+
+	* trunk/src/libmpg123/decode.h, trunk/src/libmpg123/sample.h,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth_8bit.c,
+	  trunk/src/libmpg123/synth_altivec.c,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c: Extract the WRITE_SAMPLE macros
+	  out of decode.h into sample.h, only the synth functions need
+	  these.
+
+2009-01-10 18:07  thor
+
+	* trunk/src/output/jack.c: Add named connections to JACK output
+	  (the -a parameter can now take a comma-separated list of output
+	  ports). When you choose only one port, stereo output gets mixed
+	  down into this one by jackd.
+
+2009-01-10 17:21  thor
+
+	* trunk/src/mpg123.c: That hint about resampling is not true
+	  anymore.
+
+2009-01-10 16:38  thor
+
+	* trunk/scripts/debugdef.pl, trunk/src/libmpg123/debug.h: Add new
+	  preprocessor flags to disable error / warning messages. That can
+	  save around 9K on libmpg123.
+
+2009-01-10 16:37  thor
+
+	* trunk/NEWS: also the news entry for the ntom fix
+
+2009-01-10 16:36  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c: Include the
+	  fix (from 1.6.4) for ntom + seeking + frame fillup, and ntom
+	  consistency with seeking as side effect.
+
+2009-01-10 14:17  thor
+
+	* trunk/src/libmpg123/layer3.c: Fix resampling modes for i486 (the
+	  special optimization only applies to 1to1 synth).
+
+2009-01-10 10:45  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/synth_i486.c: fix i486 decoder with the bo
+	  business
+
+2009-01-10 10:18  thor
+
+	* trunk/src/libmpg123/synth_altivec.c: fix altivec's fr->bo usage
+	  (theoretically, need someone with an apple box to test)
+
+2009-01-09 14:30  patr3ck
+
+	* trunk/ports/MSVC++/2005/feedseek,
+	  trunk/ports/MSVC++/2005/feedseek/feedseek.vcproj,
+	  trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2005/mpg123.sln,
+	  trunk/ports/MSVC++/2005/mpglib,
+	  trunk/ports/MSVC++/2005/mpglib/mpglib.vcproj,
+	  trunk/ports/MSVC++/2008/feedseek/feedseek.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/mpg123.sln: VS2005 build environment
+	  catchup including examples and release optimization settings.
+	  Additionally fix a few VS2008 compiler settings along the way.
+
+2008-12-29 22:36  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/format.c, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/icy.h,
+	  trunk/src/libmpg123/icy2utf8.h, trunk/src/libmpg123/id3.c,
+	  trunk/src/libmpg123/id3.h, trunk/src/libmpg123/layer2.c,
+	  trunk/src/libmpg123/layer3.c, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/optimize.h, trunk/src/libmpg123/parse.c,
+	  trunk/src/libmpg123/readers.c, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth_8bit.c,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/libmpg123/tabinit.c:
+	  Massive commit. That's holiday season for you. This one is all
+	  about reducing libmpg123 size via --disable switches to
+	  configure. id3v2 handling, icy, output formats, MPEG layers ...
+	  have fun!
+
+2008-12-29 22:32  thor
+
+	* trunk/src/legacy_module.c: typos
+
+2008-12-20 16:35  thor
+
+	* trunk: ignore changes in ChangeLog
+
+2008-12-20 16:34  thor
+
+	* trunk/NEWS: add notes for 1.6.3
+
+2008-12-20 16:33  thor
+
+	* trunk/configure.ac: again... a fix for configure default: really
+	  enable fifo when autodetected
+
+2008-12-19 19:19  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/mpg123.h: Add int32_t and uint32_t
+	  definitions to MSVC++ mpg123.h
+
+2008-12-15 10:00  thor
+
+	* trunk/src/metaprint.c: Actually use the output stream argument
+	  of print_icy (no user-visible change, though).
+
+2008-12-14 19:12  thor
+
+	* trunk: ignore
+
+2008-12-14 19:07  thor
+
+	* trunk/src/libmpg123: ignore
+
+2008-12-14 19:05  thor
+
+	* trunk/doc/examples: ignore
+
+2008-12-14 19:04  thor
+
+	* trunk/test/README: mention forkfaint
+
+2008-12-14 19:02  thor
+
+	* trunk/test/hex24_s32.c: hex 24bit ASCII -> native signed 32bit
+	  integer
+
+2008-12-14 19:01  thor
+
+	* trunk/test/README: Notes about test/
+
+2008-12-14 18:23  thor
+
+	* trunk/AUTHORS, trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/output/Makefile.am, trunk/src/output/sndio.c: Adding
+	  sndio output, contributed by Christian Weisgerber. Not tested by
+	  self, lacking an OpenBSD install.
+
+2008-12-12 14:46  thor
+
+	* trunk/test/s16_double.c: note about s16 scaling
+	* trunk/test/rmsdouble.c: Interpret the limits as already being
+	  relative to full scale. Makes sense.
+
+2008-12-12 14:33  thor
+
+	* trunk/src/audio.c, trunk/src/audio.h, trunk/src/mpg123.c: Give
+	  proper help for --encoding with list of encodings. Also fixed s8
+	  u8 nlen value to 2.
+
+2008-12-12 14:12  thor
+
+	* trunk/configure.ac, trunk/src/audio.c,
+	  trunk/src/config.h.legacy, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/format.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/optimize.c, trunk/src/libmpg123/optimize.h,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth_8bit.c,
+	  trunk/src/libmpg123/synth_real.c,
+	  trunk/src/libmpg123/synth_s32.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123app.h, trunk/src/output/alsa.c: A tale about
+	  output. - Signed 32bit integer output (generic/i386). -
+	  Postprocessing for unsigned 16 or 32 bit integer. - Fixing 32bit
+	  integer encoding flags (sorry... but they didn't do anything
+	  before anyway). - Split synth stuff into some files according to
+	  output format. Trying to be easier on compilers. - Alsa output
+	  supports 32bit and float formats now. - New mpg123 command line
+	  parameter to force a specific output encoding (--encoding) ...
+	  not yet documented.
+
+2008-12-12 14:07  thor
+
+	* trunk/test/Makefile, trunk/test/s32_double.c: Also add signed
+	  32bit handling.
+
+2008-12-12 13:44  thor
+
+	* trunk/test, trunk/test/Makefile, trunk/test/f32_double.c,
+	  trunk/test/hex24_double.c, trunk/test/rms32.c,
+	  trunk/test/rmsdouble.c, trunk/test/s16_double.c: Some system
+	  work for compliance testing. I can reproduce
+	  http://www.underbit.com/resources/mpeg/audio/compliance/ for
+	  layer3 and generic decoder, the numbers. Only, that I interpret
+	  the compliance restriction differently. Anyhow: When using f32
+	  output, mpg123 is clearly compliant. the 16bit truncation is a
+	  bit of a question.
+
+2008-12-12 13:42  thor
+
+	* trunk/test/1000Hz/work.sh: updated / corrected lame options
+
+2008-12-10 19:18  thor
+
+	* trunk/src/libmpg123/id3.c, trunk/src/libmpg123/mpg123.h.in:
+	  Hacking a variant of the USLT idea from sf.net issue #1883610 .
+	  Untested.
+
+2008-12-10 16:48  thor
+
+	* trunk/src/libmpg123/format.c, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/libmpg123.c:
+	  Fix sf.net bug #2413608: The new_format flag got lost when you
+	  close the track without querying it. Now the output format gets
+	  cleared on that occasion so that format newness arises anew on
+	  next track.
+
+2008-12-10 00:51  thor
+
+	* trunk/src/term.c: remove unused variable
+	* trunk/src/libmpg123/optimize.c: fix optimize.c, with leftover
+	  DEBUG, too
+
+2008-12-09 23:43  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/libmpg123/optimize.c, trunk/src/libmpg123/optimize.h,
+	  trunk/src/term.c: - WIP API change: mpg123_current_decoder
+	  returns a const char*, not an index - some cleaning up (can I
+	  really call it like that?) in optimize.c - fixing up single
+	  i586_dither build
+
+2008-12-09 23:04  thor
+
+	* trunk/src/libmpg123/synth_i586_dither.S: Fixing a bug with two
+	  faces in i586 dither code: Wrong stack variable access for
+	  ditherindex and dithernoise. The latter has been new, the former
+	  must have been there from the beginning but harmless. Hm.. but
+	  how much of the noise has been used before?
+
+2008-12-09 17:50  thor
+
+	* trunk/src/libmpg123/decode.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/optimize.h, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth.h: Adding 2to1 and 4to1 dithered synth
+	  with generic code. Also used for i586_dither decoder's
+	  downsampling.
+
+2008-12-09 11:53  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/dnoise.sh, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/optimize.h, trunk/src/libmpg123/synth.c,
+	  trunk/src/libmpg123/synth.h,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_ntom.h: More experiment: First steps
+	  to prepare outsourcing of the dithernoise, adding a
+	  generic_dither decoder offering a portable alternative to
+	  synth_1to1_i586_dither.
+
+2008-11-30 14:39  thor
+
+	* trunk/doc/examples/feedseek.c: fix a bit off_t versus size_t
+
+2008-11-30 14:38  thor
+
+	* trunk/doc/examples/Makefile: give it some space Note: that
+	  simple makefile won't work with static linking.
+
+2008-11-28 20:24  patr3ck
+
+	* trunk/Makefile.am, trunk/doc/Makefile.am,
+	  trunk/doc/examples/Makefile: Add feedseek example to makefile
+	  and distribution Add new MSVC solution and project files to
+	  distribution
+
+2008-11-28 17:29  patr3ck
+
+	* trunk/ports/MSVC++/2008/mpg123.sln: Add MSVC++ solution file
+	  that holds the library and example projects
+
+2008-11-28 17:27  patr3ck
+
+	* trunk/ports/MSVC++/2008/mpglib,
+	  trunk/ports/MSVC++/2008/mpglib/mpglib.vcproj: add MSVC++ project
+	  file for mpglib example
+	* trunk/doc/examples/feedseek.c, trunk/ports/MSVC++/2008/feedseek,
+	  trunk/ports/MSVC++/2008/feedseek/feedseek.vcproj: new
+	  programming example fuzzy seeking in feeder mode
+
+2008-11-27 22:58  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Add optimize
+	  flags to the rest of the release builds, all release builds are
+	  now tuned for speed
+
+2008-11-27 22:55  patr3ck
+
+	* trunk/doc/examples/mpglib.c: Make it compile under MSVC++
+
+2008-11-25 23:57  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Enable some
+	  compiler optimizations for the i486 release build
+
+2008-11-21 13:25  thor
+
+	* trunk/Makefile.am: add msvc.c to distribution
+
+2008-11-18 00:44  patr3ck
+
+	* trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: add
+	  REAL_IS_FLOAT to all builds to make float output with
+	  MPG123_ENC_FLOAT_32 working
+
+2008-11-17 20:40  patr3ck
+
+	* trunk/src/libmpg123/libmpg123.c: mpg123_length now returns
+	  mpg123_tell if nothing else works
+
+2008-11-12 10:18  thor
+
+	* trunk/Makefile.am, trunk/NEWS: added equalize.dat to the
+	  distribution, been missing
+
+2008-11-11 23:08  thor
+
+	* trunk/src/libmpg123/libmpg123.c: not mh here
+
+2008-11-11 23:05  thor
+
+	* trunk/src/libmpg123/libmpg123.c: Restore buffer initialization
+	  for mpg123 handle on initial mpg123_parnew() The whole think
+	  with mpg123_parnew() / mpg123_decoder() / decode_update() has to
+	  be cleaned up!
+
+2008-11-11 23:04  thor
+
+	* trunk/NEWS, trunk/configure.ac: import the 1.6.2 fix for IPv6
+	  auto detection in configure
+
+2008-11-10 20:57  patr3ck
+
+	* trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Catch up to
+	  latest code restructuring
+
+2008-11-10 01:04  thor
+
+	* trunk/src/libmpg123/format.c: remove that debugging line
+
+2008-11-10 00:58  thor
+
+	* trunk/src/libmpg123/synth_i486.c: Ah, alright, it was just a
+	  missing i ... absynth_1to1_i486 instead of absynth_1to1_486!
+
+2008-11-10 00:55  thor
+
+	* trunk/src/Makefile.legacy: legacy built sort of working again;
+	  but also has trouble with i486
+
+2008-11-10 00:53  thor
+
+	* trunk/src/libmpg123/optimize.c: code fixup for non-multi ...
+	  i486 still broken strangely
+
+2008-11-10 00:34  thor
+
+	* trunk/NEWS: NEW sync and update
+
+2008-11-09 23:55  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am: build
+	  system fixup for the synth_ rename
+
+2008-11-09 23:47  thor
+
+	* trunk/src/libmpg123/synth_float.c: removed synth_float.c, it's
+	  in synth.c
+
+2008-11-09 23:45  thor
+
+	* trunk/configure.ac: remove bashisms, thanks to Christian
+	  Weisgerber
+
+2008-11-09 23:30  thor
+
+	* trunk/src/libmpg123/decode_3dnow.S,
+	  trunk/src/libmpg123/decode_3dnowext.S,
+	  trunk/src/libmpg123/decode_float.c,
+	  trunk/src/libmpg123/decode_i586.S,
+	  trunk/src/libmpg123/decode_i586_dither.S,
+	  trunk/src/libmpg123/decode_mmx.S,
+	  trunk/src/libmpg123/decode_sse.S,
+	  trunk/src/libmpg123/decode_sse3d.h,
+	  trunk/src/libmpg123/synth_3dnow.S,
+	  trunk/src/libmpg123/synth_3dnowext.S,
+	  trunk/src/libmpg123/synth_float.c,
+	  trunk/src/libmpg123/synth_i586.S,
+	  trunk/src/libmpg123/synth_i586_dither.S,
+	  trunk/src/libmpg123/synth_mmx.S,
+	  trunk/src/libmpg123/synth_sse.S,
+	  trunk/src/libmpg123/synth_sse3d.h: Complete the rename of
+	  decode_ files to synth_ files. They contain synth functions.
+	* trunk/src/libmpg123/optimize.c: oh, some random keypress went
+	  in...
+
+2008-11-09 23:26  thor
+
+	* trunk/src/libmpg123/optimize.c: missed a ;
+
+2008-11-09 23:22  thor
+
+	* trunk/src/libmpg123/synth_1to1.h: synth_1to1.h is gone
+
+2008-11-09 23:20  thor
+
+	* trunk/src/libmpg123/decode.h: update copyright on decode.h
+
+2008-11-09 23:19  thor
+
+	* trunk/src/libmpg123/decode_2to1.c,
+	  trunk/src/libmpg123/decode_4to1.c: Removed more obsolete
+	  decode_*, they are gone into synth.c and associated headers.
+
+2008-11-09 23:18  thor
+
+	* trunk/src/libmpg123/decode_ntom.c: removed decode_ntom.c
+	* trunk/src/libmpg123/format.c,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/parse.c, trunk/src/libmpg123/parse.h: Move
+	  the sample<->byte conversion to format.c .
+
+2008-11-09 23:12  thor
+
+	* trunk/src/libmpg123/format.c: Don't offer float for fixed build.
+	* trunk/NEWS.libmpg123: updating for 12.0.12
+
+2008-11-09 23:08  thor
+
+	* trunk/src/libmpg123/Makefile.am: synth_8bit been missing
+
+2008-11-09 23:05  thor
+
+	* trunk/src/output/jack.c: Update the JACK output to also work
+	  with float samples as JACK likes it.
+	* trunk/src/mpg123.c: - const char* for decoder names - added
+	  --float option (will be documented...)
+
+2008-11-09 23:04  thor
+
+	* trunk/src/term.c, trunk/src/term.h: Add a key to check for
+	  currently active decoder.
+
+2008-11-09 23:02  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/Makefile.am,
+	  trunk/src/libmpg123/compat.h, trunk/src/libmpg123/decode.c,
+	  trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/decode_altivec.c,
+	  trunk/src/libmpg123/decode_i386.c,
+	  trunk/src/libmpg123/decode_i486.c, trunk/src/libmpg123/format.c,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/index.c, trunk/src/libmpg123/layer1.c,
+	  trunk/src/libmpg123/layer2.c, trunk/src/libmpg123/layer3.c,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/libmpg123.sym.in,
+	  trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/optimize.c, trunk/src/libmpg123/optimize.h,
+	  trunk/src/libmpg123/parse.c, trunk/src/libmpg123/parse.h,
+	  trunk/src/libmpg123/synth.c, trunk/src/libmpg123/synth.h,
+	  trunk/src/libmpg123/synth_1to1.h,
+	  trunk/src/libmpg123/synth_2to1.h,
+	  trunk/src/libmpg123/synth_4to1.h,
+	  trunk/src/libmpg123/synth_8bit.h,
+	  trunk/src/libmpg123/synth_altivec.c,
+	  trunk/src/libmpg123/synth_i486.c,
+	  trunk/src/libmpg123/synth_mono.h,
+	  trunk/src/libmpg123/synth_ntom.h, trunk/src/libmpg123/tabinit.c:
+	  Bigg-O-Commit: Began with cleaning up layer3 ... ended in
+	  long-due overhaul of the whole synth functions and optimization
+	  cruft. A lot more is now how it is supposed to be: - Every
+	  decoder supports all formats / resamplings, though the
+	  optimization only kicks in for certain modes (1to1 16bit, 8bit).
+	  - Formats include floating point output in every non-fixed-math
+	  build (Yay!). - Redundant code has been merged into the synth*
+	  headers. - A possible downside: compiling synth.c is a bit of
+	  work, may split that again into synth, synth_8bit, etc. One has
+	  to do some side-by-side comparison with 1.6.x with respect to
+	  output and speed. I could be that one should re-insert some
+	  optimized dct64 in some places (apart from synth_1to1). Well, I
+	  hope things are a bit cleaner now... though I don't claim
+	  they're less complicated;-)
+
+2008-11-09 22:55  thor
+
+	* trunk/NEWS: some notes
+
+2008-11-09 22:22  patr3ck
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Add ntom.c
+	  to VC2008 project file
+
+2008-11-07 12:09  thor
+
+	* trunk/src/libmpg123/libmpg123.c, trunk/src/libmpg123/parse.c:
+	  remove unreachable code
+	* trunk/src/output/esd.c: Make sure to include config.h early
+	  enough.
+
+2008-11-07 12:08  thor
+
+	* trunk/autogen.sh: portable sh in autogen.sh
+	* trunk/configure.ac: only use alignment machinery for decoders
+	  where it may be useful; the sun compiler complained
+
+2008-11-07 08:54  thor
+
+	* trunk/NEWS, trunk/src/libmpg123/decode.h,
+	  trunk/src/libmpg123/format.c: Deactivate unsigned 16bit. It is
+	  not handled. Either this deactivation or a converter wrapped
+	  into libmpg123 will go into 1.6.1 .
+
+2008-11-07 08:53  thor
+
+	* trunk/src/libmpg123/layer3.c: Cleanup: reformat layer3.c to
+	  consistent style (consistent by my rules;-).
+
+2008-11-06 09:59  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/common.c,
+	  trunk/src/control_generic.c, trunk/src/libmpg123/compat.h: After
+	  seeing that control_generic.c forgot to cast off_t to long for a
+	  printf, realized that this is the time to add proper large type
+	  printing. We try to use PRIiMAX and friends if possible, else
+	  fallback to long.
+
+2008-11-06 09:46  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/decode.c,
+	  trunk/src/libmpg123/decode.h, trunk/src/libmpg123/decode_2to1.c,
+	  trunk/src/libmpg123/decode_4to1.c,
+	  trunk/src/libmpg123/decode_altivec.c,
+	  trunk/src/libmpg123/decode_float.c,
+	  trunk/src/libmpg123/decode_i386.c,
+	  trunk/src/libmpg123/decode_ntom.c, trunk/src/libmpg123/format.c,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/ntom.c, trunk/src/libmpg123/optimize.c,
+	  trunk/src/libmpg123/optimize.h, trunk/src/libmpg123/parse.c,
+	  trunk/src/libmpg123/parse.h, trunk/src/libmpg123/synth_1to1.h,
+	  trunk/src/libmpg123/synth_2to1.h,
+	  trunk/src/libmpg123/synth_4to1.h,
+	  trunk/src/libmpg123/synth_ntom.h, trunk/src/libmpg123/tabinit.c,
+	  trunk/src/mpg123.c, trunk/src/mpg123app.h, trunk/src/wav.c,
+	  trunk/src/wavhead.h: I am insane. I really am. Here comes a
+	  first hack at a comined build with floating point output.
+
+2008-11-05 02:07  thor
+
+	* trunk/configure.ac: at least a little increment in version for
+	  development
+
+2008-11-05 01:23  thor
+
+	* trunk/doc/examples/mpglib.c, trunk/doc/examples/scan.c: include
+	  style
+
+2008-11-04 23:45  thor
+
+	* trunk/NEWS: Last notes for 1.6.0!
+
+2008-11-04 18:02  thor
+
+	* trunk/configure.ac: closing a quote, un-breaking the build again
+
+2008-11-04 16:44  thor
+
+	* trunk/configure.ac: configure cleanup; safer tests and another
+	  bugfix for fifo (like ipv6 and network before)
+
+2008-11-04 16:26  thor
+
+	* trunk/configure.ac: fix network and ipv6 configuration handling,
+	  thanks to Thorsten Glaser for pointers
+
+2008-11-04 16:09  thor
+
+	* trunk/src/libmpg123/dct64_3dnowext.S,
+	  trunk/src/libmpg123/dct64_sse.S: fix remaining #APP / #NO_APP
+
+2008-11-04 09:38  thor
+
+	* trunk/src/libmpg123: ignore
+
+2008-11-04 09:34  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123lib_intern.h: Work on alignment
+	  issues... - Made the actual check easier on compilers (old gcc
+	  will not align too small blocks). - Do not use the useless check
+	  when using gcc-4.2+. - Some drive-by configure.ac refinement.
+
+2008-11-03 10:36  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c: By default
+	  enable the stack alignment check now. The fail case is too
+	  serious. Also, it is enhanced to detect a bad build of libmpg123
+	  itself: When you give gcc -mpreferred-stack-boundary=2, it will
+	  not handle __attribute__((aligned(16))) variables correctly. I
+	  consider this alone to be a bug, but that may be subject to
+	  discussion. What is clearly a bug in gcc-4.3.1: The check fails
+	  to detect stack misalignment there! The % 16 is apparently
+	  optimized to zero at compile time... while at runtime the result
+	  is wrong. This depends on some optimization included in -O1
+	  already, or worse, a combination of some (I could not make out a
+	  single option that is causing it). Anyhow, gcc-3.3 and gcc-3.4
+	  handle that fine -- at least they detect the misalignment.
+
+2008-11-03 00:39  thor
+
+	* trunk/src/libmpg123/dct36_3dnowext.S: fix broken comments (it's
+	  preprocessed now!)
+
+2008-11-03 00:32  thor
+
+	* trunk/src/output/esd.c: include some headers in esd.c for netbsd
+
+2008-11-03 00:21  thor
+
+	* trunk/configure.ac: better BSD detection
+
+2008-11-02 23:26  thor
+
+	* trunk/configure.ac: Weird quoting to preserve the [^0-9] as it
+	  is needed, M4 swallowed the brackets.
+
+2008-11-02 22:46  thor
+
+	* trunk/configure.ac: only use numeric file offset bit values
+
+2008-11-02 22:11  thor
+
+	* trunk/configure.ac, trunk/src/control_generic.c,
+	  trunk/src/libmpg123/compat.h, trunk/src/libmpg123/libmpg123.sym,
+	  trunk/src/libmpg123/libmpg123.sym.in,
+	  trunk/src/libmpg123/mpg123.h.in: More work on largefile support.
+	  Now we have some hacks that, at least on systems that deal with
+	  _FILE_OFFSET_BITS, prevent mixture of non-largefile and
+	  largefile program/library.
+
+2008-11-02 21:27  thor
+
+	* trunk/src/libmpg123/frame.c: intialize fr->down_sample; prevents
+	  irritating error messages with debugging
+
+2008-11-02 15:25  thor
+
+	* trunk/src/libmpg123/parse.c: fix a seeking weirdness;
+	  audio_start has been overwritten due to resyncs
+
+2008-11-02 13:35  thor
+
+	* trunk/src/libmpg123/frame.c: More verbosity to a theoretically
+	  impossible error message that I nevertheless saw in a log from
+	  Patrick. What is the deal with fr->down_sample there?
+
+2008-10-28 09:13  thor
+
+	* trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj: patch from
+	  Patrick: update the MSVC++ 2005 project
+
+2008-10-28 09:07  thor
+
+	* trunk/src/mpg123.c: Quick hack to have --no-seekbuffer to
+	  disable the http stream buffering. Not sure if that will stay,
+	  it's for Serge to debug something.
+
+2008-10-27 15:48  thor
+
+	* trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/mpg123.h, trunk/ports/MSVC++/msvc.c:
+	  Integrate new patch from Patrick: Open unicode files for MSVC++.
+
+2008-10-27 15:39  thor
+
+	* trunk/src/libmpg123/readers.c: complete the "cannot open file"
+	  error msg
+
+2008-10-26 10:40  thor
+
+	* trunk/xmms2-plugin/mpg123/mpg123.c: Add the line for fuzzy
+	  seeking to the (outdated, actually) xmms2 plugin.
+
+2008-10-26 10:36  thor
+
+	* trunk/src/libmpg123/readers.c: (cosmetic) Return MPG123_ERR
+	  instead of the return value from open() directly. It's still -1,
+	  as always...
+
+2008-10-24 19:09  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/index.c,
+	  trunk/src/libmpg123/index.h: Optimized index a little, not that
+	  it really matters. The next frame number to put into is cached.
+
+2008-10-24 10:06  thor
+
+	* trunk/src/audio.h, trunk/src/mpg123app.h: Header fix, audio.h
+	  needs mpg123.h, mpg123app does not need module.h .
+
+2008-10-24 09:34  thor
+
+	* trunk/MakeLegacy.sh, trunk/configure.ac,
+	  trunk/src/Makefile.legacy, trunk/src/audio.h,
+	  trunk/src/common.h, trunk/src/config.h.legacy,
+	  trunk/src/httpget.h, trunk/src/libmpg123/compat.h,
+	  trunk/src/libmpg123/icy.h,
+	  trunk/src/libmpg123/mpg123lib_intern.h, trunk/src/local.h,
+	  trunk/src/metaprint.c, trunk/src/metaprint.h,
+	  trunk/src/module.h, trunk/src/mpg123app.h, trunk/src/playlist.h,
+	  trunk/src/term.h: Sort out header issues, merge more stuff into
+	  compat.h. Also, reactivate legacy build.
+
+2008-10-24 08:34  thor
+
+	* trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: Convert the
+	  MSVC project files to DOS line ending, as they started out. My
+	  patch program always strips the trailing CRs ... supposedly a
+	  different patch format (unified) would help?
+
+2008-10-24 08:32  thor
+
+	* trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj: MSVC updates
+	  from Patrick, mainly additon of index.c and some build cleanup.
+
+2008-10-23 00:04  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123, trunk/configure.ac: doc
+	  update, lib version update
+
+2008-10-22 23:58  thor
+
+	* trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/index.c,
+	  trunk/src/libmpg123/index.h, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/parse.c,
+	  trunk/src/mpg123.c, trunk/src/mpg123app.h: When frame index is
+	  enabled, it's size is now runtime-tunable. Along with that, the
+	  associated code has found it's own place. The main API header
+	  got some comment refinements in addition to the necessary
+	  changes.
+
+2008-10-22 23:56  thor
+
+	* trunk/configure.ac: - add largefile support detection in
+	  configure This will define _FILE_OFFSET_BITS and stuff like
+	  that. Users of the lib should be aware of that... - always
+	  define INDEX_SIZE
+
+2008-10-22 23:50  thor
+
+	* trunk/src/control_generic.c: remove unused variable
+
+2008-10-22 23:49  thor
+
+	* trunk/src/libmpg123/compat.h,
+	  trunk/src/libmpg123/mpg123lib_intern.h: compat.h is the place
+	  for system headers
+
+2008-10-22 23:48  thor
+
+	* trunk/src/libmpg123/readers.c: lessen default verbosity in reader
+
+2008-10-21 22:10  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/libmpg123/parse.c:
+	  enable frame index also for non-seekable streams ... among that:
+	  the feeder, that can seek but differently
+
+2008-10-19 10:44  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/parse.c: Add handling of stream size given
+	  by Xing header; that one indeed has been missing. Also warn if
+	  it differs significantly from determined file size.
+
+2008-10-19 00:59  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/frame.c: A bit more
+	  safety with fuzzy seeking, also being paranoid about positive
+	  file length with VBR table.
+
+2008-10-18 18:15  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123, trunk/src/control_generic.c,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/libmpg123.sym,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/term.c: Adding
+	  mpg123_getstate to query things, like "is the current position
+	  accurate?".
+
+2008-10-18 18:13  thor
+
+	* trunk/src/libmpg123/frame.c: use TRUE, not 1
+
+2008-10-18 12:20  thor
+
+	* trunk/man1/mpg123.1: manpage update
+
+2008-10-18 12:05  thor
+
+	* trunk/NEWS: NEWS for 1.6.0 ... final?
+
+2008-10-18 12:02  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c: Prevent
+	  gapless stuff from fiddling while we don't have an accurate
+	  position. ...also updating the patchlevel of the lib for that.
+
+2008-10-18 00:05  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/parse.c: Add usage of the Xing TOC to the
+	  fuzzy seeking. Also, trying to silence the resync
+
+2008-10-17 09:24  thor
+
+	* trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/parse.c,
+	  trunk/src/mpg123.c: first guess at fuzzy seeking, using mean
+	  framesize as estimate
+
+2008-10-15 09:50  thor
+
+	* trunk/windows-builds.sh: Save the readme & co with .txt
+	  extension for Windows binary packages.
+
+2008-10-15 08:51  thor
+
+	* trunk/windows-builds.sh: again, the hopyfully working version of
+	  the script
+
+2008-10-15 08:19  thor
+
+	* trunk/src/libmpg123/libmpg123.c: revert the debugging stuff in
+	  libmpg123.c; it is not for the repo
+
+2008-10-15 08:17  thor
+
+	* trunk/src/libmpg123/libmpg123.c, trunk/windows-builds.sh: still
+	  a missing adaption of the windows script... hopefully complete
+	  now
+
+2008-10-15 00:52  thor
+
+	* trunk/INSTALL: another hint for windows (the SSE stack alignment
+	  issue)
+
+2008-10-15 00:47  thor
+
+	* trunk/INSTALL: hint about win32 binaries
+
+2008-10-15 00:43  thor
+
+	* trunk/windows-builds.sh: fix a path there
+
+2008-10-15 00:12  thor
+
+	* trunk/Makefile.am, trunk/windows-builds.sh: also distribute the
+	  build script
+
+2008-10-15 00:10  thor
+
+	* trunk/windows-builds.sh: an attempt to have automated windows
+	  builds in here
+
+2008-10-13 09:06  thor
+
+	* trunk/ports/MSVC++/config.h: do not forget these important
+	  features: gapless and seek index
+
+2008-10-11 21:40  thor
+
+	* trunk/ports/README: another note for the MSVCers
+
+2008-10-11 16:03  thor
+
+	* trunk/Makefile.am: add new ports stuff to distfiles
+
+2008-10-11 15:59  thor
+
+	* trunk/NEWS: a bit of credit
+
+2008-10-11 15:57  thor
+
+	* trunk/NEWS: doc update
+
+2008-10-11 15:50  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/libmpg123.sym,
+	  trunk/src/libmpg123/mpg123.h.in: adding mpg123_tell_stream to
+	  get the current input offset
+
+2008-10-11 15:29  thor
+
+	* trunk/NEWS, trunk/ports/README: doc update for MSVC++ projects
+
+2008-10-11 15:17  thor
+
+	* trunk/ports/MSVC++/2005, trunk/ports/MSVC++/2005/libmpg123,
+	  trunk/ports/MSVC++/2005/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/2008, trunk/ports/MSVC++/2008/libmpg123,
+	  trunk/ports/MSVC++/2008/libmpg123/libmpg123.vcproj,
+	  trunk/ports/MSVC++/config.h: adding MSVC projects by Patrick
+	  Dehne
+
+2008-10-11 14:17  thor
+
+	* trunk/ports/README: update ports README for MSVC++
+
+2008-10-11 14:14  thor
+
+	* trunk/ports/mpg123_msvc.h: don't need that anymore
+
+2008-10-11 14:13  thor
+
+	* trunk/ports/MSVC++/mpg123.h: Add a mpg123.h wrapper header to be
+	  used by all MSVC++ builds.
+
+2008-10-11 14:10  thor
+
+	* trunk/ports/MSVC++/CMP3Stream,
+	  trunk/ports/MSVC++/CMP3Stream/INCLUDE,
+	  trunk/ports/MSVC++/CMP3Stream/README,
+	  trunk/ports/MSVC++/CMP3Stream/SOURCE,
+	  trunk/ports/MSVC++/CMP3Stream/libMPG123,
+	  trunk/ports/MSVC++/INCLUDE, trunk/ports/MSVC++/README,
+	  trunk/ports/MSVC++/SOURCE, trunk/ports/MSVC++/libMPG123: Move
+	  the MSVC++ wrapper class to a subdirectory, preparing for the
+	  new MSVC++ projects to come.
+
+2008-10-11 13:49  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: make mpg123.h.in directly
+	  includable with -DMPG123_NO_CONFIGURE
+
+2008-10-11 13:23  thor
+
+	* trunk/src/libmpg123/readers.c: MSVC++ needs io.h in readers.c .
+
+2008-10-11 12:21  thor
+
+	* trunk/src/term.c: Fix a funny regression in the loopy pause: We
+	  were going backwards in time one frame at a time.
+
+2008-10-11 12:14  thor
+
+	* trunk/man1/mpg123.1: An attempt to clarify the terminal control
+	  with respect to pausing. ...in the course of that, don't mention
+	  the "pause" that is a loop.
+
+2008-10-11 12:04  thor
+
+	* trunk/AUTHORS, trunk/NEWS, trunk/configure.ac,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/layer3.c: Integrate bit reservoir patch from
+	  Patrick Dehne, fixing playback of badly cut MPEG layer 3 streams.
+
+2008-10-09 11:08  thor
+
+	* trunk/src/local.c: UTF-8 env check also using LC_ALL and LC_CTYPE
+
+2008-10-09 10:57  thor
+
+	* trunk/src/libmpg123/icy2utf8.c: icy2utf8: comment typo and
+	  additions to test
+
+2008-10-08 08:32  thor
+
+	* trunk/NEWS, trunk/src/local.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123app.h: Added --utf8.
+
+2008-10-08 08:20  thor
+
+	* trunk/AUTHORS, trunk/NEWS: doc update
+	* trunk/configure.ac, trunk/src/Makefile.am, trunk/src/local.c,
+	  trunk/src/local.h, trunk/src/mpg123.c, trunk/src/mpg123app.h:
+	  More elaborate check for UTF-8 locale, with setlocale and
+	  nl_langinfo. In the course of applying that, moved this locale
+	  code out into its own realm. Structure.
+
+2008-10-08 08:18  thor
+
+	* trunk/src/libmpg123/icy2utf8.c: Do only convert stuff that is
+	  not already UTF-8. There are streams that send UTF-8 ICY
+	  metadata...
+
+2008-10-08 08:16  thor
+
+	* trunk/configure.ac, trunk/src/getlopt.c,
+	  trunk/src/libmpg123/compat.c, trunk/src/libmpg123/compat.h:
+	  Moved that replacement strdup to commpat.c, also check for it
+	  instead of assuming some specific system.
+
+2008-10-02 13:49  thor
+
+	* trunk/NEWS, trunk/configure.ac,
+	  trunk/src/libmpg123/decode_2to1.c,
+	  trunk/src/libmpg123/decode_4to1.c,
+	  trunk/src/libmpg123/decode_ntom.c: fix resampling modes for
+	  integer decoding (just use REAL_MUL, stupid!)
+
+2008-10-02 13:35  thor
+
+	* trunk/src/libmpg123/libmpg123.c: now really fix the expected
+	  samples from a frame (did not work for flexible resampling)
+
+2008-10-02 13:06  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c: Fix the
+	  broken frame filler for resampling modes (look for output sample
+	  count per frame, not input).
+
+2008-10-02 12:45  thor
+
+	* trunk/NEWS: some news for 1.6.0
+	* trunk/configure.ac: gah, confusion with libversion again... not
+	  ., :!
+
+2008-10-02 12:35  thor
+
+	* trunk/doc/README.remote: update remote control docu
+
+2008-10-02 12:34  thor
+
+	* trunk/src/Makefile.am, trunk/src/control_generic.c,
+	  trunk/src/equalizer.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123app.h: Adding EQFILE and SHOWEQ to remote
+	  control, factoring out the equalizer file loading for that.
+	  Realizing that the equalizer file reading did not even work with
+	  the example equalize.dat and fixing this (really ignore comment
+	  lines).
+
+2008-10-02 11:55  thor
+
+	* trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/libmpg123.sym,
+	  trunk/src/libmpg123/mpg123.h.in: added mpg123_geteq()
+
+2008-10-02 11:53  thor
+
+	* trunk/src/libmpg123/mpg123lib_intern.h: added REAL_TO_DOUBLE
+	  and... a using (long) in DOUBLE_TO_REAL for fixed (integer)
+	  real... seems right, theoretically
+
+2008-10-02 00:58  thor
+
+	* trunk/NEWS: an attempt to update the NEWS
+
+2008-10-02 00:54  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: More parameter safety (checks
+	  for NULL pointers users may give).
+
+2008-10-02 00:41  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c: cleanup
+	  error return of mpg123_index
+
+2008-10-02 00:39  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/frame.c,
+	  trunk/src/libmpg123/frame.h, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/parse.c: Wrap INDEX_SIZE=0 around extra
+	  #define to prevent compilers from chokin on zero-sized arrays.
+
+2008-10-01 20:27  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: Multiple issues at once
+	  (sorry): - fill up broken frames (with zeros) that would
+	  otherwise screw up the relation between sample offset and frame
+	  offset, breaking seeks - prevent reporting of negative positions
+	  - deny seek if file position is screwed up - some more caution
+	  with user-provided pointers to store values (check for NULL)
+
+2008-10-01 20:23  thor
+
+	* trunk/src/resolver.c: remove an unused variable
+
+2008-10-01 20:18  thor
+
+	* trunk/src/libmpg123/frame.c: be prepared to find first header
+	  again when there is no seek table, fresh and clean
+
+2008-10-01 20:11  thor
+
+	* trunk/configure.ac: version will be 1.6.0 because of added
+	  features of control interface
+
+2008-10-01 20:10  thor
+
+	* trunk/configure.ac: be prepared to find first header again when
+	  there is no seek table, fresh and clean
+
+2008-10-01 20:04  thor
+
+	* trunk/TODO: note about possible multiplied ID3v2 parsing
+
+2008-10-01 19:29  thor
+
+	* trunk/test/1000Hz/work.sh: use --no-gapless
+	* trunk/ChangeLog: typo
+
+2008-09-30 17:25  thor
+
+	* trunk/src/control_generic.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123app.h: adding sample and scan commands to remote
+	  interface, also --keep-open
+
+2008-09-17 13:58  thor
+
+	* trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/dnoise.c,
+	  trunk/src/libmpg123/dnoise.dat, trunk/src/libmpg123/dnoise.sh:
+	  turn dnoise.c into a data file with a converter script; much
+	  saner this way
+
+2008-09-17 13:45  thor
+
+	* trunk/configure.ac: fixes for picky autoconf-2.62 ... it picked
+	  up the spaces around variable names (actually only the space
+	  _after_) as part of the variable name. Great job to make me
+	  waste my time with such cruft again!!
+
+2008-09-03 11:07  thor
+
+	* trunk/NEWS, trunk/configure.ac: document updates
+
+2008-09-03 11:05  thor
+
+	* trunk/src/libmpg123/libmpg123.c: make mpg123_getformat check for
+	  NULL pointers
+
+2008-09-03 11:03  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: Clean up mpg123_channels:
+	  MPG123_LEFT|MPG123_RIGHT is now a member of the enum, at least
+	  per value. C++ still wants to have a specific symbol instead of
+	  the binary | ...
+
+2008-09-03 10:38  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/reader.h,
+	  trunk/src/libmpg123/readers.c: use const char* file paths for
+	  open()
+
+2008-08-29 06:47  thor
+
+	* trunk/configure.ac: update library version
+
+2008-08-22 08:43  thor
+
+	* trunk/src/libmpg123/libmpg123.sym: add the missing export symbol
+	  for mpg123_set_filesize
+
+2008-08-21 17:18  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: Work on bug #2064322, adding
+	  mpg123_set_filesize() and controlling mpg123_length() a bit.
+	  Arbitrary negative length values should be a thing of the past
+	  now.
+
+2008-08-20 09:34  thor
+
+	* trunk/configure.ac: version will be 1.5.1
+
+2008-08-20 09:28  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/libmpg123/dct64_sse.S:
+	  Making SSE decoder thread safe (bug #2053181). The local b1 and
+	  b2 variables are now handled on the stack, which interestingly
+	  also seems to be slightly faster on my machine.
+
+2008-08-19 18:20  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: API doc: make mpg123_init/exit
+	  calling with threads more clear
+
+2008-08-10 18:40  thor
+
+	* trunk/NEWS, trunk/man1/mpg123.1: update docs
+
+2008-08-10 18:39  thor
+
+	* trunk/src/mpg123.c: add --no-resync to replace --resync in future
+
+2008-08-10 18:21  thor
+
+	* trunk/src/wav.c: Make wav/cdr/au output properly work with the
+	  special file "-", aka. stdout. Not closing it, not repeating
+	  headers.
+
+2008-08-03 20:04  thor
+
+	* trunk/src/libmpg123/dct36_3dnow.S,
+	  trunk/src/libmpg123/dct36_3dnowext.S,
+	  trunk/src/libmpg123/dct64_3dnow.S,
+	  trunk/src/libmpg123/dct64_3dnowext.S,
+	  trunk/src/libmpg123/dct64_mmx.S,
+	  trunk/src/libmpg123/dct64_sse.S,
+	  trunk/src/libmpg123/decode_3dnow.S,
+	  trunk/src/libmpg123/decode_3dnowext.S,
+	  trunk/src/libmpg123/decode_i586.S,
+	  trunk/src/libmpg123/decode_i586_dither.S,
+	  trunk/src/libmpg123/decode_mmx.S,
+	  trunk/src/libmpg123/decode_sse.S,
+	  trunk/src/libmpg123/equalizer_3dnow.S,
+	  trunk/src/libmpg123/getcpuflags.S,
+	  trunk/src/libmpg123/tabinit_mmx.S: following gentoo advice...
+	  marking stacks as non-exec for gcc
+
+2008-08-03 08:43  thor
+
+	* trunk/src/control_generic.c: fix help of loadpaused command
+
+2008-08-02 11:54  thor
+
+	* trunk/src/libmpg123/Makefile.am: include ic2utf8.h in
+	  distribution
+
+2008-08-02 11:48  thor
+
+	* trunk/src/resolver.c: remove the fixed DEBUG
+
+2008-08-02 11:41  thor
+
+	* trunk/NEWS: updated 1.5.0 NEWS
+
+2008-08-02 11:40  thor
+
+	* trunk/src/resolver.c: Also make the initial connection use the
+	  timeout (would block forever otherwise...).
+
+2008-08-02 11:39  thor
+
+	* trunk/src/libmpg123/readers.c: Do the nonblock switching
+	  properly, without clearing other flags.
+
+2008-08-02 10:40  thor
+
+	* trunk/AUTHORS, trunk/NEWS, trunk/NEWS.libmpg123,
+	  trunk/configure.ac, trunk/src/Makefile.am, trunk/src/httpget.c,
+	  trunk/src/id3print.c, trunk/src/id3print.h,
+	  trunk/src/libmpg123/Makefile.am, trunk/src/libmpg123/icy2utf8.c,
+	  trunk/src/libmpg123/icy2utf8.h, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/libmpg123.sym,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/metaprint.c,
+	  trunk/src/metaprint.h, trunk/src/mpg123.c, trunk/src/term.c:
+	  Added the ICY decoding from Thorsten Glaser (of course wrapped
+	  it a bit in mpg123 mungo;-).
+
+2008-08-02 09:19  thor
+
+	* trunk/src/libmpg123/reader.h, trunk/src/libmpg123/readers.c:
+	  preserve the constness of input buffers
+
+2008-08-02 09:10  thor
+
+	* trunk/NEWS: NEWS updated for 1.5.0
+
+2008-08-02 08:55  thor
+
+	* trunk/src/libmpg123/layer3.c, trunk/src/libmpg123/parse.c: -
+	  remove varmodesupport - consistent indendation in parse.c - dead
+	  code removed in parse.c
+
+2008-08-02 08:36  thor
+
+	* trunk/src/libmpg123/parse.c: Remove that line that stored the
+	  (bogus, anyway) peak value a float number from an arbitrary
+	  buffer. At least on the Wii (PowerPC), this triggered a problem
+	  due to unaligned floating point operation.
+
+2008-08-02 08:33  thor
+
+	* trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/parse.c,
+	  trunk/src/mpg123.c, trunk/src/mpg123app.h: Remove --force-resync
+	  again; the ICY resync mess has been caused by that bug of mine...
+
+2008-07-11 21:38  thor
+
+	* trunk/NEWS, trunk/src/output/alsa.c: Try to resume ALSA devices
+	  after suspend...
+
+2008-07-09 08:41  thor
+
+	* trunk/doc/doxyhead.xhtml: ...you should proofread that before
+	  the first commit. Anyway, added note about compatibility.
+
+2008-07-09 08:37  thor
+
+	* trunk/doc/doxyhead.xhtml: Eh... put that note below the mpg123
+	  linkbar...
+
+2008-07-09 08:35  thor
+
+	* trunk/doc/doxyhead.xhtml: Added note about API being from
+	  development verison.
+
+2008-07-09 01:35  thor
+
+	* trunk/configure.ac: Put environment CFLAGS/CPPFLAGS _after_ the
+	  generated ones, to give the user the last word.
+
+2008-07-04 08:01  thor
+
+	* trunk/NEWS, trunk/NEWS.libmpg123, trunk/configure.ac,
+	  trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/libmpg123.sym,
+	  trunk/src/libmpg123/mpg123.h.in: Added mpg123_feed() and made it
+	  take a const pointer as input buffer (mpg123_decode, too).
+
+2008-07-01 09:52  thor
+
+	* trunk/src/httpget.c: added audio/mpegurl
+
+2008-07-01 08:56  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/frame.h,
+	  trunk/src/libmpg123/mpg123.h.in, trunk/src/libmpg123/parse.c,
+	  trunk/src/mpg123.c, trunk/src/mpg123app.h: added --force-resync
+	  (I think it will vanish soon again), by-the-way cleanup of
+	  unused fr->do_recover
+
+2008-07-01 08:30  thor
+
+	* trunk/NEWS, trunk/src/mpg123.c, trunk/src/mpg123app.h,
+	  trunk/src/playlist.c: Added --ignore-mime.
+
+2008-07-01 01:39  thor
+
+	* trunk/src/httpget.c, trunk/src/mpg123.c: Remove further NETWORK
+	  blocks to make it actually work for generic systems.
+
+2008-07-01 01:20  thor
+
+	* trunk/src/resolver.c: Give note about kind of connection being
+	  tried to established (old IPv4 code, new code).
+
+2008-07-01 01:17  thor
+
+	* trunk/configure.ac, trunk/src/httpget.c, trunk/src/resolver.c:
+	  Give the network code a dedicated configure and preprocessor
+	  switch; checking for the lot of headers in configure. One step
+	  further to eliminate the host OS recognition stuff.
+
+2008-06-30 23:44  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/resolver.c: ... IPv6!
+	  Totally untested!
+
+2008-06-30 23:41  thor
+
+	* trunk/src/httpget.c: Re-enable the host request header
+	  (debugging...); make verbosity about HTTP communication
+	  runtime-switchable.
+
+2008-06-30 23:32  thor
+
+	* trunk/src/httpget.c: remove a debugging line
+
+2008-06-30 22:56  thor
+
+	* trunk/NEWS, trunk/src/httpget.c, trunk/src/httpget.h,
+	  trunk/src/mpg123.c, trunk/src/mpg123app.h, trunk/src/playlist.c,
+	  trunk/src/resolver.c: proxy fixup
+
+2008-06-30 21:22  thor
+
+	* trunk/NEWS: news for 1.5.0 ...
+	* trunk/src/Makefile.am, trunk/src/httpget.c, trunk/src/httpget.h,
+	  trunk/src/resolver.c, trunk/src/resolver.h: Reworked the HTTP
+	  code! Apart from now using mpg123_string all around (which
+	  should at least be a bit safer), the lowlevel network code is
+	  separated into resolver.c . This should ease the to-come IPv6
+	  changes.
+
+2008-06-30 21:20  thor
+
+	* trunk/configure.ac: The new libmpg123 version
+	* trunk/NEWS.libmpg123, trunk/src/libmpg123/libmpg123.sym,
+	  trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/libmpg123/stringbuf.c: Extending libmpg123's string
+	  API with substrings and growing; doc update.
+
+2008-06-30 21:14  thor
+
+	* trunk/src/mpg123.c: verbose error message on http_open failure
+
+2008-06-30 20:36  thor
+
+	* trunk/src/libmpg123/id3.c: Wondering why that didn't hit
+	  earlier: A bogus null-termination of the "lang" field in
+	  comments.
+
+2008-06-30 20:22  thor
+
+	* trunk/src/audio.h: export print_capabilities officially
+
+2008-06-29 10:49  thor
+
+	* trunk/configure.ac, trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/libmpg123/stringbuf.c: Safety: make the char*
+	  arguments to mpg123_add_string and mpg123_set_string const char*
+	  .
+
+2008-06-29 09:01  thor
+
+	* trunk/src/mpg123.c: Try to be more helpful on output format
+	  errors; especially cdr.
+
+2008-06-15 20:35  thor
+
+	* trunk/ports/Sony_PSP/README,
+	  trunk/ports/Sony_PSP/readers.c.patch: Update of PSP port to
+	  current toolchain, by noapic.
+
+2008-05-23 09:04  thor
+
+	* trunk/src/libmpg123/libmpg123.c: Add more alignment checking.
+
+2008-05-20 18:56  thor
+
+	* trunk/Makefile.am, trunk/ports/README,
+	  trunk/ports/mpg123_msvc.h: add that msvc header
+
+2008-05-18 09:27  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: Oh, that missing error code in
+	  mpg123.h
+
+2008-05-18 08:24  thor
+
+	* trunk/src/libmpg123/libmpg123.c: A li'l attempt to detect
+	  misaligned stack in debug build.
+
+2008-05-18 07:42  thor
+
+	* trunk/NEWS: now really the news about 1.4.3 stuff
+
+2008-05-18 07:19  thor
+
+	* trunk/AUTHORS, trunk/src/libmpg123/format.c,
+	  trunk/src/libmpg123/frame.c, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123lib_intern.h,
+	  trunk/src/libmpg123/optimize.c, trunk/src/libmpg123/parse.c,
+	  trunk/src/libmpg123/stringbuf.c: Import the ABI / stack
+	  alignment fixes from tag 1.4.3 (rev 1484).
+
+2008-05-18 07:15  thor
+
+	* trunk/NEWS: news for 1.4.3
+
+2008-05-13 20:35  thor
+
+	* trunk/src/libmpg123/id3.c: RVA notice clarification.
+
+2008-05-13 20:34  thor
+
+	* trunk/src/output/win32.c: Make win32 output use the channel
+	  count to support mono playback (from 1.4.3 tag).
+
+2008-04-29 20:03  thor
+
+	* trunk/src/libmpg123/frame.c, trunk/src/libmpg123/libmpg123.c:
+	  Fixing the return value of mpg123_tell(), and thus the return
+	  value of mpg123_seek() as well as the working of relative seeks.
+	  The buffer offset missed a conversion from bytes to samples.
+	  This should fix bug 1947373.
+
+2008-04-28 22:51  njh
+
+	* trunk/misc/ruby-mpg123.rb: Added ruby class for controlling
+	  mpg123
+
+2008-04-28 09:36  thor
+
+	* trunk/src/libmpg123/getcpuflags.S,
+	  trunk/src/libmpg123/getcpuflags.h: A fix for bogus 3DNow
+	  detection on CPUs that do not support the extended flag query.
+	  Not yet verified on the CPU in question (IDT C6).
+
+2008-04-20 13:19  thor
+
+	* trunk/NEWS, trunk/src/libmpg123/readers.c, trunk/src/mpg123.c:
+	  import build fixes from 1.4.2
+
+2008-04-20 07:50  thor
+
+	* trunk/src/control_generic.c, trunk/src/libmpg123/readers.c: One
+	  precaution and one bugfix with header inclusion oder: readers.c
+	  didn't see config.h before conditionally including system
+	  headers. This only made trouble on Cygwin so far, apparently.
+
+2008-04-14 06:52  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: Further clarification in
+	  encoding doc.
+
+2008-04-14 06:48  thor
+
+	* trunk/src/libmpg123/mpg123.h.in: clarify testing situation with
+	  floats
+
+2008-04-14 06:43  thor
+
+	* trunk/src/libmpg123/format.c, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in: Silently drop not supported
+	  formats in mpg123_format(), no outright failure.
+
+2008-04-14 06:42  thor
+
+	* trunk/src/libmpg123/frame.c: fix printf for float
+
+2008-04-14 00:07  thor
+
+	* trunk/configure.ac, trunk/src/audio.c,
+	  trunk/src/libmpg123/format.c, trunk/src/libmpg123/libmpg123.c,
+	  trunk/src/libmpg123/mpg123.h.in,
+	  trunk/src/libmpg123/mpg123lib_intern.h: Working on float output
+	  support. Tested only 32bit float, but added API definitions for
+	  64bit float and 32bit integers, too.
 
 2008-04-07 23:04  thor
 
@@ -5271,26 +9761,26 @@
 	  Nick, we avoid having both jukebox/ and JUKEBOX. It's a question
 	  if this sajber jukebox interface will keep working anyway...
 
-2005-12-24 00:41  thomas
+2005-12-24 00:41  thor
 
 	* trunk/BENCHMARKING.thor: just added my benchmark; nice to have
 	  some numbers there...
 
-2005-12-24 00:18  thomas
+2005-12-24 00:18  thor
 
 	* trunk/CHANGES, trunk/README, trunk/README.thor: now also final
 	  thor5 doc-wise
 
-2005-12-24 00:07  thomas
+2005-12-24 00:07  thor
 
 	* trunk/mpg123.c: really thor5 now (code): a trivial 0 instead of
 	  NULL
 
-2005-12-24 00:03  thomas
+2005-12-24 00:03  thor
 
 	* trunk/debian/changelog, trunk/httpget.c: Debian r20 httpget fix
 
-2005-12-23 20:26  thomas
+2005-12-23 20:26  thor
 
 	* trunk/BUGS, trunk/CHANGES, trunk/Makefile, trunk/README,
 	  trunk/README.thor, trunk/control_generic.c, trunk/decode.c,
@@ -5306,17 +9796,17 @@
 	  added SEQ) - fixed the Alpha show-stopper: mixing up of int and
 	  long pointers in getlopt
 
-2005-02-24 20:09  thomas
+2005-02-24 20:09  thor
 
 	* trunk/control_generic.c: final final -thor4: just a
 	  misunderstanding: break means end and that makes sense.
 
-2005-02-24 19:33  thomas
+2005-02-24 19:33  thor
 
 	* trunk/Makefile: final -thor4: changed my modified target to
 	  "linux-static"
 
-2005-02-24 19:17  thomas
+2005-02-24 19:17  thor
 
 	* trunk/README.3DNOW, trunk/README.thor, trunk/dct36_3dnow.s,
 	  trunk/debian, trunk/debian/README, trunk/debian/changelog,
@@ -5326,7 +9816,7 @@
 	  trunk/debian/rules, trunk/equalizer_3dnow.s,
 	  trunk/getcpuflags.s: thor4: second stage.
 
-2005-02-24 19:12  thomas
+2005-02-24 19:12  thor
 
 	* trunk/CHANGES, trunk/Makefile, trunk/audio.c, trunk/audio_esd.c,
 	  trunk/audio_oss.c, trunk/audio_sun.c, trunk/buffer.c,
@@ -5340,27 +9830,27 @@
 	  trunk/xfermem.c: thor4: merge the Debian 0.59r-19 in for serious
 	  bug fixing, a bit of docu
 
-2005-02-24 16:40  thomas
+2005-02-24 16:40  thor
 
 	* trunk/CHANGES, trunk/control_generic.c, trunk/httpget.c,
 	  trunk/mpg123.h, trunk/readers.c, trunk/version.h: thor-3: again
 	  command parsing reworked; non-exit()ing open functions added:
 
-2004-10-09 20:36  thomas
+2004-10-09 20:36  thor
 
 	* trunk/control_generic.c: Removed load-paused function that
 	  wasn't really working anyway.
 
-2004-10-08 16:12  thomas
+2004-10-08 16:12  thor
 
 	* trunk/control_generic.c: added version info in control_generic
 	  startup message
 
-2004-09-21 04:02  thomas
+2004-09-21 04:02  thor
 
 	* trunk/version.h: version info updated
 
-2004-09-21 03:58  thomas
+2004-09-21 03:58  thor
 
 	* trunk/CHANGES, trunk/control_generic.c, trunk/mpglib: more info
 	  in general and more useful info on JUMP

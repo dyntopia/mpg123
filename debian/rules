@@ -1,17 +1,10 @@
 #!/usr/bin/make -f
-#
-# TODO:
-# * End-user documentation of what's going on?
-#   Include a NEWS.Debian in the final upload.
-# Non-essentials:
-# * Extend build-deps to include further output plugins (arts, jack...)?
-# * Create a libmpg123-dbg package?
-# * Build xmms2 plugin?
 
 PACKAGE:=mpg123
 
 ARCH:=$(shell dpkg-architecture -qDEB_HOST_GNU_CPU)
 OS:=$(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
+CPU:=$(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
 
 WRAPPER_TARGETS:=mpg123-oss mpg123-esd mpg123-nas
 
@@ -48,6 +41,37 @@ DUMMY_PKGSTR += -pmpg123-oss-i486
 endif
 endif
 endif
+
+CFLAGS = 
+LDFLAGS =
+
+# Add hardening options. OS and architecture restrictions are stolen from
+# package hardening-wrapper.
+ifeq (,$(findstring noharden,$(DEB_BUILD_OPTIONS)))
+# configure script currently chokes on -Werror
+#       CFLAGS += -Wformat -Werror=format-security
+        CFLAGS += -Wformat
+        LDFLAGS += -Wl,-z,relro
+ifeq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+        CFLAGS += -D_FORTIFY_SOURCE=2
+endif
+ifeq (,$(findstring :$(CPU):,:ia64:alpha:mips:mipsel:hppa:arm:))
+        CFLAGS += -fstack-protector
+endif
+ifneq (,$(findstring :$(OS):,:linux:knetbsd:))
+ifeq (,$(findstring :$(CPU):,:hppa:m68k:arm:mips:mipsel:))
+        CFLAGS += -fPIE
+        LDFLAGS += -pie
+endif
+endif
+endif
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+        CFLAGS += -O0
+else
+        CFLAGS += -O2
+endif
+
 
 #export DH_VERBOSE=1
 
@@ -89,7 +113,9 @@ configure-stamp:
 	ln -sf /usr/share/misc/config.sub "$(CURDIR)/build/"
 	ln -sf /usr/share/misc/config.guess "$(CURDIR)/build/"
 
-	./configure $(CONF_COMMON) $(CONF_$(ARCH))
+	CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+	  ./configure $(CONF_COMMON) $(CONF_$(ARCH)) || \
+	    { ret=$?; cat config.log; exit $$ret; }
 
 	touch configure-stamp
 
@@ -135,7 +161,7 @@ install: build
 	dh_strip $(ALL_PKGSTR)
 	dh_compress $(ALL_PKGSTR) $(DUMMY_PKGSTR)
 	dh_fixperms $(ALL_PKGSTR) $(DUMMY_PKGSTR)
-	dh_makeshlibs $(LIB_PKGSTR)
+	dh_makeshlibs $(LIB_PKGSTR) -V "$(LIB_PKG) (>= 1.7.2)"
 	dh_installdeb $(ALL_PKGSTR)
 	dh_shlibdeps $(ALL_PKGSTR) -Xdebian/mpg123/usr/lib/mpg123/ -- \
 		-dSuggests `find debian/mpg123/usr/lib/mpg123/ -name "output_*.so" -type f` -dDepends
@@ -144,19 +170,12 @@ install: build
 		test -e "$$i" || continue; \
 		dh_shlibdeps $(ARCH_PKGSTR) $(DUMMY_PKGSTR) -Xdebian/mpg123/usr/lib/mpg123 debian/mpg123 -- -p"$$n"plugin -dRecommends "$$i" -dDepends; \
 	done
-	if grep '^alsaplugin:Recommends' debian/mpg123.substvars | grep -q ',' || \
-	   grep -q '^ossplugin:Recommends' debian/mpg123.substvars || \
-	   grep '^dummyplugin:Recommends' debian/mpg123.substvars | grep -q ','; then \
-		echo "BUG: Build system cannot handle more than one substitution for first-class plugins. Giving up."; \
-		echo "debian/substvars:"; \
-		cat debian/substvars; \
-		exit 1; \
-	fi
-	if test -e debian/mpg123/usr/lib/mpg123/output_alsa.so; then \
-		dh_gencontrol $(ALL_PKGSTR) -- -V'plugin:Recommends=$${alsaplugin:Recommends} | oss-compat | $${dummyplugin:Recommends}'; \
-	else \
-		dh_gencontrol $(ALL_PKGSTR) -- -V'plugin:Recommends=oss-compat | $${dummyplugin:Recommends}'; \
-	fi
+	chmod +x "$(CURDIR)/debian/alt_deps.py"
+	"$(CURDIR)/debian/alt_deps.py" "$(CURDIR)/debian/mpg123.substvars" \
+	  plugin:Recommends \
+	  "alsaplugin:Recommends ossplugin:Recommends dummyplugin:Recommends" \
+	  ossplugin:Recommends=oss-compat
+	dh_gencontrol $(ALL_PKGSTR)
 	dh_gencontrol $(DUMMY_PKGSTR) -- -Tdebian/mpg123.substvars
 	dh_md5sums $(ALL_PKGSTR) $(DUMMY_PKGSTR)
 	dh_builddeb $(ALL_PKGSTR) $(DUMMY_PKGSTR)

@@ -33,6 +33,10 @@ static const struct {
 	{ SND_PCM_FORMAT_S8,     MPG123_ENC_SIGNED_8    },
 	{ SND_PCM_FORMAT_A_LAW,  MPG123_ENC_ALAW_8      },
 	{ SND_PCM_FORMAT_MU_LAW, MPG123_ENC_ULAW_8      },
+	{ SND_PCM_FORMAT_S32,    MPG123_ENC_SIGNED_32   },
+	{ SND_PCM_FORMAT_U32,    MPG123_ENC_UNSIGNED_32 },
+	{ SND_PCM_FORMAT_FLOAT,  MPG123_ENC_FLOAT_32    },
+	{ SND_PCM_FORMAT_FLOAT64, MPG123_ENC_FLOAT_64   }
 };
 #define NUM_FORMATS (sizeof format_map / sizeof format_map[0])
 
@@ -136,7 +140,7 @@ static int initialize_device(audio_output_t *ao)
 	return 0;
 }
 
-void error_ignorer(const char *file, int line, const char *function, int err, const char *fmt,...)
+static void error_ignorer(const char *file, int line, const char *function, int err, const char *fmt,...)
 {
 	/* I can make ALSA silent. */
 }
@@ -210,7 +214,19 @@ static int write_alsa(audio_output_t *ao, unsigned char *buf, int bytes)
 	if (written >= 0)
 		return snd_pcm_frames_to_bytes(pcm, written);
 	else
-		return written;
+	{
+		if(snd_pcm_state(pcm) == SND_PCM_STATE_SUSPENDED)
+		{
+			/* Iamnothappyabouthisnothappyreallynot. */
+			snd_pcm_resume(pcm);
+			if(snd_pcm_state(pcm) == SND_PCM_STATE_SUSPENDED)
+			{
+				error("device still suspended after resume hackery... giving up");
+				return -1;
+			}
+		}
+		return 0;
+	}
 }
 
 static void flush_alsa(audio_output_t *ao)
@@ -218,8 +234,12 @@ static void flush_alsa(audio_output_t *ao)
 	snd_pcm_t *pcm=(snd_pcm_t*)ao->userptr;
 
 	/* is this the optimal solution? - we should figure out what we really whant from this function */
+
+debug("alsa drop");
 	snd_pcm_drop(pcm);
+debug("alsa prepare");
 	snd_pcm_prepare(pcm);
+debug("alsa flush done");
 }
 
 static int close_alsa(audio_output_t *ao)

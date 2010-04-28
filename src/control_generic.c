@@ -9,11 +9,9 @@
 
 #include "mpg123app.h"
 #include <stdarg.h>
-#ifndef WIN32
+#if !defined (WIN32) || defined (__CYGWIN__)
 #include <sys/wait.h>
 #include <sys/socket.h>
-#else
-#include <winsock.h>
 #endif
 #include <fcntl.h>
 #include <errno.h>
@@ -27,6 +25,8 @@
 #define MODE_PAUSED 2
 
 extern int buffer_pid;
+extern audio_output_t *ao;
+
 #ifdef FIFO
 #include <sys/stat.h>
 int control_file = STDIN_FILENO;
@@ -97,7 +97,7 @@ void generic_sendstat (mpg123_handle *fr)
 	off_t current_frame, frames_left;
 	double current_seconds, seconds_left;
 	if(!mpg123_position(fr, 0, xfermem_get_usedspace(buffermem), &current_frame, &frames_left, &current_seconds, &seconds_left))
-	generic_sendmsg("F %li %li %3.2f %3.2f", current_frame, frames_left, current_seconds, seconds_left);
+	generic_sendmsg("F %"OFF_P" %"OFF_P" %3.2f %3.2f", (off_p)current_frame, (off_p)frames_left, current_seconds, seconds_left);
 }
 
 static void generic_sendv1(mpg123_id3v1 *v1, const char *prefix)
@@ -262,7 +262,7 @@ int control_generic (mpg123_handle *fr)
 #endif
 	/* the command behaviour is different, so is the ID */
 	/* now also with version for command availability */
-	fprintf(outstream, "@R MPG123 (ThOr) v3\n");
+	fprintf(outstream, "@R MPG123 (ThOr) v6\n");
 #ifdef FIFO
 	if(param.fifo)
 	{
@@ -295,9 +295,21 @@ int control_generic (mpg123_handle *fr)
 			if (n == 0) {
 				if (!play_frame())
 				{
-					mode = MODE_STOPPED;
-					close_track();
-					generic_sendmsg("P 0");
+					/* When the track ended, user may want to keep it open (to seek back),
+					   so there is a decision between stopping and pausing at the end. */
+					if(param.keep_open)
+					{
+						mode = MODE_PAUSED;
+						/* Hm, buffer should be stopped already, shouldn't it? */
+						if(param.usebuffer) buffer_stop();
+						generic_sendmsg("P 1");
+					}
+					else
+					{
+						mode = MODE_STOPPED;
+						close_track();
+						generic_sendmsg("P 0");
+					}
 					continue;
 				}
 				if (init) {
@@ -382,7 +394,7 @@ int control_generic (mpg123_handle *fr)
 
 				/* PAUSE */
 				if (!strcasecmp(comstr, "P") || !strcasecmp(comstr, "PAUSE")) {
-					if (!(mode == MODE_STOPPED))
+					if(mode != MODE_STOPPED)
 					{	
 						if (mode == MODE_PLAYING) {
 							mode = MODE_PAUSED;
@@ -393,7 +405,7 @@ int control_generic (mpg123_handle *fr)
 							if(param.usebuffer) buffer_start();
 							generic_sendmsg("P 2");
 						}
-					}
+					} else generic_sendmsg("P 0");
 					continue;
 				}
 
@@ -408,7 +420,7 @@ int control_generic (mpg123_handle *fr)
 						close_track();
 						mode = MODE_STOPPED;
 						generic_sendmsg("P 0");
-					}
+					} else generic_sendmsg("P 0");
 					continue;
 				}
 
@@ -424,6 +436,55 @@ int control_generic (mpg123_handle *fr)
 					continue;
 				}
 
+				if(!strcasecmp(comstr, "SCAN"))
+				{
+					if(mode != MODE_STOPPED)
+					{
+						if(mpg123_scan(fr) == MPG123_OK)
+						generic_sendmsg("SCAN done");
+						else
+						generic_sendmsg("E %s", mpg123_strerror(fr));
+					}
+					else generic_sendmsg("E No track loaded!");
+
+					continue;
+				}
+
+				if(!strcasecmp(comstr, "SAMPLE"))
+				{
+					off_t pos = mpg123_tell(fr);
+					off_t len = mpg123_length(fr);
+					/* I need to have portable printf specifiers that do not truncate the type... more autoconf... */
+					if(len < 0) generic_sendmsg("E %s", mpg123_strerror(fr));
+					else generic_sendmsg("SAMPLE %li %li", (long)pos, (long)len);
+					continue;
+				}
+
+				if(!strcasecmp(comstr, "SHOWEQ"))
+				{
+					int i;
+					generic_sendmsg("SHOWEQ {");
+					for(i=0; i<32; ++i)
+					{
+						generic_sendmsg("SHOWEQ %i : %i : %f", MPG123_LEFT, i, mpg123_geteq(fr, MPG123_LEFT, i));
+						generic_sendmsg("SHOWEQ %i : %i : %f", MPG123_RIGHT, i, mpg123_geteq(fr, MPG123_RIGHT, i));
+					}
+					generic_sendmsg("SHOWEQ }");
+					continue;
+				}
+
+				if(!strcasecmp(comstr, "STATE"))
+				{
+					long val;
+					generic_sendmsg("STATE {");
+					/* Get some state information bits and display them. */
+					if(mpg123_getstate(fr, MPG123_ACCURATE, &val, NULL) == MPG123_OK)
+					generic_sendmsg("STATE accurate %li", val);
+
+					generic_sendmsg("STATE }");
+					continue;
+				}
+
 				/* QUIT */
 				if (!strcasecmp(comstr, "Q") || !strcasecmp(comstr, "QUIT")){
 					alive = FALSE; continue;
@@ -434,16 +495,22 @@ int control_generic (mpg123_handle *fr)
 					generic_sendmsg("H {");
 					generic_sendmsg("H HELP/H: command listing (LONG/SHORT forms), command case insensitve");
 					generic_sendmsg("H LOAD/L <trackname>: load and start playing resource <trackname>");
-					generic_sendmsg("H LOADPAUSED/LP <trackname>: load and start playing resource <trackname>");
+					generic_sendmsg("H LOADPAUSED/LP <trackname>: load but do not start playing resource <trackname>");
 					generic_sendmsg("H PAUSE/P: pause playback");
 					generic_sendmsg("H STOP/S: stop playback (closes file)");
 					generic_sendmsg("H JUMP/J <frame>|<+offset>|<-offset>|<[+|-]seconds>s: jump to mpeg frame <frame> or change position by offset, same in seconds if number followed by \"s\"");
 					generic_sendmsg("H VOLUME/V <percent>: set volume in % (0..100...); float value");
 					generic_sendmsg("H RVA off|(mix|radio)|(album|audiophile): set rva mode");
-					generic_sendmsg("H EQ/E <channel> <band> <value>: set equalizer value for frequency band on channel");
+					generic_sendmsg("H EQ/E <channel> <band> <value>: set equalizer value for frequency band 0 to 31 on channel %i (left) or %i (right) or %i (both)", MPG123_LEFT, MPG123_RIGHT, MPG123_LR);
+					 generic_sendmsg("H EQFILE <filename>: load EQ settings from a file");
+					generic_sendmsg("H SHOWEQ: show all equalizer settings (as <channel> <band> <value> lines in a SHOWEQ block (like TAG))");
 					generic_sendmsg("H SEEK/K <sample>|<+offset>|<-offset>: jump to output sample position <samples> or change position by offset");
+					generic_sendmsg("H SCAN: scan through the file, building seek index");
+					generic_sendmsg("H SAMPLE: print out the sample position and total number of samples");
 					generic_sendmsg("H SEQ <bass> <mid> <treble>: simple eq setting...");
+					generic_sendmsg("H PITCH <[+|-]value>: adjust playback speed (+0.01 is 1 %% faster)");
 					generic_sendmsg("H SILENCE: be silent during playback (meaning silence in text form)");
+					generic_sendmsg("H STATE: Print auxilliary state info in several lines (just try it to see what info is there).");
 					generic_sendmsg("H TAG/T: Print all available (ID3) tag info, for ID3v2 that gives output of all collected text fields, using the ID3v2.3/4 4-character names.");
 					generic_sendmsg("H    The output is multiple lines, begin marked by \"@T {\", end by \"@T }\".");
 					generic_sendmsg("H    ID3v1 data is like in the @I info lines (see below), just with \"@T\" in front.");
@@ -501,10 +568,23 @@ int control_generic (mpg123_handle *fr)
 						/*generic_sendmsg("%s",updown);*/
 						if(sscanf(arg, "%i %i %lf", &c, &v, &e) == 3)
 						{
-							mpg123_eq(fr, c, v, e);
+							if(mpg123_eq(fr, c, v, e) == MPG123_OK)
 							generic_sendmsg("%i : %i : %f", c, v, e);
+							else
+							generic_sendmsg("E failed to set eq: %s", mpg123_strerror(fr));
 						}
 						else generic_sendmsg("E invalid arguments for EQ: %s", arg);
+						continue;
+					}
+
+					if(!strcasecmp(cmd, "EQFILE"))
+					{
+						equalfile = arg;
+						if(load_equalizer(fr) == 0)
+						generic_sendmsg("EQFILE done");
+						else
+						generic_sendmsg("E failed to parse given eq file");
+
 						continue;
 					}
 
@@ -514,9 +594,13 @@ int control_generic (mpg123_handle *fr)
 						off_t soff;
 						char *spos = arg;
 						int whence = SEEK_SET;
-						if(!spos || (mode == MODE_STOPPED)) continue;
+						if(mode == MODE_STOPPED)
+						{
+							generic_sendmsg("E No track loaded!");
+							continue;
+						}
 
-						soff = atol(spos);
+						soff = (off_t) atobigint(spos);
 						if(spos[0] == '-' || spos[0] == '+') whence = SEEK_CUR;
 						if(0 > (soff = mpg123_seek(fr, soff, whence)))
 						{
@@ -535,10 +619,11 @@ int control_generic (mpg123_handle *fr)
 						double secs;
 
 						spos = arg;
-						if (!spos)
+						if(mode == MODE_STOPPED)
+						{
+							generic_sendmsg("E No track loaded!");
 							continue;
-						if (mode == MODE_STOPPED)
-							continue;
+						}
 
 						if(spos[strlen(spos)-1] == 's' && sscanf(arg, "%lf", &secs) == 1) offset = mpg123_timeframe(fr, secs);
 						else offset = atol(spos);
@@ -567,13 +652,26 @@ int control_generic (mpg123_handle *fr)
 						continue;
 					}
 
+					/* PITCH (playback speed) in percent */
+					if(!strcasecmp(cmd, "PITCH"))
+					{
+						double p;
+						if(sscanf(arg, "%lf", &p) == 1)
+						{
+							set_pitch(fr, ao, p);
+							generic_sendmsg("PITCH %f", param.pitch);
+						}
+						else generic_sendmsg("E invalid arguments for PITCH: %s", arg);
+						continue;
+					}
+
 					/* RVA mode */
 					if(!strcasecmp(cmd, "RVA"))
 					{
 						if(!strcasecmp(arg, "off")) param.rva = MPG123_RVA_OFF;
 						else if(!strcasecmp(arg, "mix") || !strcasecmp(arg, "radio")) param.rva = MPG123_RVA_MIX;
 						else if(!strcasecmp(arg, "album") || !strcasecmp(arg, "audiophile")) param.rva = MPG123_RVA_ALBUM;
-						mpg123_volume(fr, -1);
+						mpg123_volume_change(fr, 0.);
 						generic_sendmsg("RVA %s", rva_name[param.rva]);
 						continue;
 					}

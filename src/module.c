@@ -1,7 +1,7 @@
 /*
 	module.c: modular code loader
 
-	copyright 1995-2008 by the mpg123 project - free software under the terms of the LGPL 2.1
+	copyright 1995-2009 by the mpg123 project - free software under the terms of the LGPL 2.1
 	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Nicholas J Humfrey
 */
@@ -26,43 +26,69 @@
 
 /* It's nasty to hardcode that here...
    also it does need hacking around libtool's hardcoded .la paths:
-   When the .la file is in the same dir as .so file, you need libdir='.' in there.
-   Also, all this crap doesn't actually work on Win32 (for what I initially intended it). */
-#ifdef WIN32
-#define RELMOD "\\..\\lib\\mpg123" /* I suspect that win32api would accept "/", too */
-#else
-#define RELMOD "/../lib/mpg123"
-#endif
+   When the .la file is in the same dir as .so file, you need libdir='.' in there. */
+static const char* modulesearch[] =
+{
+	 "../lib/mpg123"
+	,"plugins"
+};
 
 static char *get_the_cwd(); /* further down... */
 static char *get_module_dir()
 {
-	/* Either PKGLIBDIR is accessible right away or we assume ../lib/mpg123 from binpath. */
+	/* Either PKGLIBDIR is accessible right away or we search for some possible plugin dirs relative to binary path. */
 	DIR* dir = NULL;
 	char *moddir = NULL;
+	const char *defaultdir;
+	/* Compiled-in default module dir or environment variable MPG123_MODDIR. */
+	defaultdir = getenv("MPG123_MODDIR");
+	if(defaultdir == NULL)
+	defaultdir=PKGLIBDIR;
 
-	dir = opendir(PKGLIBDIR);
+	dir = opendir(defaultdir);
 	if(dir != NULL)
 	{
-		size_t l = strlen(PKGLIBDIR);
+		size_t l = strlen(defaultdir);
+
+		if(param.verbose > 1) fprintf(stderr, "Using default module dir: %s\n", defaultdir);
 		moddir = malloc(l+1);
 		if(moddir != NULL)
 		{
-			strcpy(moddir, PKGLIBDIR);
+			strcpy(moddir, defaultdir);
 			moddir[l] = 0;
 		}
 		closedir(dir);
 	}
-	else
+	else /* Search relative to binary. */
 	{
-		size_t l = strlen(binpath) + strlen(RELMOD);
-		moddir = malloc(l+1);
-		if(moddir != NULL)
+		size_t i;
+		for(i=0; i<sizeof(modulesearch)/sizeof(char*); ++i)
 		{
-			snprintf(moddir, l+1, "%s%s", binpath, RELMOD);
-			moddir[l] = 0;
+			const char *testpath = modulesearch[i];
+			size_t l;
+			if(binpath != NULL) l = strlen(binpath) + strlen(testpath) + 1;
+			else l = strlen(testpath);
+
+			moddir = malloc(l+1);
+			if(moddir != NULL)
+			{
+				if(binpath==NULL) /* a copy of testpath, when there is no prefix */
+				snprintf(moddir, l+1, "%s", testpath);
+				else
+				snprintf(moddir, l+1, "%s/%s", binpath, testpath);
+
+				moddir[l] = 0;
+				if(param.verbose > 1) fprintf(stderr, "Looking for module dir: %s\n", moddir);
+
+				dir = opendir(moddir);
+				closedir(dir);
+
+				if(dir != NULL) break; /* found it! */
+				else{ free(moddir); moddir=NULL; }
+			}
 		}
 	}
+	if(param.verbose > 1) fprintf(stderr, "Module dir: %s\n", moddir != NULL ? moddir : "<nil>");
 	return moddir;
 }
 
@@ -91,7 +117,11 @@ open_module( const char* type, const char* name )
 	/* Initialize libltdl */
 	if (lt_dlinit()) error( "Failed to initialise libltdl" );
 
-	chdir(moddir);
+	if(chdir(moddir) != 0)
+	{
+		error2("Failed to enter module directory %s: %s", moddir, strerror(errno));
+		goto om_bad;
+	}
 	/* Work out the path of the module to open */
 	/* Note that we need to open ./file, not just file! */
 	module_path_len = 2 + strlen(type) + 1 + strlen(name) + strlen(MODULE_FILE_SUFFIX) + 1;
@@ -102,13 +132,16 @@ open_module( const char* type, const char* name )
 	}
 	snprintf( module_path, module_path_len, "./%s_%s%s", type, name, MODULE_FILE_SUFFIX );
 	/* Display the path of the module created */
-	debug1( "Module path: %s", module_path );
+	if(param.verbose > 1) fprintf(stderr, "Module path: %s\n", module_path );
 
 	/* Open the module */
 	handle = lt_dlopen( module_path );
 	free( module_path );
 	if (handle==NULL) {
 		error2( "Failed to open module %s: %s", name, lt_dlerror() );
+		if(param.verbose > 1)
+		fprintf(stderr, "Note: This could be because of braindead path in the .la file...\n");
+
 		goto om_bad;
 	}
 	

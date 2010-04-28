@@ -46,12 +46,12 @@ ASM_NAME(dct64_3dnowext):
 	pushl	%esi
 	pushl	%ebx
 	subl	$256, %esp
-#APP
+/* APP */
 	movl 16(%ebp),%eax
 	leal 128+-268(%ebp),%edx
 	movl 8(%ebp),%esi
 	movl 12(%ebp),%edi
-	movl $ASM_NAME(costab_mmxsse),%ebx
+	movl ASM_VALUE(costab_mmxsse),%ebx
 	leal -268(%ebp),%ecx
 	movq	(%eax), %mm0
 	movq	8(%eax), %mm4
@@ -702,7 +702,7 @@ ASM_NAME(dct64_3dnowext):
 .L_bye:
 	femms
 	
-#NO_APP
+/* NO_APP */
 	addl	$256, %esp
 	popl	%ebx
 	popl	%esi
@@ -710,3 +710,8 @@ ASM_NAME(dct64_3dnowext):
 	leave
 	ret
 	/* .size	ASM_NAME(dct64_3dnowext), .-ASM_NAME(dct64_3dnowext) */
+
+/* Mark non-executable stack. */
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack,"",%progbits
+#endif

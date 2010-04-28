@@ -1,7 +1,7 @@
 /*
 	mpg123: main code of the program (not of the decoder...)
 
-	copyright 1995-2008 by the mpg123 project - free software under the terms of the LGPL 2.1
+	copyright 1995-2009 by the mpg123 project - free software under the terms of the LGPL 2.1
 	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
@@ -9,15 +9,13 @@
 #define ME "main"
 #include "mpg123app.h"
 #include "mpg123.h"
+#include "local.h"
 
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
-#endif
-#ifdef WIN32
-#include <windows.h>
 #endif
 
 #include <errno.h>
@@ -40,10 +38,8 @@
 #include "term.h"
 #include "playlist.h"
 #include "httpget.h"
-#include "id3print.h"
-#include "getbits.h"
+#include "metaprint.h"
 #include "httpget.h"
-#include "getcpuflags.h"
 
 #include "debug.h"
 
@@ -74,7 +70,10 @@ struct parameter param = {
   0 ,	  /* force_reopen, always (re)opens audio device for next song */
   /* test_cpu flag is valid for multi and 3dnow.. even if 3dnow is built alone; ensure it appears only once */
   FALSE , /* normal operation */
-  FALSE,  /* try to run process in 'realtime mode' */   
+  FALSE,  /* try to run process in 'realtime mode' */
+#ifdef HAVE_WINDOWS_H 
+  0, /* win32 process priority */
+#endif
   NULL,  /* wav,cdr,au Filename */
 	0, /* default is to play all titles in playlist */
 	NULL, /* no playlist per default */
@@ -84,9 +83,7 @@ struct parameter param = {
 #ifdef FIFO
 	,NULL
 #endif
-#ifndef WIN32
 	,0 /* timeout */
-#endif
 	,1 /* loop */
 	,0 /* delay */
 	,0 /* index */
@@ -104,9 +101,17 @@ struct parameter param = {
 	,1024 /* resync_limit */
 	,0 /* smooth */
 	,0.0 /* pitch */
+	,0 /* ignore_mime */
+	,NULL /* proxyurl */
+	,0 /* keep_open */
+	,0 /* force_utf8 */
+	,INDEX_SIZE
+	,NULL /* force_encoding */
+	,1. /* preload */
+	,-1 /* preframes */
+	,-1 /* gain */
 };
 
-int utf8env = 0;
 mpg123_handle *mh = NULL;
 off_t framenum;
 off_t frames_left;
@@ -126,8 +131,20 @@ size_t bufferblock = 0;
 static int intflag = FALSE;
 static int skip_tracks = 0;
 int OutputDescriptor;
+
 static int filept = -1;
+
+static int network_sockets_used = 0; /* Win32 socket open/close Support */
+
 char *binpath; /* Path to myself. */
+
+/* File-global storage of command line arguments.
+   They may be needed for cleanup after charset conversion. */
+static char **argv = NULL;
+static int    argc = 0;
+
+/* Cleanup marker to know that we intiialized libmpg123 already. */
+static int cleanup_mpg123 = FALSE;
 
 void set_intflag()
 {
@@ -169,8 +186,16 @@ void safe_exit(int code)
 
 	if(mh != NULL) mpg123_delete(mh);
 
-	mpg123_exit();
-	httpdata_reset(&htd);
+	if(cleanup_mpg123) mpg123_exit();
+
+	httpdata_free(&htd);
+
+#ifdef WIN32_WANT_UNICODE
+	win32_cmdline_free(argc, argv); /* This handles the premature argv == NULL, too. */
+#endif
+#if defined (WANT_WIN32_SOCKETS)
+	win32_net_deinit();
+#endif
 	/* It's ugly... but let's just fix this still-reachable memory chunk of static char*. */
 	split_dir_file("", &dummy, &dammy);
 	exit(code);
@@ -179,7 +204,7 @@ void safe_exit(int code)
 /* returns 1 if reset_audio needed instead */
 static void set_output_module( char *arg )
 {
-	int i;
+	unsigned int i;
 		
 	/* Search for a colon and set the device if found */
 	for(i=0; i< strlen( arg ); i++) {
@@ -296,7 +321,7 @@ static void set_out_stdout1(char *arg)
 	#endif
 }
 
-#ifndef HAVE_SCHED_SETSCHEDULER
+#if !defined (HAVE_SCHED_SETSCHEDULER) && !defined (HAVE_WINDOWS_H)
 static void realtime_not_compiled(char *arg)
 {
 	fprintf(stderr,"Option '-T / --realtime' not compiled into this binary.\n");
@@ -336,7 +361,9 @@ topt opts[] = {
 	{'c', "check",       GLO_INT,  0, &param.checkrange, TRUE},
 	{'v', "verbose",     0,        set_verbose, 0,           0},
 	{'q', "quiet",       0,        set_quiet,   0,           0},
-	{'y', "resync",      GLO_INT,  set_frameflag, &frameflag, MPG123_NO_RESYNC},
+	{'y', "no-resync",      GLO_INT,  set_frameflag, &frameflag, MPG123_NO_RESYNC},
+	/* compatibility, no-resync is to be used nowadays */
+	{0, "resync",      GLO_INT,  set_frameflag, &frameflag, MPG123_NO_RESYNC},
 	{'0', "single0",     GLO_INT,  set_frameflag, &frameflag, MPG123_MONO_LEFT},
 	{0,   "left",        GLO_INT,  set_frameflag, &frameflag, MPG123_MONO_LEFT},
 	{'1', "single1",     GLO_INT,  set_frameflag, &frameflag, MPG123_MONO_RIGHT},
@@ -346,20 +373,17 @@ topt opts[] = {
 	{0,   "mono",        GLO_INT,  set_frameflag, &frameflag, MPG123_MONO_MIX},
 	{0,   "stereo",      GLO_INT,  set_frameflag, &frameflag, MPG123_FORCE_STEREO},
 	{0,   "reopen",      GLO_INT,  0, &param.force_reopen, 1},
-/*	{'g', "gain",        GLO_ARG | GLO_LONG, 0, &ao.gain,    0}, FIXME */
+	{'g', "gain",        GLO_ARG | GLO_LONG, 0, &param.gain,    0},
 	{'r', "rate",        GLO_ARG | GLO_LONG, 0, &param.force_rate,  0},
 	{0,   "8bit",        GLO_INT,  set_frameflag, &frameflag, MPG123_FORCE_8BIT},
+	{0,   "float",       GLO_INT,  set_frameflag, &frameflag, MPG123_FORCE_FLOAT},
 	{0,   "headphones",  0,                  set_output_h, 0,0},
 	{0,   "speaker",     0,                  set_output_s, 0,0},
 	{0,   "lineout",     0,                  set_output_l, 0,0},
 	{'o', "output",      GLO_ARG | GLO_CHAR, set_output, 0,  0},
 	{0,   "list-modules",0,        list_modules, NULL,  0}, 
 	{'a', "audiodevice", GLO_ARG | GLO_CHAR, 0, &param.output_device,  0},
-#ifdef FLOATOUT
-	{'f', "scale",       GLO_ARG | GLO_DOUBLE, 0, &param.outscale,   0},
-#else
 	{'f', "scale",       GLO_ARG | GLO_LONG, 0, &param.outscale,   0},
-#endif
 	{'n', "frames",      GLO_ARG | GLO_LONG, 0, &param.frame_number,  0},
 	#ifdef HAVE_TERMIOS
 	{'C', "control",     GLO_INT,  0, &param.term_ctrl, TRUE},
@@ -372,7 +396,7 @@ topt opts[] = {
 	{0,   "remote-err",  GLO_INT,  0, &param.remote_err, TRUE},
 	{'d', "doublespeed", GLO_ARG | GLO_LONG, 0, &param.doublespeed, 0},
 	{'h', "halfspeed",   GLO_ARG | GLO_LONG, 0, &param.halfspeed, 0},
-	{'p', "proxy",       GLO_ARG | GLO_CHAR, 0, &htd.proxyurl,   0},
+	{'p', "proxy",       GLO_ARG | GLO_CHAR, 0, &param.proxyurl,   0},
 	{'@', "list",        GLO_ARG | GLO_CHAR, 0, &param.listname,   0},
 	/* 'z' comes from the the german word 'zufall' (eng: random) */
 	{'z', "shuffle",     GLO_INT,  0, &param.shuffle, 1},
@@ -391,14 +415,17 @@ topt opts[] = {
 	{0, "cpu", GLO_ARG | GLO_CHAR, 0, &param.cpu,  0},
 	{0, "test-cpu",  GLO_INT,  0, &param.test_cpu, TRUE},
 	{0, "list-cpu", GLO_INT,  0, &param.list_cpu , 1},
-	#if !defined(WIN32) && !defined(GENERIC)
+	#ifdef NETWORK
 	{'u', "auth",        GLO_ARG | GLO_CHAR, 0, &httpauth,   0},
 	#endif
-	#ifdef HAVE_SCHED_SETSCHEDULER
+	#if defined (HAVE_SCHED_SETSCHEDULER) || defined (HAVE_WINDOWS_H)
 	/* check why this should be a long variable instead of int! */
 	{'T', "realtime",    GLO_LONG,  0, &param.realtime, TRUE },
 	#else
 	{'T', "realtime",    0,  realtime_not_compiled, 0,           0 },    
+	#endif
+	#ifdef HAVE_WINDOWS_H
+	{0, "priority", GLO_ARG | GLO_INT, 0, &param.w32_priority, 0},
 	#endif
 	{0, "title",         GLO_INT,  0, &param.xterm_title, TRUE },
 	{'w', "wav",         GLO_ARG | GLO_CHAR, set_out_wav, 0, 0 },
@@ -419,14 +446,21 @@ topt opts[] = {
 #ifdef FIFO
 	{0, "fifo", GLO_ARG | GLO_CHAR, 0, &param.fifo,  0},
 #endif
-#ifndef WIN32
 	{0, "timeout", GLO_ARG | GLO_LONG, 0, &param.timeout, 0},
-#endif
 	{0, "loop", GLO_ARG | GLO_LONG, 0, &param.loop, 0},
 	{'i', "index", GLO_INT, 0, &param.index, 1},
 	{'D', "delay", GLO_ARG | GLO_INT, 0, &param.delay, 0},
 	{0, "resync-limit", GLO_ARG | GLO_LONG, 0, &param.resync_limit, 0},
-  {0, "pitch", GLO_ARG|GLO_DOUBLE, 0, &param.pitch, 0},
+	{0, "pitch", GLO_ARG|GLO_DOUBLE, 0, &param.pitch, 0},
+	{0, "ignore-mime", GLO_INT,  0, &param.ignore_mime, 1 },
+	{0, "keep-open", GLO_INT, 0, &param.keep_open, 1},
+	{0, "utf8", GLO_INT, 0, &param.force_utf8, 1},
+	{0, "fuzzy", GLO_INT,  set_frameflag, &frameflag, MPG123_FUZZY},
+	{0, "index-size", GLO_ARG|GLO_LONG, 0, &param.index_size, 0},
+	{0, "no-seekbuffer", GLO_INT, unset_frameflag, &frameflag, MPG123_SEEKBUFFER},
+	{'e', "encoding", GLO_ARG|GLO_CHAR, 0, &param.force_encoding, 0},
+	{0, "preload", GLO_ARG|GLO_DOUBLE, 0, &param.preload, 0},
+	{0, "preframes", GLO_ARG|GLO_LONG, 0, &param.preframes, 0},
 	{0, 0, 0, 0, 0, 0}
 };
 
@@ -478,6 +512,20 @@ static void reset_audio(long rate, int channels, int format)
 #endif
 }
 
+static int open_track_fd (void)
+{
+	/* Let reader handle invalid filept */
+	if(mpg123_open_fd(mh, filept) != MPG123_OK)
+	{
+		error2("Cannot open fd %i: %s", filept, mpg123_strerror(mh));
+		return 0;
+	}
+	debug("Track successfully opened.");
+	fresh = TRUE;
+	return 1;
+	/*1 for success, 0 for failure */
+}
+
 /* 1 on success, 0 on failure */
 int open_track(char *fname)
 {
@@ -485,16 +533,37 @@ int open_track(char *fname)
 	httpdata_reset(&htd);
 	if(MPG123_OK != mpg123_param(mh, MPG123_ICY_INTERVAL, 0, 0))
 	error1("Cannot (re)set ICY interval: %s", mpg123_strerror(mh));
-	if(!strcmp(fname, "-")) filept = STDIN_FILENO;
+	if(!strcmp(fname, "-"))
+	{
+		filept = STDIN_FILENO;
+#ifdef WIN32
+		_setmode(STDIN_FILENO, _O_BINARY);
+#endif
+		return open_track_fd();
+	}
 	else if (!strncmp(fname, "http://", 7)) /* http stream */
 	{
-		filept = http_open(fname, &htd);
+#if defined (WANT_WIN32_SOCKETS)
+	/*Use recv instead of stdio functions */
+	win32_net_replace(mh);
+	filept = win32_net_http_open(fname, &htd);
+#else
+	filept = http_open(fname, &htd);
+#endif
+	network_sockets_used = 1;
+/* utf-8 encoded URLs might not work under Win32 */
+		
 		/* now check if we got sth. and if we got sth. good */
 		if(    (filept >= 0) && (htd.content_type.p != NULL)
-			  && strcmp(htd.content_type.p, "audio/mpeg") && strcmp(htd.content_type.p, "audio/x-mpeg") )
+			  && !param.ignore_mime && !(debunk_mime(htd.content_type.p) & IS_FILE) )
 		{
 			error1("Unknown mpeg MIME type %s - is it perhaps a playlist (use -@)?", htd.content_type.p == NULL ? "<nil>" : htd.content_type.p);
 			error("If you know the stream is mpeg1/2 audio, then please report this as "PACKAGE_NAME" bug");
+			return 0;
+		}
+		if(filept < 0)
+		{
+			error1("Access to http resource %s failed.", fname);
 			return 0;
 		}
 		if(MPG123_OK != mpg123_param(mh, MPG123_ICY_INTERVAL, htd.icy_interval, 0))
@@ -503,13 +572,9 @@ int open_track(char *fname)
 	}
 	debug("OK... going to finally open.");
 	/* Now hook up the decoder on the opened stream or the file. */
-	if(filept > -1)
+	if(network_sockets_used) 
 	{
-		if(mpg123_open_fd(mh, filept) != MPG123_OK)
-		{
-			error2("Cannot open fd %i: %s", filept, mpg123_strerror(mh));
-			return 0;
-		}
+		return open_track_fd();
 	}
 	else if(mpg123_open(mh, fname) != MPG123_OK)
 	{
@@ -525,6 +590,13 @@ int open_track(char *fname)
 void close_track(void)
 {
 	mpg123_close(mh);
+#if defined (WANT_WIN32_SOCKETS)
+	if (network_sockets_used)
+	win32_net_close(filept);
+	filept = -1;
+	return;
+#endif
+	network_sockets_used = 0;
 	if(filept > -1) close(filept);
 	filept = -1;
 }
@@ -655,7 +727,7 @@ int skip_or_die(struct timeval *start_time)
 #define skip_or_die(a) TRUE
 #endif
 
-int main(int argc, char *argv[])
+int main(int sys_argc, char ** sys_argv)
 {
 	int result;
 	long parr;
@@ -665,20 +737,33 @@ int main(int argc, char *argv[])
 #if !defined(WIN32) && !defined(GENERIC)
 	struct timeval start_time;
 #endif
+
+#if defined (WANT_WIN32_UNICODE)
+	if(win32_cmdline_utf8(&argc, &argv) != 0)
 	{
-		char *lang = getenv("LANG");
-		if(lang && strstr(lang, "UTF-8")) utf8env = 1;
+		error("Cannot convert command line to UTF8!");
+		safe_exit(76);
 	}
+#else
+	argv = sys_argv;
+	argc = sys_argc;
+#endif
+#if defined (WANT_WIN32_SOCKETS)
+	win32_net_init();
+#endif
+
+	/* Extract binary and path, take stuff before/after last / or \ . */
+	if((prgName = strrchr(argv[0], '/')) || (prgName = strrchr(argv[0], '\\')))
 	{
-		/* Hack the path of the binary... needed for relative module search. */
-		int i;
+		/* There is some explicit path. */
+		prgName[0] = 0; /* End byte for path. */
+		prgName++;
 		binpath = argv[0];
-		for(i=strlen(binpath)-1; i>-1; --i)
-		if(binpath[i] == '/' || binpath[i] == '\\')
-		{
-			binpath[i] = 0;
-			break;
-		}
+	}
+	else
+	{
+		prgName = argv[0]; /* No path separators there. */
+		binpath = NULL; /* No path at all. */
 	}
 
 	/* Need to initialize mpg123 lib here for default parameter values. */
@@ -687,13 +772,15 @@ int main(int argc, char *argv[])
 	if(result != MPG123_OK)
 	{
 		error1("Cannot initialize mpg123 library: %s", mpg123_plain_strerror(result));
-		exit(77);
+		safe_exit(77);
 	}
+	cleanup_mpg123 = TRUE;
+
 	mp = mpg123_new_pars(&result); /* This may get leaked on premature exit(), which is mainly a cosmetic issue... */
 	if(mp == NULL)
 	{
 		error1("Crap! Cannot get mpg123 parameters: %s", mpg123_plain_strerror(result));
-		safe_exit(77);
+		safe_exit(78);
 	}
 
 	/* get default values */
@@ -702,20 +789,17 @@ int main(int argc, char *argv[])
 	mpg123_getpar(mp, MPG123_RVA, &param.rva, NULL);
 	mpg123_getpar(mp, MPG123_DOWNSPEED, &param.halfspeed, NULL);
 	mpg123_getpar(mp, MPG123_UPSPEED, &param.doublespeed, NULL);
-#ifdef FLOATOUT
-	mpg123_getpar(mp, MPG123_OUTSCALE, NULL, &param.outscale);
-#else
 	mpg123_getpar(mp, MPG123_OUTSCALE, &param.outscale, NULL);
-#endif
 	mpg123_getpar(mp, MPG123_FLAGS, &parr, NULL);
+	mpg123_getpar(mp, MPG123_INDEX_SIZE, &param.index_size, NULL);
 	param.flags = (int) parr;
+	param.flags |= MPG123_SEEKBUFFER; /* Default on, for HTTP streams. */
 	mpg123_getpar(mp, MPG123_RESYNC_LIMIT, &param.resync_limit, NULL);
+	mpg123_getpar(mp, MPG123_PREFRAMES, &param.preframes, NULL);
 
 #ifdef OS2
         _wildcard(&argc,&argv);
 #endif
-
-	(prgName = strrchr(argv[0], '/')) ? prgName++ : (prgName = argv[0]);
 
 	while ((result = getlopt(argc, argv, opts)))
 	switch (result) {
@@ -728,10 +812,12 @@ int main(int argc, char *argv[])
 				prgName, loptarg);
 			usage(1);
 	}
+	/* Do this _after_ parameter parsing. */
+	check_locale(); /* Check/set locale; store if it uses UTF-8. */
 
 	if(param.list_cpu)
 	{
-		char **all_dec = mpg123_decoders();
+		const char **all_dec = mpg123_decoders();
 		printf("Builtin decoders:");
 		while(*all_dec != NULL){ printf(" %s", *all_dec); ++all_dec; }
 		printf("\n");
@@ -740,12 +826,16 @@ int main(int argc, char *argv[])
 	}
 	if(param.test_cpu)
 	{
-		char **all_dec = mpg123_supported_decoders();
+		const char **all_dec = mpg123_supported_decoders();
 		printf("Supported decoders:");
 		while(*all_dec != NULL){ printf(" %s", *all_dec); ++all_dec; }
 		printf("\n");
 		mpg123_delete_pars(mp);
 		return 0;
+	}
+	if(param.gain != -1)
+	{
+	    warning("The parameter -g is deprecated and may be removed in the future.");
 	}
 
 	if (loptind >= argc && !param.listname && !param.remote) usage(1);
@@ -779,7 +869,6 @@ int main(int argc, char *argv[])
 	/* Set the frame parameters from command line options */
 	if(param.quiet) param.flags |= MPG123_QUIET;
 
-	param.flags |= MPG123_SEEKBUFFER; /* For HTTP streams. */
 #ifdef OPT_3DNOW
 	if(dnow != 0) param.cpu = (dnow == SET_3DNOW) ? "3dnow" : "i586";
 #endif
@@ -801,23 +890,25 @@ int main(int argc, char *argv[])
 	    && MPG123_OK == (result = mpg123_par(mp, MPG123_ICY_INTERVAL, 0, 0))
 	    && ++libpar
 	    && MPG123_OK == (result = mpg123_par(mp, MPG123_RESYNC_LIMIT, param.resync_limit, 0))
-#ifndef WIN32
 	    && ++libpar
 	    && MPG123_OK == (result = mpg123_par(mp, MPG123_TIMEOUT, param.timeout, 0))
-#endif
-#ifdef FLOATOUT
-	    && ++libpar
-	    && MPG123_OK == (result = mpg123_par(mp, MPG123_OUTSCALE, 0, param.outscale))
-#else
 	    && ++libpar
 	    && MPG123_OK == (result = mpg123_par(mp, MPG123_OUTSCALE, param.outscale, 0))
-#endif
+	    && ++libpar
+	    && MPG123_OK == (result = mpg123_par(mp, MPG123_PREFRAMES, param.preframes, 0))
 			))
 	{
 		error2("Cannot set library parameter %i: %s", libpar, mpg123_plain_strerror(result));
 		safe_exit(45);
 	}
 	if (!(param.listentry < 0) && !param.quiet) print_title(stderr); /* do not pollute stdout! */
+
+	{
+		long default_index;
+		mpg123_getpar(mp, MPG123_INDEX_SIZE, &default_index, NULL);
+		if( param.index_size != default_index && (result = mpg123_par(mp, MPG123_INDEX_SIZE, param.index_size, 0.)) != MPG123_OK )
+		error1("Setting of frame index size failed: %s", mpg123_plain_strerror(result));
+	}
 
 	if(param.force_rate && param.down_sample)
 	{
@@ -837,28 +928,7 @@ int main(int argc, char *argv[])
 	/* Now either check caps myself or query buffer for that. */
 	audio_capabilities(ao, mh);
 
-	if(equalfile != NULL)
-	{ /* tst; ThOr: not TRUE or FALSE: allocated or not... */
-		FILE *fe;
-		int i;
-		fe = fopen(equalfile,"r");
-		if(fe) {
-			char line[256];
-			for(i=0;i<32;i++) {
-				float e1,e0; /* %f -> float! */
-				line[0]=0;
-				fgets(line,255,fe);
-				if(line[0]=='#')
-					continue;
-				sscanf(line,"%f %f",&e0,&e1);
-				mpg123_eq(mh, MPG123_LEFT,  i, e0);
-				mpg123_eq(mh, MPG123_RIGHT, i, e1);
-			}
-			fclose(fe);
-		}
-		else
-			fprintf(stderr,"Can't open equalizer file '%s'\n",equalfile);
-	}
+	load_equalizer(mh);
 
 #ifdef HAVE_SETPRIORITY
 	if(param.aggressive) { /* tst */
@@ -867,7 +937,8 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if defined (HAVE_SCHED_SETSCHEDULER) && !defined (__CYGWIN__)
+/* Cygwin --realtime seems to fail when accessing network, using win32 set priority instead */
 	if (param.realtime) {  /* Get real-time priority */
 	  struct sched_param sp;
 	  fprintf(stderr,"Getting real-time priority\n");
@@ -876,6 +947,11 @@ int main(int argc, char *argv[])
 	  if (sched_setscheduler(0, SCHED_RR, &sp) == -1)
 	    fprintf(stderr,"Can't get real-time priority\n");
 	}
+#endif
+
+#ifdef HAVE_WINDOWS_H
+	/* argument "3" is equivalent to realtime priority class */
+	win32_set_priority( param.realtime ? 3 : param.w32_priority);
 #endif
 
 	if(!param.remote) prepare_playlist(argc, argv);
@@ -940,10 +1016,24 @@ int main(int argc, char *argv[])
 			if(param.verbose) fprintf(stderr, "indexing...\r");
 			mpg123_scan(mh);
 		}
+		/*
+			Only trigger a seek if we do not want to start with the first frame.
+			Rationale: Because of libmpg123 sample accuracy, this could cause an unnecessary backwards seek, that even may fail on non-seekable streams.
+			For start frame of 0, we are already at the correct position!
+		*/
+		framenum = 0;
+		if(param.start_frame > 0)
 		framenum = mpg123_seek_frame(mh, param.start_frame, SEEK_SET);
+
 		if(framenum < 0)
 		{
 			error1("Initial seek failed: %s", mpg123_strerror(mh));
+			if(mpg123_errcode(mh) == MPG123_BAD_OUTFORMAT)
+			{
+				fprintf(stderr, "%s", "So, you have trouble getting an output format... this is the matrix of currently possible formats:\n");
+				print_capabilities(ao, mh);
+				fprintf(stderr, "%s", "Somehow the input data and your choices don't allow one of these.\n");
+			}
 			mpg123_close(mh);
 			continue;
 		}
@@ -953,6 +1043,12 @@ int main(int argc, char *argv[])
 			if (split_dir_file(fname ? fname : "standard input",
 				&dirname, &filename))
 				fprintf(stderr, "Directory: %s\n", dirname);
+
+#ifdef HAVE_TERMIOS
+		/* Reminder about terminal usage. */
+		if(param.term_ctrl) term_hint();
+#endif
+
 
 			fprintf(stderr, "Playing MPEG stream %lu of %lu: %s ...\n", (unsigned long)pl.pos, (unsigned long)pl.fill, filename);
 			if(htd.icy_name.fill) fprintf(stderr, "ICY-NAME: %s\n", htd.icy_name.p);
@@ -993,10 +1089,8 @@ int main(int argc, char *argv[])
 				meta = mpg123_meta_check(mh);
 				if(meta & (MPG123_NEW_ID3|MPG123_NEW_ICY))
 				{
-					char *icy;
 					if(meta & MPG123_NEW_ID3) print_id3_tag(mh, param.long_id3, stderr);
-					if(meta & MPG123_NEW_ICY && MPG123_OK == mpg123_icy(mh, &icy))
-					fprintf(stderr, "\nICY-META: %s\n", icy);
+					if(meta & MPG123_NEW_ICY) print_icy(mh, stderr);
 				}
 			}
 			if(!fresh && param.verbose)
@@ -1074,8 +1168,8 @@ static void usage(int err)  /* print syntax & exit */
 	fprintf(o,"   -w <filename> write Output as WAV file\n");
 	fprintf(o,"   -k n  skip first n frames [0]        -n n  decode only n frames [all]\n");
 	fprintf(o,"   -c    check range violations         -y    DISABLE resync on errors\n");
-	fprintf(o,"   -b n  output buffer: n Kbytes [0]    -f n  change scalefactor [%g]\n", (double)param.outscale);
-	fprintf(o,"   -r n  set/force samplerate [auto]    -g n  set audio hardware output gain\n");
+	fprintf(o,"   -b n  output buffer: n Kbytes [0]    -f n  change scalefactor [%li]\n", param.outscale);
+	fprintf(o,"   -r n  set/force samplerate [auto]\n");
 	fprintf(o,"   -os,-ol,-oh  output to built-in speaker,line-out connector,headphones\n");
 	#ifdef NAS
 	fprintf(o,"                                        -a d  set NAS server\n");
@@ -1108,6 +1202,7 @@ static void want_usage(char* arg)
 
 static void long_usage(int err)
 {
+	char *enclist;
 	FILE* o = stdout;
 	if(err)
 	{
@@ -1120,19 +1215,22 @@ static void long_usage(int err)
 	fprintf(o,"\ninput options\n\n");
 	fprintf(o," -k <n> --skip <n>         skip n frames at beginning\n");
 	fprintf(o," -n     --frames <n>       play only <n> frames of every stream\n");
-	fprintf(o," -y     --resync           DISABLES resync on error\n");
+	fprintf(o,"        --fuzzy            Enable fuzzy seeks (guessing byte offsets or using approximate seek points from Xing TOC)\n");
+	fprintf(o," -y     --no-resync        DISABLES resync on error (--resync is deprecated)\n");
 	fprintf(o," -p <f> --proxy <f>        set WWW proxy\n");
 	fprintf(o," -u     --auth             set auth values for HTTP access\n");
+	fprintf(o,"        --ignore-mime      ignore HTTP MIME types (content-type)\n");
 	fprintf(o," -@ <f> --list <f>         play songs in playlist <f> (plain list, m3u, pls (shoutcast))\n");
 	fprintf(o," -l <n> --listentry <n>    play nth title in playlist; show whole playlist for n < 0\n");
 	fprintf(o,"        --loop <n>         loop track(s) <n> times, < 0 means infinite loop (not with --random!)\n");
-#ifndef WIN32
+	fprintf(o,"        --keep-open        (--remote mode only) keep loaded file open after reaching end\n");
 	fprintf(o,"        --timeout <n>      Timeout in seconds before declaring a stream dead (if <= 0, wait forever)\n");
-#endif
 	fprintf(o," -z     --shuffle          shuffle song-list before playing\n");
 	fprintf(o," -Z     --random           full random play\n");
 	fprintf(o,"        --no-icy-meta      Do not accept ICY meta data\n");
 	fprintf(o," -i     --index            index / scan through the track before playback\n");
+	fprintf(o,"        --index-size <n>   change size of frame index\n");
+	fprintf(o,"        --preframes  <n>   number of frames to decode in advance after seeking (to keep layer 3 bit reservoir happy)\n");
 	fprintf(o,"        --resync-limit <n> Set number of bytes to search for valid MPEG data; <0 means search whole stream.\n");
 	fprintf(o,"\noutput/processing options\n\n");
 	fprintf(o," -o <o> --output <o>       select audio output module\n");
@@ -1142,7 +1240,7 @@ static void long_usage(int err)
 	fprintf(o," -S     --STDOUT           play AND output stream (not implemented yet)\n");
 	fprintf(o," -w <f> --wav <f>          write samples as WAV file in <f> (- is stdout)\n");
 	fprintf(o,"        --au <f>           write samples as Sun AU file in <f> (- is stdout)\n");
-	fprintf(o,"        --cdr <f>          write samples as CDR file in <f> (- is stdout)\n");
+	fprintf(o,"        --cdr <f>          write samples as raw CD audio file in <f> (- is stdout)\n");
 	fprintf(o,"        --reopen           force close/open on audiodevice\n");
 	#ifdef OPT_MULTI
 	fprintf(o,"        --cpu <string>     set cpu optimization\n");
@@ -1154,8 +1252,8 @@ static void long_usage(int err)
 	fprintf(o,"        --force-3dnow      force use of 3DNow! optimized routine (obsoleted by --test-cpu)\n");
 	fprintf(o,"        --no-3dnow         force use of floating-pointer routine (obsoleted by --cpu)\n");
 	#endif
-	fprintf(o," -g     --gain             set audio hardware output gain\n");
-	fprintf(o," -f <n> --scale <n>        scale output samples (soft gain, default=%g)\n", (double)param.outscale);
+	fprintf(o," -g     --gain             [DEPRECATED] set audio hardware output gain\n");
+	fprintf(o," -f <n> --scale <n>        scale output samples (soft gain - based on 32768), default=%li)\n", param.outscale);
 	fprintf(o,"        --rva-mix,\n");
 	fprintf(o,"        --rva-radio        use RVA2/ReplayGain values for mix/radio mode\n");
 	fprintf(o,"        --rva-album,\n");
@@ -1169,6 +1267,9 @@ static void long_usage(int err)
 	fprintf(o," -4     --4to1             4:1 downsampling\n");
   fprintf(o,"        --pitch <value>    set hardware pitch (speedup/down, 0 is neutral; 0.05 is 5%%)\n");
 	fprintf(o,"        --8bit             force 8 bit output\n");
+	fprintf(o,"        --float            force floating point output (internal precision)\n");
+	audio_enclist(&enclist);
+	fprintf(o," -e <c> --encoding <c>     force a specific encoding c (%s)\n", enclist != NULL ? enclist : "OOM!");
 	fprintf(o," -d n   --doublespeed n    play only every nth frame\n");
 	fprintf(o," -h n   --halfspeed   n    play every frame n times\n");
 	fprintf(o,"        --equalizer        exp.: scales freq. bands acrd. to 'equalizer.dat'\n");
@@ -1181,6 +1282,7 @@ static void long_usage(int err)
 	fprintf(o," -o l   --lineout          (aix/hp/sun) output to lineout\n");
 #ifndef NOXFERMEM
 	fprintf(o," -b <n> --buffer <n>       set play buffer (\"output cache\")\n");
+	fprintf(o,"        --preload <value>  fraction of buffer to fill before playback\n");
 	fprintf(o,"        --smooth           keep buffer over track boundaries\n");
 #endif
 
@@ -1192,10 +1294,11 @@ static void long_usage(int err)
 	#ifdef HAVE_TERMIOS
 	fprintf(o," -C     --control          enable terminal control keys\n");
 	#endif
-	#ifndef GENERIG
+	#ifndef GENERIC
 	fprintf(o,"        --title            set xterm/rxvt title to filename\n");
 	#endif
 	fprintf(o,"        --long-tag         spacy id3 display with every item on a separate line\n");
+	fprintf(o,"        --utf8             Regardless of environment, print metadata in UTF-8.\n");
 	fprintf(o," -R     --remote           generic remote interface\n");
 	fprintf(o,"        --remote-err       force use of stderr for generic remote interface\n");
 #ifdef FIFO
@@ -1204,8 +1307,13 @@ static void long_usage(int err)
 	#ifdef HAVE_SETPRIORITY
 	fprintf(o,"        --aggressive       tries to get higher priority (nice)\n");
 	#endif
-	#ifdef HAVE_SCHED_SETSCHEDULER
+	#if defined (HAVE_SCHED_SETSCHEDULER) || defined (HAVE_WINDOWS_H)
 	fprintf(o," -T     --realtime         tries to get realtime priority\n");
+	#endif
+	#ifdef HAVE_WINDOWS_H
+	fprintf(o,"        --priority <n>     use specified process priority\n");
+	fprintf(o,"                           accepts -2 to 3 as integer arguments\n");
+	fprintf(o,"                           -2 as idle, 0 as normal and 3 as realtime.\n");
 	#endif
 	fprintf(o," -?     --help             give compact help\n");
 	fprintf(o,"        --longhelp         give this long help listing\n");

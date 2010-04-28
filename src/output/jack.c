@@ -10,6 +10,7 @@
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
+#include <sys/errno.h>
 
 #include "mpg123app.h"
 #include "debug.h"
@@ -44,7 +45,8 @@ static jack_handle_t* alloc_jack_handle()
 	handle->client = NULL;
 	handle->tmp_buffer = NULL;
 	handle->rb_size = 0;
-	
+
+
 	return handle;
 }
 
@@ -107,9 +109,32 @@ static void shutdown_callback( void *arg )
 
 }
 
+/* connect to jack ports named in the NULL-terminated wishlist */
+static int real_connect_jack_ports( jack_handle_t* handle, const char** wishlist)
+{
+	const char **wish = wishlist;
+	int ch, err;
+
+	if(wish != NULL && *wish == NULL) return 1; /* success, nothing connected as wanted */
+
+	for(ch=0; ch<handle->channels; ++ch)
+	{
+		const char* in = jack_port_name( handle->ports[ch] );
+
+		if ((err = jack_connect(handle->client, in, *wish)) != 0 && err != EEXIST) {
+			error1("connect_jack_ports(): failed to jack_connect() ports: %d",err);
+			return 0;
+		}
+		/* Increment wish only if there is another one. Otherwise simply connect to the same port multiple times. */
+		if(*(wish+1) != NULL) ++wish;
+	}
+
+	return 1;
+}
+
 /* crude way of automatically connecting up jack ports */
 /* 0 on error */
-static int autoconnect_jack_ports( jack_handle_t* handle )
+static int autoconnect_jack_ports( jack_handle_t* handle)
 {
 	const char **all_ports;
 	unsigned int ch=0;
@@ -127,10 +152,8 @@ static int autoconnect_jack_ports( jack_handle_t* handle )
 
 		const char* in = jack_port_name( handle->ports[ch] );
 		const char* out = all_ports[i];
-		
-		debug2("Connecting %s to %sesound", in, out);
-		
-		if ((err = jack_connect(handle->client, in, out)) != 0) {
+
+		if ((err = jack_connect(handle->client, in, out)) != 0 && err != EEXIST) {
 			error1("connect_jack_ports(): failed to jack_connect() ports: %d",err);
 			return 0;
 		}
@@ -148,10 +171,36 @@ static int connect_jack_ports( jack_handle_t* handle, const char *dev )
 {
 	if (dev==NULL || strcmp(dev, "auto")==0) {
 		return autoconnect_jack_ports( handle );
-	} else if (strcmp(dev, "none")==0) {
-		warning("Not connecting up jack ports as requested.");
-	} else {
-		warning("Sorry I don't know how to connect up ports yet.");
+	}
+	else
+	{
+		const char* wishlist[] = { NULL, NULL, NULL }; /* Two channels and end marker. */
+		char *devcopy;
+		int ret;
+		size_t len = strlen(dev);
+		devcopy = malloc(len+1);
+		if(devcopy == NULL){ error("OOM"); return 0; }
+
+		/* We just look out for a possible second port, comma separated
+		   This is really crude cruft, but it's enough. Can be replaced by something sensible later. */
+		memcpy(devcopy, dev, len+1);
+		if( len > 0 && strcmp(dev, "none")!=0 )
+		{
+			size_t i=0;
+			wishlist[0] = devcopy;
+			while(devcopy[i] != 0 && devcopy[i] != ',') ++i;
+
+			if(devcopy[i] == ',')
+			{
+				devcopy[i] = 0;
+				wishlist[1] = devcopy+i+1;
+			}
+		}
+		if(wishlist[0] == NULL) warning("Not connecting up jack ports as requested.");
+
+		ret = real_connect_jack_ports(handle, wishlist);
+		free(devcopy);
+		return ret;
 	}
 	return 1;
 }
@@ -278,21 +327,26 @@ static int open_jack(audio_output_t *ao)
 }
 
 
-/* Jack could be set to 32bits float, actually */
+/* Jack prefers floats, I actually assume it does _only_ float/double (as it is nowadays)! */
 static int get_formats_jack(audio_output_t *ao)
 {
 	if(jack_get_sample_rate( ((jack_handle_t*)(ao->userptr))->client ) != (jack_nframes_t)ao->rate) return 0;
-	else return MPG123_ENC_SIGNED_16;
+	else return MPG123_ENC_FLOAT_32|MPG123_ENC_FLOAT_64|MPG123_ENC_SIGNED_16;
 }
 
 
 static int write_jack(audio_output_t *ao, unsigned char *buf, int len)
 {
 	int c,n = 0;
-	short* src = (short*)buf;
 	jack_handle_t *handle = (jack_handle_t*)ao->userptr;
-	jack_nframes_t samples = len / 2 / handle->channels;
-	size_t tmp_size = samples * sizeof( jack_default_audio_sample_t );
+	jack_nframes_t samples; 
+	size_t tmp_size;
+	/* Only float or double is used.
+	   Note: I still need the tmp buffer because of de-interleaving the channels. */
+	samples = len /
+		(ao->format == MPG123_ENC_FLOAT_64 ? 8 : (ao->format == MPG123_ENC_SIGNED_16 ? 2 : 4))
+		/ handle->channels;
+	tmp_size = samples * sizeof( jack_default_audio_sample_t );
 	
 	
 	/* Sanity check that ring buffer is at least twice the size of the audio we just got*/
@@ -320,11 +374,25 @@ static int write_jack(audio_output_t *ao, unsigned char *buf, int len)
 	for(c=0; c<handle->channels; c++) {
 		size_t len = 0;
 		
-		/* Convert samples from short to flat and put in temporary buffer*/
-		for(n=0; n<samples; n++) {
+		/* Hm, is that optimal? Anyhow, deinterleaving float or double ... or short. With/without conversion. */
+		if(ao->format == MPG123_ENC_SIGNED_16)
+		{
+			short* src = (short*)buf;
+			for(n=0; n<samples; n++)
 			handle->tmp_buffer[n] = src[(n*handle->channels)+c] / 32768.0f;
 		}
-		
+		else if(ao->format == MPG123_ENC_FLOAT_32)
+		{
+			float* src = (float*)buf;
+			for(n=0; n<samples; n++)
+			handle->tmp_buffer[n] = src[(n*handle->channels)+c];
+		}
+		else /* MPG123_ENC_FLOAT_64 */
+		{
+			double* src = (double*)buf;
+			for(n=0; n<samples; n++)
+			handle->tmp_buffer[n] = src[(n*handle->channels)+c];
+		}
 		/* Copy temporary buffer into ring buffer*/
 		len = jack_ringbuffer_write(handle->rb[c], (char*)handle->tmp_buffer, tmp_size);
 		if (len < tmp_size)

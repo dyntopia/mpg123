@@ -1,10 +1,20 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define if your architecture wants/needs/can use attribute_align_arg and
+   alignment checks. It's for 32bit x86... */
+#undef ABI_ALIGN_FUN
+
+/* Define to use proper rounding. */
+#undef ACCURATE_ROUNDING
+
 /* Define if .align takes 3 for alignment of 2^3=8 bytes instead of 8. */
 #undef ASMALIGN_EXP
 
-/* Define if __attribute__((aligned(16))) works */
+/* Define if __attribute__((aligned(16))) shall be used */
 #undef CCALIGN
+
+/* Define if checking of stack alignment is wanted. */
+#undef CHECK_ALIGN
 
 /* Define if debugging is enabled. */
 #undef DEBUG
@@ -18,14 +28,35 @@
 /* Define if FIFO support is enabled. */
 #undef FIFO
 
+/* Define if frame index should be used. */
+#undef FRAME_INDEX
+
 /* Define if gapless is enabled. */
 #undef GAPLESS
+
+/* Define to 1 if you have the <alc.h> header file. */
+#undef HAVE_ALC_H
 
 /* Define to 1 if you have the <Alib.h> header file. */
 #undef HAVE_ALIB_H
 
+/* Define to 1 if you have the <AL/alc.h> header file. */
+#undef HAVE_AL_ALC_H
+
+/* Define to 1 if you have the <AL/al.h> header file. */
+#undef HAVE_AL_AL_H
+
+/* Define to 1 if you have the <al.h> header file. */
+#undef HAVE_AL_H
+
+/* Define to 1 if you have the <arpa/inet.h> header file. */
+#undef HAVE_ARPA_INET_H
+
 /* Define to 1 if you have the <asm/audioio.h> header file. */
 #undef HAVE_ASM_AUDIOIO_H
+
+/* Define to 1 if you have the `atoll' function. */
+#undef HAVE_ATOLL
 
 /* Define to 1 if you have the <audios.h> header file. */
 #undef HAVE_AUDIOS_H
@@ -45,6 +76,12 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
+/* Define if getaddrinfo accepts the AI_ADDRCONFIG flag */
+#undef HAVE_GAI_ADDRCONFIG
+
+/* Define to 1 if you have the `getaddrinfo' function. */
+#undef HAVE_GETADDRINFO
+
 /* Define to 1 if you have the `getpagesize' function. */
 #undef HAVE_GETPAGESIZE
 
@@ -53,6 +90,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <langinfo.h> header file. */
+#undef HAVE_LANGINFO_H
 
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
@@ -66,7 +106,10 @@
 /* Define to 1 if you have the <linux/soundcard.h> header file. */
 #undef HAVE_LINUX_SOUNDCARD_H
 
-/* Define if LTDL library is available. */
+/* Define to 1 if you have the <locale.h> header file. */
+#undef HAVE_LOCALE_H
+
+/* Define if libltdl is available */
 #undef HAVE_LTDL
 
 /* Define to 1 if you have the <machine/soundcard.h> header file. */
@@ -90,6 +133,15 @@
 /* Define to 1 if you have the <netinet/tcp.h> header file. */
 #undef HAVE_NETINET_TCP_H
 
+/* Define to 1 if you have the `nl_langinfo' function. */
+#undef HAVE_NL_LANGINFO
+
+/* Define to 1 if you have the <OpenAL/alc.h> header file. */
+#undef HAVE_OPENAL_ALC_H
+
+/* Define to 1 if you have the <OpenAL/al.h> header file. */
+#undef HAVE_OPENAL_AL_H
+
 /* Define to 1 if you have the <os2me.h> header file. */
 #undef HAVE_OS2ME_H
 
@@ -105,6 +157,9 @@
 /* Define to 1 if you have the `sched_setscheduler' function. */
 #undef HAVE_SCHED_SETSCHEDULER
 
+/* Define to 1 if you have the `setlocale' function. */
+#undef HAVE_SETLOCALE
+
 /* Define to 1 if you have the `setpriority' function. */
 #undef HAVE_SETPRIORITY
 
@@ -114,6 +169,9 @@
 /* Define to 1 if you have the <signal.h> header file. */
 #undef HAVE_SIGNAL_H
 
+/* Define to 1 if you have the <sndio.h> header file. */
+#undef HAVE_SNDIO_H
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
@@ -122,6 +180,9 @@
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the `strdup' function. */
+#undef HAVE_STRDUP
 
 /* Define to 1 if you have the `strerror' function. */
 #undef HAVE_STRERROR
@@ -144,8 +205,17 @@
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #undef HAVE_SYS_IOCTL_H
 
+/* Define to 1 if you have the <sys/param.h> header file. */
+#undef HAVE_SYS_PARAM_H
+
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #undef HAVE_SYS_RESOURCE_H
+
+/* Define to 1 if you have the <sys/signal.h> header file. */
+#undef HAVE_SYS_SIGNAL_H
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+#undef HAVE_SYS_SOCKET_H
 
 /* Define to 1 if you have the <sys/soundcard.h> header file. */
 #undef HAVE_SYS_SOUNDCARD_H
@@ -171,8 +241,73 @@
 /* Define to 1 if you have the <windows.h> header file. */
 #undef HAVE_WINDOWS_H
 
+/* Define to 1 if you have the <ws2tcpip.h> header file. */
+#undef HAVE_WS2TCPIP_H
+
+/* Define to indicate that float storage follows IEEE754. */
+#undef IEEE_FLOAT
+
 /* size of the frame index seek table */
 #undef INDEX_SIZE
+
+/* Define if IPV6 support is enabled. */
+#undef IPV6
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
+/* Define if network support is enabled. */
+#undef NETWORK
+
+/* Define to disable 16 bit integer output. */
+#undef NO_16BIT
+
+/* Define to disable 32 bit integer output. */
+#undef NO_32BIT
+
+/* Define to disable 8 bit integer output. */
+#undef NO_8BIT
+
+/* Define to disable downsampled decoding. */
+#undef NO_DOWNSAMPLE
+
+/* Define to disable error messages in combination with a return value (the
+   return is left intact). */
+#undef NO_ERETURN
+
+/* Define to disable error messages. */
+#undef NO_ERROR
+
+/* Define to disable feeder and buffered readers. */
+#undef NO_FEEDER
+
+/* Define to disable ICY handling. */
+#undef NO_ICY
+
+/* Define to disable ID3v2 parsing. */
+#undef NO_ID3V2
+
+/* Define to disable layer I. */
+#undef NO_LAYER1
+
+/* Define to disable layer II. */
+#undef NO_LAYER2
+
+/* Define to disable layer III. */
+#undef NO_LAYER3
+
+/* Define to disable ntom resampling. */
+#undef NO_NTOM
+
+/* Define to disable real output. */
+#undef NO_REAL
+
+/* Define to disable string functions. */
+#undef NO_STRING
+
+/* Define to disable warning messages. */
+#undef NO_WARNING
 
 /* Name of package */
 #undef PACKAGE
@@ -189,11 +324,29 @@
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
 
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
 /* Define if portaudio v18 API is wanted. */
 #undef PORTAUDIO18
+
+/* The size of `int32_t', as computed by sizeof. */
+#undef SIZEOF_INT32_T
+
+/* The size of `long', as computed by sizeof. */
+#undef SIZEOF_LONG
+
+/* The size of `off_t', as computed by sizeof. */
+#undef SIZEOF_OFF_T
+
+/* The size of `size_t', as computed by sizeof. */
+#undef SIZEOF_SIZE_T
+
+/* The size of `ssize_t', as computed by sizeof. */
+#undef SIZEOF_SSIZE_T
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
@@ -204,6 +357,18 @@
 /* Version number of package */
 #undef VERSION
 
+/* Define to use Win32 sockets */
+#undef WANT_WIN32_SOCKETS
+
+/* Define to use Unicode for Windows */
+#undef WANT_WIN32_UNICODE
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
+
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 
@@ -213,11 +378,23 @@
 #undef inline
 #endif
 
+/* Define to `short' if <sys/types.h> does not define. */
+#undef int16_t
+
+/* Define to `int' if <sys/types.h> does not define. */
+#undef int32_t
+
 /* Define to `long int' if <sys/types.h> does not define. */
 #undef off_t
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* Define to `unsigned long' if <sys/types.h> does not define. */
 #undef size_t
 
-/* Define to `int' if <sys/types.h> does not define. */
+/* Define to `long' if <sys/types.h> does not define. */
 #undef ssize_t
+
+/* Define to `unsigned short' if <sys/types.h> does not define. */
+#undef uint16_t
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+#undef uint32_t

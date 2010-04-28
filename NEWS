@@ -1,3 +1,311 @@
+1.12.1
+---
+
+- Update INSTALL for the dual-mode library. No code changes.
+
+1.12.0
+---
+
+Attention: This reverts the big bad libray name change. People did not like libmpg123_64.so at all ... so Thomas went along with proving that being responsible for a open source library package sucks for your life -- he coded large file dual-mode into libmpg123. One library with both APIs, like glibc.
+
+- libmpg123 25.0.25:
+  - The separate libraries are gone again, this one is dual-mode (using ca. 750 lines of not very funny code).
+  - The library even translates callbacks between large file support modes.
+  - Introduce handle-based custom I/O in libmpg123.
+  - The header now defines MPG123_API_VERSION to help compile-time detection of available functions (lib is version 25.0.25 now... MPG123_API_VERSION is 25).
+- Make the usage of AI_ADDRCONFIG dependend on a configure check. This flag is not available everywhere.
+
+
+1.11.0
+---
+
+Attention: There was a re-release of the source archive, because the initial one missed the actual changes for the library name.
+Sorry for the inconvenience:-/
+
+- Big bad libray name change for builds with enabled large file support.
+  That will break libmpg123 binary compatibility on Linux/x86 when upgrading from mpg123>=1.5.0 with enabled large file support. You need to relink with the new library called libmpg123_64.
+  If you do not enable large file support, or it is implicit on your platform (x86-64), the library keeps the old name of libmpg123 and everything is fine.
+- Assembler cleanup:
+  - no use of compiler-based stack alignment (for SSE), helping portability
+  - mostly performance neutral, hint at faster decoding for the dynamic build and slower for static, but small change in any case
+- Windows networking (access http streams in mingw builds).
+- Do not ask for addresses that do not have matching interfaces configured (IPv6 on a IPv4-only host, for example).
+  That can help with broken DNS servers that choke on IPv6 addresses (T-Online Speedport W502V, for example).
+- Fix a potential ICY reading problem were ICY metadata could be read as mp3 data (basically for MPEG frames bigger than the ICY interval).
+
+
+1.10.1
+---
+
+- Help multilib setups that boldly assume that headers are invariant by removing the consistency check in mpg123.h and instead just adding a suffix to relevant functions when _FILE_OFFSET_BITS is defined. Invalid setups will now fail at the linking stage instead of the preprocessing stage.
+  That should cover bug 2934488.
+- Fixes for gapless decoding:
+  - Correctly skip padding larger than one MPEG frame (strange, but occurs).
+  - Bug 2950218 (proper gapless cuts for seeking near the end).
+- Make sure the search for the first header aborts after 64K of one-byte reads, as always intended (bug 2951334).
+  Certain files (or even random data) were able to fool mpg123 sufficiently enough that it basically reads through the whole file in 1-byte steps in search for MPEG data.
+  The limit of 64K will very likely be configurable in a future mpg123 version.
+- Fix subtle bug with seeking in feeder mode: A seek close to the current position (meaning: the needed data offset is already in mpg123's buffer chain) resulted in skipped bytes.
+- Improve the feeder mode for handling large amounts of junk at the beginning, including proper passing of the request for more data when trying to determine free format frame size. This also fixes endless looping as reported in bug 2951334.
+- The parser code still needs overhaul. It is not pretty.
+- Compile fix for OpenAL.
+
+1.10.0
+---
+
+- Confirmed/fixed on OS/2 platform.
+  At least a static build works with native audio output and generic decoder.
+- Make modules work with libtool-2.2.6b .
+- Added pitch command to control interface.
+- HTTP header field and MIME type parsing now case-insensitive (fixes bug 2904736).
+  Also, the MIME-parsing for non-playlist URLs is done the same way as from playlists now.
+  And, we interpret MIME types only to before a ";" (see bug 2836904).
+- There is a build-time option to enable unicode file names on windows now. UNIX (Linux) does not need that, UTF-8 works natively.
+  An unicode-enabled build of libmpg123 expects file names as UTF-8 strings, opening of non-utf8 strings (by old applications) still works via fallback when the conversion of the string or opening of the file failed.
+- Also, on Windows, --realtime now works, along with added granularity of the new --priority parameter. Note that you get the latter functionality through nice/renice on UNIX, no need to add that to mpg123.
+- Added experimental framebyframe API.
+- Added a new Microsoft common language runtime wrapper (aka .NET wrapper) written by Malcolm Boczek. See ports\MSVC++\2008clr\mpg123clr\ReadMe.txt for further information
+- Added Visual Studio 2010 Beta 2 project files for libmpg123
+- Updated autotools machinery, autogen.sh is gone, use `autoreconf -iv`.
+
+1.9.2
+---
+- Fix logic failure in gapless code: The trailing silence was only cut on the first decode. So, seek-back and decode again never was gapless:-(
+- Fix linker flags on MacOS 10.6 .
+- Improve portability (mainly for Solaris/x86, possibly others).
+- Fix reading from standard input in Windows (use binary mode).
+
+1.9.1
+---
+- Fix OpenAL output issue (bug 2840085)
+- Fix theoretically possible discarding of some audio samples when getting a new format.
+- Fix unwanted verboseness (some error messages from library even when MPG123_QUIET was specified).
+- Fix back-to-beginning for feed_skip (fixes bug 2859531).
+- Fix the CPU creep bug with NtoM decoding.
+  That one has been nasty on you with large files since bad frame fillup has been introduced.
+- Fix regression (since 1.9.0) in ID3 parsing: Now Foobar2000 RVA fields are interpreted again (among others).
+- Fix some compiler warnings, minor cleanup.
+
+1.9.0
+---
+
+- Free format support.
+- ARM assembly optimizations (yay Taihei again!).
+- Dither noise now runtime-generated, thus less bloated binary (thanks Taihei...).
+  This means that dithered decoding is now included per default.
+  Please note that work is ongoing to improve the dithering quality, more to come.
+  For example: Accurate rounding to 16bits is now always used for generic dithered decoder, there are plans to adapt the noise for different sampling frequencies.
+- Buffer plays any audio type now.
+- New output module: OpenAL
+- Bug fixes:
+  - Broken frame fillup for non-signed 8 bit formats with correct zero (bug 2805665)
+  - Crash on invalid UTF-16 in ID3 tags fixed (thanks to Andy Hefner)
+  - Bad detection of separated UTF-16 strings in ID3 tags (bug 2834636).
+- Topic ID3 and UTF: Now we are more tolerant with UTF16, even accepting those broken tags that id3v2 produces (multiple conflicing BOMs).
+- Build system allows AltiVec on non-Macs now (don't enforce unsupported gcc flags).
+- Terminal control mode is more verbose (gives hint about pressing 'h').
+- The library now offers a switch and small API to defer translation of ID3 text data until client app wants to do it (or not).
+
+1.8.1
+---
+- Include improvements to integer decoder from SVN trunk.
+  They have been accidentally promised on 1.8.0 release announcements, though they were not there. Here it is: ISO compliant fixed point decoding (speed optimizations are still reserved for next release).
+- Fixed build with ./configure --enable-modules (bug in configure script).
+- Fix name of binary in help screen when called with path.
+- Build fix for old gcc with AltiVec code.
+- Update of Sony PSP build files.
+
+1.8.0 (The Taihei Monmament)
+---
+
+- New and improved SSE optimizations! For x86-64, too! Also AltiVec! Fast float output! Faster stereo!
+  Finally, this should put mpg123 into the efficiency-leading position on current hardware!
+  Thanks go out to Taihei Monma for pushing lots of new assembler code.
+- Added proper rounding modes to 16bit integer.
+  - Use ./configure --enable-int-quality to prefer accuracy over speed.
+  - Accurate code (generic, SSE, 3dnow -- i586 has always been good) delivers ISO compliant quality with 16bit output.
+  - Uses fast rounding for IEEE754 floats.
+  - Mpg123 can do fully ISO compliant MPEG audio decoding to 16bits (of course to 32bit float/int, too).
+- subtle performance enhancements via broader data alignment
+- Prefer SSE code over 3DNowExt.
+  - It can be tight, but generally our new SSE code is better on CPUs that can do both.
+- Remove HF cutoff (SFB21), has been introduced in 0.59r .
+- Fix layer 1 regression (been there since version 1.x).
+  - Layer 1 ISO compliance test is positive now.
+- Fix layer 2 regression (false positives header change).
+  - Layer 2 ISO compliance test is positive now.
+- more sample-accurateness
+  - Clear frame buffers before seek.
+  - Decode 4 frames in advance for layer 3 (2 for layer 1 and 2) per default.
+  - Number of layer 3 frames to decoded in advance (and fill bit reservoir) is runtime tunable (--preframes).
+- Do not stop decoding after stray ID3v1 tags in streams (bug 2793677).
+- Fix handling of negative RVA2 values in ID3v2 (bug 2792417).
+- Discard bitreservoir of previous frames if a resync is needed.
+- improve perceived randomness of --random (do not repeat too early)
+- Fix special crash case in UTF16 conversion for ID3v2.
+- MPG123_MODDIR environment variable for changing module directory at runtime
+- arts output fixes (bug 2715128)
+- win32 output swallowing less buffers at end (but still some audio is lost, bug 2722991)
+- tested mpg123 on OS/2; it works, but not the native audio output (SDL works)
+- WAV output announces supported output formats correctly
+- fix buffer startup to make sure the first bits of audio are not discarded (bug 2796802)
+- re-enable the --gain parameter (the move to modules disabled that), untested
+- Libltdl is _not_ included anymore.
+  - The host system is expected to provide it, otherwise plugins are not used.
+  - Our copy does not get in the way anymore.
+- enhancements of the MSVC++ builds, including optimizations using yasm
+- general build system fixes
+- Legacy build system is gone.
+- code cleanup
+  - signed/unsigned integer usage, make compilers more happy)
+  - simplified synth selection code (it is _less_ code now, and does more)
+- Fixed behaviour of MPG123_NEW_FORMAT: Now it does not stop you from just continuing decoding without querying the (new) output format, this behaviour regression had been there since somewhen after 1.4.3 .
+
+1.7.3
+---
+  - Fix a regression introduced with the --doublespeed fix. Now seeking should be a lot smoother again.
+
+1.7.2
+---
+  - Fix a possible vulnerability in the ID3 code (negative encoding values).
+
+1.7.1
+---
+  - Just one fix for making the RVA switch in terminal and generic control mode work again (instead of plain silence).
+
+1.7.0
+---
+- Lots of output format fun!
+  - now supporting 8, 16, 32 bit signed/unsigned integers,
+    32bit float (64bit float can be hacked in quickly)
+  - optimized decoders use fallback routines for non-optimized
+    formats transparently
+  - flexible resampling is automatically chosen when output does
+    not support standard rates (like a JACK server)
+  - That meant quite some restructuring in the decoder code...
+- Lots of core functionality now optional, enabling small-footprint
+  builds of libmpg123.
+  - choosing among the MPEG layer codes
+  - NtoM resampling
+  - downsampling
+  - feeder API (mpg123_open_feed())
+  - ID3v2
+  - String API
+  - ICY
+  - output formats
+  - error/warning message printouts
+  - ... a layer3-only shared libmpg123 can be just 107K on x86-64
+    or 94K on x86
+- --preload (tune prefill before playback for buffered mode)
+- win64 support (one report at least;-), modules working on Windows
+- Windows/MSVC++: fixed handling of unicode file names,
+  mpg123_topen() now actually working there
+  - You are obliged to use mpg123_tclose() now!
+- using "plugins" subdir relative to mpg123 binary
+  (in addition to ../lib/mpg123)
+- switch to libtool 2.2 and automake 1.10 for the build scripts
+  - though no update to new libtool 2 API, yet
+- some portability fixes
+- prevent user from creating non-working I/O setups
+  (replacing timeout reader, ICY with feeding)
+- JACK output accepts port names for -a, stereo gets mixed down
+  when only one port is chosen
+- added sndio output, contributed by Christian Weisgerber
+- Make --doublespeed paramter work, porting of which has been
+  forgotten in the 1.x series!
+  Along with that, a regression in decoding has been fixed
+  (concerning skipping of frames in general). 
+
+1.6.4
+---
+- Fix for consistent NtoM resampled decoding and broken frames fillup.
+
+1.6.3
+---
+
+- Fix sf.net bug #2413608: Make sure a new format does not slip through after early close.
+- Include equalizer example file and a piece of wrapper code for MSVC++ in the distribution.
+- Do not claim to support unsigned 16 bit encoding (never been the case).
+- Fix default fifo detection, now it actally activates fifo support!
+
+1.6.2
+---
+
+- Fix default IPv6 detection in configure.ac (a typo has been introduced before).
+
+1.6.1
+---
+
+- Fix printing of largefile offsets in remote control interface.
+- Some portability fixes (reduced compiler warnings on Solaris, p.ex.).
+
+1.6.0
+---
+- small things inside that I forgot to mention
+- some new commands for remote control interface:
+  - SCAN
+  - SAMPLE
+  - EQFILE
+  - SHOWEQ
+- added --keep-open command line flag (for remote control)
+- fixed equalizer file parsing to really handle comment lines as example file suggests
+- more elaborate detection of UTF-8 locale, also --utf8 switch to force it
+- added --fuzzy to enable inexact seeking (see below)
+- added --index-size parameter for tuning accurate frame seek index
+- enabling largefile support via configure
+- libmpg123 11.0.11:
+  - added mpg123_geteq(), mpg123_tell_stream() and mpg123_getstate()
+  - API cleanup (take const char* for mpg123_open())
+  - calm down complainling (C++) compilers by completing the mpg123_channels enum
+  - fixed several possible crashes when user provides NULLs where it isn't appropriate
+  - workaround for frames that fail decoding (bad frame body, missing bit reservoir): fill up with silence
+    That also fixes seeking issues related to bad frames since now the fixed relation between frame and sample offsets is restored.
+  - Finally realized what that the resampling code for integer math (generic_nofpu) was just incomplete!
+    Now it works, using the defined integer multiplication.
+  - Detect UTF-8 in ICY conversion (instead of just assuming CP-1252, provided by Torsten Glaser).
+  - Prevent ugly noise when the bit reservoir is not fully there (p.ex. ignorantly cut mp3 files).
+    Concerned frames are silenced, but reservoir for following frames is kept.
+    Thanks to Patrick Dehne for the investigation and patch!
+  - New option for fuzzy seeking; trading sample accuracy for speed.
+    With that option, seeks positions are guessed using mean framesize or the Xing VBR TOC is used.
+  - Feeder streams work with seek index now.
+  - Seek frame index is runtime tunable.
+  - more caution with alignment issues for varying library users
+- new project files to build/use libmpg123 with MSVC++ 2005 and 2008, provided by Patrick Dehne
+- fixed a regression that made the pause/loop mode in terminal control slowly go backwards
+
+Big note for libmpg123 users: Make sure your application is compiled with the same largefile setting as libmpg123!
+If that does not match, you will get unresolved symbols (which is better than weird errors when using a nonmatching off_t in arguments;-).
+
+1.5.1
+---
+
+- fix wav/au/cdr writing to stdout (bug #2044423)
+- add more sensible --no-resync to replace --resync (bug #2044404)
+- libmpg123 7.0.7
+  - fix thread safety of SSE decoder (bug #2053181)
+  - fix robustness of length handling, added mpg123_set_filesize() (bug #2064322) 
+
+1.5.0
+---
+
+- libmpg123 6.0.6
+  - Floating point decoding back again, (build time choice for now; --with-cpu=generic_float).
+  - More robust string handling; extended string API.
+  - fixed an (so far) unnoticed ID3 bug that may have obscured comment fields
+  - added mpg123_feed() as shortcut; using const input buffer now
+  - resync is enabled again for ICY streams (the trouble in the past was due to a reader bug, not the streams)
+  - decode ICY text data to UTF-8 (thanks, Thorsten)
+  - preserve file flags for timeout mode
+- More elaborate (helpful?) error message for output format problems.
+- Reworked HTTP code... and added IPv6 support!
+- Fix the --proxy parameter (has been accidentally ignored before).
+- Added --ignore-mime to work with web streams with funny playlist MIME types like "audio/megurl".
+- Know MIME audio/mpegurl.
+- --timeout is now also used for the connection itself (not just reading).
+- Now trying to resume ALSA device after suspend.
+- subtle build changes (your CFLAGS rule now)
+
 1.4.3
 ---
 

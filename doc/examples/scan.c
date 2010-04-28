@@ -10,7 +10,7 @@
    While it would be nicer to inform the user about troubles, libmpg123 is designed _not_ to bite you on operations with invalid handles , etc.
   You just jet invalid results on invalid operations... */
 
-#include "mpg123.h"
+#include <mpg123.h>
 #include <stdio.h>
 
 int main(int argc, char **argv)
@@ -29,12 +29,18 @@ int main(int argc, char **argv)
 	for(i = 1; i < argc; ++i)
 	{
 		off_t a, b;
+		
 		mpg123_open(m, argv[i]);
-		a = mpg123_length(m);
+
+		a = mpg123_length(m);		
 		mpg123_scan(m);
 		b = mpg123_length(m);
+
+		mpg123_close(m);
+
 		printf("File %i: estimated %li vs. scanned %li\n", i, (long)a, (long)b);
 	}
+
 	mpg123_delete(m);
 	mpg123_exit();
 	return 0;

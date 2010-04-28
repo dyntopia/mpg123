@@ -6,18 +6,21 @@
 
 AM_CPPFLAGS = -DPKGLIBDIR="\"$(pkglibdir)\""
 mpg123_LDADD = $(LIBLTDL) libmpg123/libmpg123.la @MODULE_OBJ@ @OUTPUT_OBJ@ @OUTPUT_LIBS@
-mpg123_LDFLAGS = @LT_LDFLAGS@ @OUTPUT_LDFLAGS@
+mpg123_LDFLAGS = @EXEC_LT_LDFLAGS@ @OUTPUT_LDFLAGS@
 # Just mpg123_INCLUDES has no effect on build! Trying that before reverting to AM_CPPFLAGS.
 INCLUDES = $(LTDLINCL) -I$(top_builddir)/src/libmpg123 -I$(top_srcdir)/src/libmpg123
 # libltdl is not mentioned here... it's not that trivial
 mpg123_DEPENDENCIES = @OUTPUT_OBJ@ @MODULE_OBJ@ libmpg123/libmpg123.la
 
 SUBDIRS = output libmpg123
-EXTRA_DIST = Makefile.legacy config.h.legacy legacy_module.c module.c
+EXTRA_DIST = legacy_module.c module.c sfifo.c sfifo.h
+
 
 CLEANFILES = *.a
 
 bin_PROGRAMS = mpg123
+
+EXTRA_PROGRAMS = tests/seek_accuracy tests/seek_whence tests/noise tests/text tests/plain_id3
 
 mpg123_SOURCES = \
 	audio.c \
@@ -29,26 +32,37 @@ mpg123_SOURCES = \
 	libmpg123/compat.c \
 	libmpg123/compat.h \
 	control_generic.c \
+	equalizer.c \
 	getlopt.c \
 	getlopt.h \
 	httpget.c \
 	httpget.h \
+	resolver.c \
+	resolver.h \
 	genre.h \
 	genre.c \
 	module.h \
 	mpg123.c \
 	mpg123app.h \
-	id3print.c \
-	id3print.h \
+	metaprint.c \
+	metaprint.h \
+	local.h \
+	local.c \
 	playlist.c \
 	playlist.h \
-	sfifo.c \
-	sfifo.h \
 	term.c \
 	term.h \
 	wav.c \
+	win32_support.h \
+	wavhead.h \
 	xfermem.c \
 	xfermem.h
+
+if WIN32_CODES
+mpg123_SOURCES += \
+	win32_support.c \
+	win32_net.c
+endif
 
 # That is not nice... but it is how I manage to get the dependency on output/alsa.o without error about .deps/output/alsa.Tpo .
 # Did I mention that recursive make sucks?
@@ -120,9 +134,51 @@ output/alsa.$(OBJEXT): output/alsa.c audio.h module.h
 output/hp.$(OBJEXT): output/hp.c audio.h module.h
 	cd output && $(MAKE)
 
+output/sndio.$(OBJEXT): output/sndio.c audio.h module.h
+	cd output && $(MAKE)
+
 
 # Would have to mention _all_ source files... Dammit, that's what the libmpg123/Makefile.am does!
 # But again, the a make $something here needs that stupid rule... WHY???
 libmpg123/libmpg123.la: config.h libmpg123/mpg123.h
 	cd libmpg123 && $(MAKE)
 
+tests_seek_accuracy_SOURCES = \
+tests/seek_accuracy.c \
+libmpg123/compat.h \
+libmpg123/compat.c
+
+tests_seek_accuracy_DEPENDENCIES = libmpg123/libmpg123.la
+tests_seek_accuracy_LDADD = libmpg123/libmpg123.la
+
+tests_seek_whence_SOURCES = \
+tests/seek_whence.c \
+libmpg123/compat.h \
+libmpg123/compat.c
+
+tests_seek_whence_DEPENDENCIES = libmpg123/libmpg123.la
+tests_seek_whence_LDADD = libmpg123/libmpg123.la
+
+tests_noise_SOURCES = \
+tests/noise.c \
+libmpg123/compat.h \
+libmpg123/compat.c \
+libmpg123/dither.h \
+libmpg123/dither.c
+
+tests_text_SOURCES = \
+tests/text.c \
+tests/testtext.h \
+libmpg123/compat.h \
+libmpg123/compat.c
+
+tests_text_DEPENDENCIES = libmpg123/libmpg123.la
+tests_text_LDADD = libmpg123/libmpg123.la
+
+tests_plain_id3_SOURCES = \
+tests/plain_id3.c \
+libmpg123/compat.h \
+libmpg123/compat.c
+
+tests_plain_id3_DEPENDENCIES = libmpg123/libmpg123.la
+tests_plain_id3_LDADD = libmpg123/libmpg123.la

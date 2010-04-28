@@ -11,10 +11,6 @@
 #include <fcntl.h>
 #include "common.h"
 
-#ifdef WIN32
-#include <winsock.h>
-#endif
-
 #include "debug.h"
 
 const char* rva_name[3] = { "off", "mix", "album" };
@@ -22,8 +18,16 @@ static const char *modes[5] = {"Stereo", "Joint-Stereo", "Dual-Channel", "Single
 static const char *smodes[5] = { "stereo", "joint-stereo", "dual-channel", "mono", "invalid" };
 static const char *layers[4] = { "Unknown" , "I", "II", "III" };
 static const char *versions[4] = {"1.0", "2.0", "2.5", "x.x" };
+static const int samples_pre_frame[4][4] =
+{
+	{ -1,384,1152,1152 },	/* MPEG 1 */
+	{ -1,384,1152,576 },	/* MPEG 2 */
+	{ -1,384,1152,576 },	/* MPEG 2.5 */
+	{ -1,-1,-1,-1 },		/* Unknown */
+};
 
-#if !defined(WIN32) && defined(HAVE_SIGNAL_H)
+
+#if (!defined(WIN32) || defined (__CYGWIN__)) && defined(HAVE_SIGNAL_H)
 void (*catchsignal(int signum, void(*handler)()))()
 {
   struct sigaction new_sa;
@@ -85,7 +89,10 @@ void print_header(mpg123_handle *mh)
 	fprintf(stderr,"Bitrate: ");
 	switch(i.vbr)
 	{
-		case MPG123_CBR: fprintf(stderr, "%d kbit/s", i.bitrate); break;
+		case MPG123_CBR:
+			if(i.bitrate) fprintf(stderr, "%d kbit/s", i.bitrate);
+			else fprintf(stderr, "%d kbit/s (free format)", (int)((double)i.framesize*8*i.rate*0.001/samples_pre_frame[i.version][i.layer]+0.5));
+			break;
 		case MPG123_VBR: fprintf(stderr, "VBR"); break;
 		case MPG123_ABR: fprintf(stderr, "%d kbit/s ABR", i.abr_rate); break;
 		default: fprintf(stderr, "???");
@@ -104,7 +111,10 @@ void print_header_compact(mpg123_handle *mh)
 	fprintf(stderr,"MPEG %s layer %s, ", versions[i.version], layers[i.layer]);
 	switch(i.vbr)
 	{
-		case MPG123_CBR: fprintf(stderr, "%d kbit/s", i.bitrate); break;
+		case MPG123_CBR:
+			if(i.bitrate) fprintf(stderr, "%d kbit/s", i.bitrate);
+			else fprintf(stderr, "%d kbit/s (free format)", (int)((double)i.framesize*8*i.rate*0.001/samples_pre_frame[i.version][i.layer]+0.5));
+			break;
 		case MPG123_VBR: fprintf(stderr, "VBR"); break;
 		case MPG123_ABR: fprintf(stderr, "%d kbit/s ABR", i.abr_rate); break;
 		default: fprintf(stderr, "???");
@@ -212,8 +222,8 @@ void print_stat(mpg123_handle *fr, long offset, long buffsize)
 	if(    MPG123_OK == mpg123_position(fr, offset, buffsize, &no, &rno, &tim1, &tim2)
 	    && MPG123_OK == mpg123_getvolume(fr, &basevol, &realvol, NULL) )
 	{
-		fprintf(stderr, "\rFrame# %5li [%5li], Time: %02lu:%02u.%02u [%02u:%02u.%02u], RVA:%6s, Vol: %3u(%3u)",
-		        (long)no, (long)rno,
+		fprintf(stderr, "\rFrame# %5"OFF_P" [%5"OFF_P"], Time: %02lu:%02u.%02u [%02u:%02u.%02u], RVA:%6s, Vol: %3u(%3u)",
+		        (off_p)no, (off_p)rno,
 		        (unsigned long) tim1/60, (unsigned int)tim1%60, (unsigned int)(tim1*100)%100,
 		        (unsigned int)tim2/60, (unsigned int)tim2%60, (unsigned int)(tim2*100)%100,
 		        rva_name[param.rva], roundui(basevol*100), roundui(realvol*100) );

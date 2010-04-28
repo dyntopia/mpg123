@@ -22,7 +22,8 @@
 #include "debug.h"
 
 /* complementary audio parameters */
-int numbuffers = 32;     /* total audio buffers, _bare_ minimum = 4 (cuz of prio boost check) */
+int numbuffers = 5;     /* total audio buffers, _bare_ minimum = 4 (cuz of prio boost check) */
+int audiobufsize = 4884;
 int lockdevice = FALSE;
 USHORT volume = 100;
 char *boostprio = NULL;
@@ -164,7 +165,7 @@ int open_os2(audio_output_t *ao)
 	
 	if(maop.usDeviceID) return (maop.usDeviceID);
 	
-	if(!ai) return -1;
+	if(!ao) return -1;
 	
 	if(!ao->device) ao->device = "0";
 	
@@ -224,7 +225,7 @@ int open_os2(audio_output_t *ao)
 		return(-1);
 	}
 	
-	volume = audio_set_volume(ai,volume);
+	volume = set_volume(ao,volume);
 	
 	/* Set up the BufferParms data structure and allocate
 	* device buffers from the Amp-Mixer  */
@@ -371,7 +372,7 @@ static int write_os2(audio_output_t *ao,unsigned char *buf,int len)
 	return len;
 }
 
-
+#if 0
 static int write_os2(audio_output_t *ao,unsigned char *buf,int len)
 {
 	if(len > audiobufsize || !playingbuffer) return -1;
@@ -426,6 +427,7 @@ static int write_os2(audio_output_t *ao,unsigned char *buf,int len)
 	
 	return 0;
 }
+#endif
 
 /*
 static int audio_nobuffermode(audio_output_t *ao, int setnobuffermode)
@@ -451,7 +453,7 @@ int audio_trash_buffers(audio_output_t *ao)
 }
 */
 
-int close_os2(audio_output_t *ao)
+static int close_os2(audio_output_t *ao)
 {
 	ULONG rc;
 	
@@ -571,7 +573,7 @@ int get_formats_os2(audio_output_t *ao)
 	return fmts;
 }
 
-int get_devices_os2(char *info, int deviceid)
+static int get_devices_os2(char *info, int deviceid)
 {
 	char buffer[128];
 	MCI_SYSINFO_PARMS mip;
@@ -623,7 +625,7 @@ int get_devices_os2(char *info, int deviceid)
 }
 
 
-void flush_os2(audio_output_t *ao)
+static void flush_os2(audio_output_t *ao)
 {
 }
 

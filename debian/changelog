@@ -1,10 +1,107 @@
-mpg123 (1.4.3-4lenny1) stable; urgency=medium
+mpg123 (1.12.1-1) unstable; urgency=low
 
-  * src/module.c: Backport upstream patch to fix regression in module
-    loading when a libltdl with a fix for CVE-2009-3736 is in place.
-    Closes: #572920
+  * New upstream version. Closes: #572975
+  * debian/control: Package complies with version 3.8.4 of Debian policy.
+  * debian/control: Add substitution variable misc:Depends to package
+    dependency lines to placate lintian.
+  * debian/libmpg123-0.symbols.common.in: Add new symbols mpg123_open_handle
+    and mpg123_replace_reader_handle.
 
- -- Daniel Kobras <kobras@debian.org>  Mon, 29 Mar 2010 11:56:52 +0200
+ -- Daniel Kobras <kobras@debian.org>  Wed, 28 Apr 2010 21:18:28 +0200
+
+mpg123 (1.10.0-2) unstable; urgency=low
+
+  * src/libmpg123/dither.[hc]: Disable function mpg123_noise that is not
+    yet part of libmpg123's official API and should therefore not get
+    exported.
+  * debian/libmpg123-0.symbols.common.in: Remove symbol mpg123_noise
+    accordingly. Closes: #559892
+
+ -- Daniel Kobras <kobras@debian.org>  Thu, 10 Dec 2009 20:42:32 +0100
+
+mpg123 (1.10.0-1) unstable; urgency=low
+
+  * New upstream release 1.10.0.
+  * debian/libmpg123-0.symbols.common.in: Add four new symbols.
+  * debian/libmpg123-0.symbols.{32bit,64bit}.in: Add one new\
+    architecture-dependent symbol.
+  * debian/control: Complies with version 3.8.3 of Debian policy.
+
+ -- Daniel Kobras <kobras@debian.org>  Sun, 06 Dec 2009 23:13:36 +0100
+
+mpg123 (1.9.1-2) unstable; urgency=low
+
+  * debian/rules: Disable PIE on mips/mipsel due to binutils bug #532821.
+    Works around build failures on these archs.
+  * debian/rules: Include contents of config.log in build log if
+    configure fails.
+
+ -- Daniel Kobras <kobras@debian.org>  Mon, 19 Oct 2009 22:51:48 +0200
+
+mpg123 (1.9.1-1) unstable; urgency=low
+
+  * New upstream version 1.9.1.
+  * src/output/arts.c: Drop Debian-specific 64bit patch (fixed upstream).
+  * debian/libmpg123-0.symbols.common.in: Add two new exported library
+    symbols. 
+
+ -- Daniel Kobras <kobras@debian.org>  Wed, 14 Oct 2009 21:43:18 +0200
+
+mpg123 (1.7.2-3) unstable; urgency=low
+
+  * debian/alt_deps.py: Add helper code to fold several (plugin)
+    dependencies into a single alternative dependency. Used to
+    auto-generate the default Recommends for "first-class" output
+    plugins. Unlike the previous hack in debian/rules, the helper
+    tool can handle several dependency entries per plugin. Fixes
+    build errors on several archs where plugins picked out a different
+    versioned dependency on libc6 than the rest of the packages.
+    Closes: #524246
+  * debian/control: Add build-dependency on python-minimal for
+    helper tool.
+  * debian/rules: Remove previous hack to generate plugin:Recommends
+    and use helper tool instead.
+
+ -- Daniel Kobras <kobras@debian.org>  Sat, 18 Apr 2009 22:34:51 +0200
+
+mpg123 (1.7.2-2) unstable; urgency=low
+
+  * debian/libmpg123-0.symbols*: Distinguish between symbols on 32bit
+    and 64bit platforms. Closes: #523592
+
+ -- Daniel Kobras <kobras@debian.org>  Wed, 15 Apr 2009 20:16:05 +0200
+
+mpg123 (1.7.2-1) unstable; urgency=low
+
+  * New upstream version 1.7.2.
+    + Fixes a denial-of-service vulnerability in the ID3 decoder. (No
+      CVE-ID listed so far.)
+  * debian/control: Package complies with version 3.8.1 of Debian policy.
+  * debian/libmpg123-0.symbols: Add initial symbols file.
+  * debian/rules: Make use of improved security features in gcc and ld,
+    unless DEB_BUILD_OPTIONS contain the "noharden" keyword.
+
+ -- Daniel Kobras <kobras@debian.org>  Thu, 09 Apr 2009 20:43:35 +0200
+
+mpg123 (1.6.4-1) unstable; urgency=low
+
+  * New upstream version 1.6.4.
+    + Misleading commandline option --resync has been renamed to
+      --no-resync. Closes: #493590
+  * src/output/arts.c: Fix invalid cast on 64bit archs.
+  * Upload to unstable again. Closes: #500719
+
+ -- Daniel Kobras <kobras@debian.org>  Thu, 26 Mar 2009 17:33:48 +0100
+
+mpg123 (1.6.2-1) experimental; urgency=low
+
+  * New upstream version 1.6.2.
+    + Includes WAV and ID3 fixes previously applied as Debian-specific
+      patches.
+  * debian/rules: Several new symbols have been added to libmpg123-0.
+    Bump shlibs version.
+
+ -- Daniel Kobras <kobras@debian.org>  Sat, 20 Dec 2008 17:35:17 +0100
 
 mpg123 (1.4.3-4) unstable; urgency=medium
 
