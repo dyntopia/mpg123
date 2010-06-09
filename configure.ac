@@ -13,7 +13,7 @@ dnl ############# Initialisation
 AC_INIT([mpg123], [1.12.1], [mpg123-devel@lists.sourceforge.net])
 dnl Increment API_VERSION when the API gets changes (new functions).
 API_VERSION=25
-LIB_PATCHLEVEL=0
+LIB_PATCHLEVEL=1
 dnl Since we want to be backwards compatible, both sides get set to API_VERSION.
 LIBMPG123_VERSION=$API_VERSION:$LIB_PATCHLEVEL:$API_VERSION
 AC_SUBST(LIBMPG123_VERSION)
@@ -889,6 +889,7 @@ AC_SUBST(LARGEFILE_SWITCH)
 
 # Using the lower level macros instead of AC_TYPE_* for compatibility with not freshest autoconf.
 AC_CHECK_TYPE(size_t, unsigned long)
+AC_CHECK_TYPE(uintptr_t, unsigned long)
 AC_CHECK_TYPE(ssize_t, long)
 AC_CHECK_TYPE(off_t,  long int)
 AC_CHECK_TYPE(int32_t, int)

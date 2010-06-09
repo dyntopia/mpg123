@@ -113,6 +113,10 @@ configure-stamp:
 	ln -sf /usr/share/misc/config.sub "$(CURDIR)/build/"
 	ln -sf /usr/share/misc/config.guess "$(CURDIR)/build/"
 
+	# One patch touches configure.ac, so we need to regenerate the
+        # configure script.
+	autoreconf --verbose
+
 	CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
 	  ./configure $(CONF_COMMON) $(CONF_$(ARCH)) || \
 	    { ret=$?; cat config.log; exit $$ret; }
@@ -139,6 +143,16 @@ clean:
 			mv "$(CURDIR)/debian/config.guess" "$(CURDIR)/build/"; \
 		fi; \
 	fi
+
+	# Cleanup after autoreconf
+	-rm -f "$(CURDIR)"/Makefile.in \
+	       "$(CURDIR)"/aclocal.m4 \
+	       "$(CURDIR)"/configure \
+	       "$(CURDIR)"/doc/Makefile.in \
+	       "$(CURDIR)"/src/Makefile.in \
+	       "$(CURDIR)"/src/config.h.in \
+	       "$(CURDIR)"/src/libmpg123/Makefile.in \
+	       "$(CURDIR)"/src/output/Makefile.in
 
 	dh_clean
 

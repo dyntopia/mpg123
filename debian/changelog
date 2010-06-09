@@ -1,3 +1,16 @@
+mpg123 (1.12.1-2) unstable; urgency=low
+
+  * configure.ac, src/libmpg123/frame.c: Apply backport of upstream patch
+    to fix calculation of pointer alignment on 32bit archs. Many thanks
+    to William Pitcock, Gregor Herrmann, and upstream author Thomas Orgis
+    for tracking down this problem. Closes: #580095
+  * debian/rules: Run autoreconf to rebuild configure script after
+    having applied above patch. In clean target, remove any files
+    altered by autoreconf.
+  * debian/control: Build-depend on automake and autoconf for autoreconf.
+
+ -- Daniel Kobras <kobras@debian.org>  Wed, 09 Jun 2010 21:40:23 +0200
+
 mpg123 (1.12.1-1) unstable; urgency=low
 
   * New upstream version. Closes: #572975
