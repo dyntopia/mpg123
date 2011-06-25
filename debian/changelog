@@ -1,3 +1,11 @@
+mpg123 (1.12.1-3.2) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Switch to libltdl-dev (Closes: #627165).
+  * Empty dependency_libs (Closes: #622501).
+
+ -- Luk Claes <luk@debian.org>  Sat, 25 Jun 2011 19:13:38 +0200
+
 mpg123 (1.12.1-3.1) unstable; urgency=low
 
   * Non-maintainer upload.

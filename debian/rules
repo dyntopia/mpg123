@@ -80,6 +80,7 @@ mpg123: $(WRAPPER_TARGETS)
 
 	$(MAKE)
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
+	sed -i "/dependency_libs/ s/'.*'/''/" `find $(CURDIR)/debian -name '*.la'`
 	mv $(CURDIR)/debian/tmp/usr/bin/mpg123 \
 	   $(CURDIR)/debian/tmp/usr/bin/mpg123.bin
 	mv $(CURDIR)/debian/tmp/usr/share/man/man1/mpg123.1 \
