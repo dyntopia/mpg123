@@ -17,7 +17,7 @@
 #include "term.h"
 #include "common.h"
 #include "playlist.h"
-#include "id3print.h"
+#include "metaprint.h"
 #include "debug.h"
 
 extern int buffer_pid;
@@ -32,29 +32,29 @@ int seeking = FALSE;
 struct keydef { const char key; const char key2; const char* desc; };
 struct keydef term_help[] =
 {
-	 { STOP_KEY,  ' ', "interrupt/restart playback (i.e. 'pause')" }
-	,{ NEXT_KEY,    0, "next track" }
-	,{ PREV_KEY,    0, "previous track" }
-	,{ BACK_KEY,    0, "back to beginning of track" }
-	,{ PAUSE_KEY,   0, "pause while looping current sound chunk" }
-	,{ FORWARD_KEY, 0, "forward" }
-	,{ REWIND_KEY,  0, "rewind" }
-	,{ FAST_FORWARD_KEY, 0, "fast forward" }
-	,{ FAST_REWIND_KEY,  0, "fast rewind" }
-	,{ FINE_FORWARD_KEY, 0, "fine forward" }
-	,{ FINE_REWIND_KEY,  0, "fine rewind" }
-	,{ VOL_UP_KEY,   0, "volume up" }
-	,{ VOL_DOWN_KEY, 0, "volume down" }
-	,{ RVA_KEY,      0, "RVA switch" }
-	,{ VERBOSE_KEY,  0, "verbose switch" }
-	,{ PLAYLIST_KEY, 0, "list current playlist, indicating current track there" }
-	,{ TAG_KEY,      0, "display tag info (again)" }
-	,{ MPEG_KEY,     0, "print MPEG header info (again)" }
-	,{ HELP_KEY,     0, "this help" }
-	,{ QUIT_KEY,     0, "quit" }
-	,{ PITCH_UP_KEY, PITCH_BUP_KEY, "pitch up (small step, big step)" }
-	,{ PITCH_DOWN_KEY, PITCH_BDOWN_KEY, "pitch down (small step, big step)" }
-	,{ PITCH_ZERO_KEY, 0, "reset pitch to zero" }
+	 { MPG123_STOP_KEY,  ' ', "interrupt/restart playback (i.e. '(un)pause')" }
+	,{ MPG123_NEXT_KEY,    0, "next track" }
+	,{ MPG123_PREV_KEY,    0, "previous track" }
+	,{ MPG123_BACK_KEY,    0, "back to beginning of track" }
+	,{ MPG123_PAUSE_KEY,   0, "loop around current position (like a damaged audio CD;-)" }
+	,{ MPG123_FORWARD_KEY, 0, "forward" }
+	,{ MPG123_REWIND_KEY,  0, "rewind" }
+	,{ MPG123_FAST_FORWARD_KEY, 0, "fast forward" }
+	,{ MPG123_FAST_REWIND_KEY,  0, "fast rewind" }
+	,{ MPG123_FINE_FORWARD_KEY, 0, "fine forward" }
+	,{ MPG123_FINE_REWIND_KEY,  0, "fine rewind" }
+	,{ MPG123_VOL_UP_KEY,   0, "volume up" }
+	,{ MPG123_VOL_DOWN_KEY, 0, "volume down" }
+	,{ MPG123_RVA_KEY,      0, "RVA switch" }
+	,{ MPG123_VERBOSE_KEY,  0, "verbose switch" }
+	,{ MPG123_PLAYLIST_KEY, 0, "list current playlist, indicating current track there" }
+	,{ MPG123_TAG_KEY,      0, "display tag info (again)" }
+	,{ MPG123_MPEG_KEY,     0, "print MPEG header info (again)" }
+	,{ MPG123_HELP_KEY,     0, "this help" }
+	,{ MPG123_QUIT_KEY,     0, "quit" }
+	,{ MPG123_PITCH_UP_KEY, MPG123_PITCH_BUP_KEY, "pitch up (small step, big step)" }
+	,{ MPG123_PITCH_DOWN_KEY, MPG123_PITCH_BDOWN_KEY, "pitch down (small step, big step)" }
+	,{ MPG123_PITCH_ZERO_KEY, 0, "reset pitch to zero" }
 };
 
 void term_sigcont(int sig);
@@ -103,6 +103,11 @@ void term_init(void)
   term_enable = 1;
 }
 
+void term_hint(void)
+{
+	fprintf(stderr, "\nTerminal control enabled, press 'h' for listing of keys and functions.\n\n");
+}
+
 static void term_handle_input(mpg123_handle *, audio_output_t *, int);
 
 static int stopped = 0;
@@ -132,18 +137,33 @@ static int print_index(mpg123_handle *mh)
 
 static off_t offset = 0;
 
+/* Go back to the start for the cyclic pausing. */
+void pause_recycle(mpg123_handle *fr)
+{
+	/* Take care not to go backwards in time in steps of 1 frame
+		 That is what the +1 is for. */
+	pause_cycle=(int)(LOOP_CYCLES/mpg123_tpf(fr));
+	offset-=pause_cycle;
+}
+
+/* Done with pausing, no offset anymore. Just continuous playback from now. */
+void pause_uncycle(void)
+{
+	offset += pause_cycle;
+}
+
 off_t term_control(mpg123_handle *fr, audio_output_t *ao)
 {
 	offset = 0;
-
+debug1("control for frame: %li", (long)mpg123_tellframe(fr));
 	if(!term_enable) return 0;
 
 	if(paused)
 	{
-		if(!--pause_cycle)
+		/* pause_cycle counts the remaining frames _after_ this one, thus <0, not ==0 . */
+		if(--pause_cycle < 0)
 		{
-			pause_cycle=(int)(LOOP_CYCLES/mpg123_tpf(fr));
-			offset-=pause_cycle;
+			pause_recycle(fr);
 			if(param.usebuffer)
 			{
 				while(paused && xfermem_get_usedspace(buffermem))
@@ -151,7 +171,8 @@ off_t term_control(mpg123_handle *fr, audio_output_t *ao)
 					buffer_ignore_lowmem();
 					term_handle_input(fr, ao, TRUE);
 				}
-				if(!paused)	offset += pause_cycle;
+				/* Undo the cycling offset if we are done with cycling. */
+				if(!paused)	pause_uncycle();
 			}
 		}
 	}
@@ -184,7 +205,7 @@ static void seekmode(void)
 	{
 		stopped = TRUE;
 		buffer_stop();
-		fprintf(stderr, "%s", STOPPED_STRING);
+		fprintf(stderr, "%s", MPG123_STOPPED_STRING);
 	}
 }
 
@@ -209,7 +230,7 @@ static void term_handle_input(mpg123_handle *fr, audio_output_t *ao, int do_dela
         break;
 
       switch(tolower(val)) {
-	case BACK_KEY:
+	case MPG123_BACK_KEY:
         if(!param.usebuffer) ao->flush(ao);
 				else buffer_resync();
 		if(paused) pause_cycle=(int)(LOOP_CYCLES/mpg123_tpf(fr));
@@ -219,12 +240,12 @@ static void term_handle_input(mpg123_handle *fr, audio_output_t *ao, int do_dela
 
 		framenum=0;
 		break;
-	case NEXT_KEY:
+	case MPG123_NEXT_KEY:
 		if(!param.usebuffer) ao->flush(ao);
 		else buffer_resync(); /* was: plain_buffer_resync */
 	  next_track();
 	  break;
-	case QUIT_KEY:
+	case MPG123_QUIT_KEY:
 		debug("QUIT");
 		if(stopped)
 		{
@@ -238,24 +259,23 @@ static void term_handle_input(mpg123_handle *fr, audio_output_t *ao, int do_dela
 		set_intflag();
 		offset = 0;
 	  break;
-	case PAUSE_KEY:
+	case MPG123_PAUSE_KEY:
   	  paused=1-paused;
 	  if(paused) {
 			/* Not really sure if that is what is wanted
 			   This jumps in audio output, but has direct reaction to pausing loop. */
 			if(param.usebuffer) buffer_resync();
 
-		  pause_cycle=(int)(LOOP_CYCLES/mpg123_tpf(fr));
-		  offset -= pause_cycle;
+			pause_recycle(fr);
 	  }
 		if(stopped)
 		{
 			stopped=0;
 			if(param.usebuffer) buffer_start();
 		}
-	  fprintf(stderr, "%s", (paused) ? PAUSED_STRING : EMPTY_STRING);
+	  fprintf(stderr, "%s", (paused) ? MPG123_PAUSED_STRING : MPG123_EMPTY_STRING);
 	  break;
-	case STOP_KEY:
+	case MPG123_STOP_KEY:
 	case ' ':
 		/* when seeking while stopped and then resuming, I want to prevent the chirp from the past */
 		if(!param.usebuffer) ao->flush(ao);
@@ -275,87 +295,58 @@ static void term_handle_input(mpg123_handle *fr, audio_output_t *ao, int do_dela
 				buffer_start();
 			}
 		}
-	  fprintf(stderr, "%s", (stopped) ? STOPPED_STRING : EMPTY_STRING);
+	  fprintf(stderr, "%s", (stopped) ? MPG123_STOPPED_STRING : MPG123_EMPTY_STRING);
 	  break;
-	case FINE_REWIND_KEY:
+	case MPG123_FINE_REWIND_KEY:
 	  if(param.usebuffer) seekmode();
 	  offset--;
 	  break;
-	case FINE_FORWARD_KEY:
+	case MPG123_FINE_FORWARD_KEY:
 	  seekmode();
 	  offset++;
 	  break;
-	case REWIND_KEY:
+	case MPG123_REWIND_KEY:
 	  seekmode();
   	  offset-=10;
 	  break;
-	case FORWARD_KEY:
+	case MPG123_FORWARD_KEY:
 	  seekmode();
 	  offset+=10;
 	  break;
-	case FAST_REWIND_KEY:
+	case MPG123_FAST_REWIND_KEY:
 	  seekmode();
 	  offset-=50;
 	  break;
-	case FAST_FORWARD_KEY:
+	case MPG123_FAST_FORWARD_KEY:
 	  seekmode();
 	  offset+=50;
 	  break;
-	case VOL_UP_KEY:
+	case MPG123_VOL_UP_KEY:
 		mpg123_volume_change(fr, 0.02);
 	break;
-	case VOL_DOWN_KEY:
+	case MPG123_VOL_DOWN_KEY:
 		mpg123_volume_change(fr, -0.02);
 	break;
-	case PITCH_UP_KEY:
-	case PITCH_BUP_KEY:
-	case PITCH_DOWN_KEY:
-	case PITCH_BDOWN_KEY:
-	case PITCH_ZERO_KEY:
+	case MPG123_PITCH_UP_KEY:
+	case MPG123_PITCH_BUP_KEY:
+	case MPG123_PITCH_DOWN_KEY:
+	case MPG123_PITCH_BDOWN_KEY:
+	case MPG123_PITCH_ZERO_KEY:
 	{
-		double old_pitch = param.pitch;
-		long rate;
-		int channels, format;
-		int smode = 0;
-		if(param.usebuffer)
-		{
-			error("No runtime pitch change with output buffer, sorry.");
-			break;
-		}
+		double new_pitch = param.pitch;
 		switch(val) /* Not tolower here! */
 		{
-			case PITCH_UP_KEY:    param.pitch += PITCH_VAL;  break;
-			case PITCH_BUP_KEY:   param.pitch += PITCH_BVAL; break;
-			case PITCH_DOWN_KEY:  param.pitch -= PITCH_VAL;  break;
-			case PITCH_BDOWN_KEY: param.pitch -= PITCH_BVAL; break;
-			case PITCH_ZERO_KEY:  param.pitch = 0.0; break;
+			case MPG123_PITCH_UP_KEY:    new_pitch += MPG123_PITCH_VAL;  break;
+			case MPG123_PITCH_BUP_KEY:   new_pitch += MPG123_PITCH_BVAL; break;
+			case MPG123_PITCH_DOWN_KEY:  new_pitch -= MPG123_PITCH_VAL;  break;
+			case MPG123_PITCH_BDOWN_KEY: new_pitch -= MPG123_PITCH_BVAL; break;
+			case MPG123_PITCH_ZERO_KEY:  new_pitch = 0.0; break;
 		}
-		if(param.pitch < -0.99) param.pitch = -0.99;
-		/* Be safe, check support. */
-		mpg123_getformat(fr, &rate, &channels, &format);
-		if(channels == 1) smode = MPG123_MONO;
-		if(channels == 2) smode = MPG123_STEREO;
-
-		output_pause(ao);
-		audio_capabilities(ao, fr);
-		if(!(mpg123_format_support(fr, rate, format) & smode))
-		{
-			/* Note: When using --pitch command line parameter, you can go higher
-			   because a lower decoder sample rate is automagically chosen.
-			   Here, we'd need to switch decoder rate during track... good? */
-			error("Reached a hardware limit there with pitch!");
-			param.pitch = old_pitch;
-			audio_capabilities(ao, fr);
-		}
-		ao->format   = format;
-		ao->channels = channels;
-		ao->rate     = pitch_rate(rate); 
-		reset_output(ao);
-		output_unpause(ao);
+		set_pitch(fr, ao, new_pitch);
 		fprintf(stderr, "New pitch: %f\n", param.pitch);
 	}
 	break;
-	case VERBOSE_KEY:
+	case MPG123_VERBOSE_KEY:
 		param.verbose++;
 		if(param.verbose > VERBOSE_MAX)
 		{
@@ -364,34 +355,34 @@ static void term_handle_input(mpg123_handle *fr, audio_output_t *ao, int do_dela
 		}
 		mpg123_param(fr, MPG123_VERBOSE, param.verbose, 0);
 	break;
-	case RVA_KEY:
+	case MPG123_RVA_KEY:
 		if(++param.rva > MPG123_RVA_MAX) param.rva = 0;
 		mpg123_param(fr, MPG123_RVA, param.rva, 0);
-		mpg123_volume(fr, -1);
+		mpg123_volume_change(fr, 0.);
 	break;
-	case PREV_KEY:
+	case MPG123_PREV_KEY:
 		if(!param.usebuffer) ao->flush(ao);
 		else buffer_resync(); /* was: plain_buffer_resync */
 
 		prev_track();
 	break;
-	case PLAYLIST_KEY:
+	case MPG123_PLAYLIST_KEY:
 		fprintf(stderr, "%s\nPlaylist (\">\" indicates current track):\n", param.verbose ? "\n" : "");
 		print_playlist(stderr, 1);
 		fprintf(stderr, "\n");
 	break;
-	case TAG_KEY:
+	case MPG123_TAG_KEY:
 		fprintf(stderr, "%s\n", param.verbose ? "\n" : "");
 		print_id3_tag(fr, param.long_id3, stderr);
 		fprintf(stderr, "\n");
 	break;
-	case MPEG_KEY:
+	case MPG123_MPEG_KEY:
 		if(param.verbose) print_stat(fr,0,0); /* Make sure that we are talking about the correct frame. */
 		fprintf(stderr, "\n");
 		print_header(fr);
 		fprintf(stderr, "\n");
 	break;
-	case HELP_KEY:
+	case MPG123_HELP_KEY:
 	{ /* This is more than the one-liner before, but it's less spaghetti. */
 		int i;
 		fprintf(stderr,"\n\n -= terminal control keys =-\n");
@@ -405,8 +396,28 @@ static void term_handle_input(mpg123_handle *fr, audio_output_t *ao, int do_dela
 		fprintf(stderr, "\n");
 	}
 	break;
-	case FRAME_INDEX_KEY:
-		print_index(fr);
+	case MPG123_FRAME_INDEX_KEY:
+	case MPG123_VARIOUS_INFO_KEY:
+		if(param.verbose) fprintf(stderr, "\n");
+		switch(val) /* because of tolower() ... */
+		{
+			case MPG123_FRAME_INDEX_KEY:
+			print_index(fr);
+			{
+				long accurate;
+				if(mpg123_getstate(fr, MPG123_ACCURATE, &accurate, NULL) == MPG123_OK)
+				fprintf(stderr, "Accurate position: %s\n", (accurate == 0 ? "no" : "yes"));
+				else
+				error1("Unable to get state: %s", mpg123_strerror(fr));
+			}
+			break;
+			case MPG123_VARIOUS_INFO_KEY:
+			{
+				const char* curdec = mpg123_current_decoder(fr);
+				if(curdec == NULL) fprintf(stderr, "Cannot get decoder info!\n");
+				else fprintf(stderr, "Active decoder: %s\n", curdec);
+			}
+		}
 	break;
 	default:
 	  ;

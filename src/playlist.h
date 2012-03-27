@@ -8,7 +8,7 @@
 #ifndef MPG123_PLAYLIST_H
 #define MPG123_PLAYLIST_H
 
-#include "mpg123.h"
+#include "mpg123app.h"
 
 enum playlist_type { UNKNOWN = 0, M3U, PLS, NO_LIST };
 
@@ -16,12 +16,14 @@ typedef struct listitem
 {
 	char* url; /* the filename */
 	char freeit; /* if it was allocated and should be free()d here */
+	size_t playcount; /* has been played as ...th track in overall counting */
 } listitem;
 
 typedef struct playlist_struct
 {
 	FILE* file; /* the current playlist stream */
 	size_t entry; /* entry in the playlist file */
+	size_t playcount; /* overall track counter for playback */
 	long loop;    /* repeat a track n times */
 	size_t size;
 	size_t fill;
@@ -31,6 +33,9 @@ typedef struct playlist_struct
 	mpg123_string linebuf;
 	mpg123_string dir;
 	enum playlist_type type;
+#if defined (WANT_WIN32_SOCKETS)
+	int sockd; /* Is Win32 socket descriptor working? */
+#endif
 } playlist_struct;
 
 extern struct playlist_struct pl;

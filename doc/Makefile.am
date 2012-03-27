@@ -11,7 +11,6 @@ EXTRA_DIST = \
 	CONTACT \
 	PATENTS \
 	README.3DNOW \
-	README.WIN32 \
 	README.gain \
 	README.remote \
 	ROAD_TO_LGPL \
@@ -27,4 +26,5 @@ EXTRA_DIST = \
 	examples/scan.c \
 	examples/mpglib.c \
 	examples/id3dump.c \
+	examples/feedseek.c \
 	examples/Makefile

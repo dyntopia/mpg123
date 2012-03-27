@@ -29,9 +29,10 @@ struct queue_state
 	int next_buffer;
 	/* Buffer playback completion event */
 	HANDLE play_done_event;
+	HWAVEOUT waveout;
 };
 
-int open_win32(struct audio_output_struct *ao)
+static int open_win32(struct audio_output_struct *ao)
 {
 	struct queue_state* state;
 	int i;
@@ -67,8 +68,8 @@ int open_win32(struct audio_output_struct *ao)
 	out_fmt.nAvgBytesPerSec = out_fmt.nBlockAlign*out_fmt.nSamplesPerSec;
 	out_fmt.cbSize = 0;
 
-	res = waveOutOpen((HWAVEOUT*)&ao->fn, dev_id, &out_fmt,
-	                  (DWORD)state->play_done_event, 0, CALLBACK_EVENT);
+	res = waveOutOpen(&state->waveout, dev_id, &out_fmt,
+	                  (DWORD_PTR)state->play_done_event, 0, CALLBACK_EVENT);
 
 	switch(res)
 	{
@@ -91,7 +92,7 @@ int open_win32(struct audio_output_struct *ao)
 	return 0;
 }
 
-int get_formats_win32(struct audio_output_struct *ao)
+static int get_formats_win32(struct audio_output_struct *ao)
 {
 	/* FIXME: support for smth besides MPG123_ENC_SIGNED_16? */
 	return MPG123_ENC_SIGNED_16;
@@ -100,7 +101,7 @@ int get_formats_win32(struct audio_output_struct *ao)
 /* Stores audio data to the fixed size buffers and pushes them into the playback queue.
    I have one grief with that: The last piece of a track may not reach the output,
    only full buffers sent... But we don't get smooth audio otherwise. */
-int write_win32(struct audio_output_struct *ao, unsigned char *buf, int len)
+static int write_win32(struct audio_output_struct *ao, unsigned char *buf, int len)
 {
 	struct queue_state* state;
 	MMRESULT res;
@@ -126,7 +127,7 @@ int write_win32(struct audio_output_struct *ao, unsigned char *buf, int len)
 	/* If it was a full buffer being played, clean up. */
 	if(hdr->dwFlags & WHDR_DONE)
 	{
-		waveOutUnprepareHeader((HWAVEOUT)ao->fn, hdr, sizeof(WAVEHDR));
+		waveOutUnprepareHeader(state->waveout, hdr, sizeof(WAVEHDR));
 		hdr->dwFlags = 0;
 		hdr->dwBufferLength = 0;
 	}
@@ -140,10 +141,10 @@ int write_win32(struct audio_output_struct *ao, unsigned char *buf, int len)
 	hdr->dwBufferLength += bufill;
 	if(hdr->dwBufferLength == BUFFER_SIZE)
 	{ /* Send the buffer out when it's full. */
-		res = waveOutPrepareHeader((HWAVEOUT)ao->fn, hdr, sizeof(WAVEHDR));
+		res = waveOutPrepareHeader(state->waveout, hdr, sizeof(WAVEHDR));
 		if(res != MMSYSERR_NOERROR) ereturn(-1, "Can't write to audio output device (prepare).");
 
-		res = waveOutWrite((HWAVEOUT)ao->fn, hdr, sizeof(WAVEHDR));
+		res = waveOutWrite(state->waveout, hdr, sizeof(WAVEHDR));
 		if(res != MMSYSERR_NOERROR) ereturn(-1, "Can't write to audio output device.");
 
 		/* Cycle to the next buffer in the ring queue */
@@ -157,28 +158,30 @@ int write_win32(struct audio_output_struct *ao, unsigned char *buf, int len)
 	return len;
 }
 
-void flush_win32(struct audio_output_struct *ao)
+static void flush_win32(struct audio_output_struct *ao)
 {
-	int i;
+	int i, z;
 	struct queue_state* state;
 
 	if(!ao || !ao->userptr) return;
-
 	state = (struct queue_state*)ao->userptr;
-	waveOutReset((HWAVEOUT)ao->fn);
-	ResetEvent(state->play_done_event);
 
+	/* FIXME: The very last output buffer is not played. This could be a problem on the feeding side. */
+	i = 0;
+	z = state->next_buffer - 1;
 	for(i = 0; i < NUM_BUFFERS; i++)
 	{
-		if(state->buffer_headers[i].dwFlags & WHDR_DONE)
-		waveOutUnprepareHeader((HWAVEOUT)ao->fn, &state->buffer_headers[i], sizeof(WAVEHDR));
+		if(!state->buffer_headers[i].dwFlags & WHDR_DONE)
+			WaitForSingleObject(state->play_done_event, INFINITE);
 
+		waveOutUnprepareHeader(state->waveout, &state->buffer_headers[i], sizeof(WAVEHDR));
 		state->buffer_headers[i].dwFlags = 0;
 		state->buffer_headers[i].dwBufferLength = 0;
+		z = (z + 1) % NUM_BUFFERS;
 	}
 }
 
-int close_win32(struct audio_output_struct *ao)
+static int close_win32(struct audio_output_struct *ao)
 {
 	int i;
 	struct queue_state* state;
@@ -187,7 +190,7 @@ int close_win32(struct audio_output_struct *ao)
 	state = (struct queue_state*)ao->userptr;
 
 	flush_win32(ao);
-	waveOutClose((HWAVEOUT)ao->fn);
+	waveOutClose(state->waveout);
 	CloseHandle(state->play_done_event);
 
 	for(i = 0; i < NUM_BUFFERS; i++) free(state->buffer_headers[i].lpData);

@@ -14,6 +14,7 @@
 #ifndef _MPG123_AUDIO_H_
 #define _MPG123_AUDIO_H_
 
+#include "compat.h"
 #include "mpg123.h"
 #include "module.h"
 
@@ -81,6 +82,7 @@ audio_output_t* alloc_audio_output();
 void audio_capabilities(audio_output_t *ao, mpg123_handle *mh);
 int audio_fit_capabilities(audio_output_t *ao,int c,int r);
 const char* audio_encoding_name(const int encoding, const int longer);
+void print_capabilities(audio_output_t *ao, mpg123_handle *mh);
 
 int init_output(audio_output_t **ao);
 void exit_output(audio_output_t *ao, int rude);
@@ -90,6 +92,15 @@ void close_output(audio_output_t *ao );
 int reset_output(audio_output_t *ao);
 void output_pause(audio_output_t *ao);  /* Prepare output for inactivity. */
 void output_unpause(audio_output_t *ao); /* Reactivate output (buffer process). */
+
+void audio_enclist(char** list); /* Make a string of encoding names. */
+
+/*
+	Twiddle audio output rate to yield speedup/down (pitch) effect.
+	The actually achieved pitch value is stored in param.pitch.
+	Returns 1 if pitch setting succeeded, 0 otherwise.
+*/
+int set_pitch(mpg123_handle *fr, audio_output_t *ao, double new_pitch);
 
 #endif
 

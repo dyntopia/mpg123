@@ -1,7 +1,7 @@
 /*
 	frame: Heap of routines dealing with the core mpg123 data structure.
 
-	copyright 2008 by the mpg123 project - free software under the terms of the LGPL 2.1
+	copyright 2008-9 by the mpg123 project - free software under the terms of the LGPL 2.1
 	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Thomas Orgis
 */
@@ -9,8 +9,6 @@
 #include "mpg123lib_intern.h"
 #include "getcpuflags.h"
 #include "debug.h"
-
-#define IGNORESHIFT 2
 
 static void frame_fixed_reset(mpg123_handle *fr);
 
@@ -22,23 +20,29 @@ static void frame_fixed_reset(mpg123_handle *fr);
 	: (type*)(p)
 void frame_default_pars(mpg123_pars *mp)
 {
-	mp->outscale = MAXOUTBURST;
+	mp->outscale = 1.0;
 #ifdef GAPLESS
 	mp->flags = MPG123_GAPLESS;
 #else
 	mp->flags = 0;
 #endif
+#ifndef NO_NTOM
 	mp->force_rate = 0;
+#endif
 	mp->down_sample = 0;
 	mp->rva = 0;
 	mp->halfspeed = 0;
 	mp->doublespeed = 0;
 	mp->verbose = 0;
+#ifndef NO_ICY
 	mp->icy_interval = 0;
-#ifndef WIN32
-	mp->timeout = 0;
 #endif
+	mp->timeout = 0;
 	mp->resync_limit = 1024;
+#ifdef FRAME_INDEX
+	mp->index_size = INDEX_SIZE;
+#endif
+	mp->preframes = 4; /* That's good  for layer 3 ISO compliance bitstream. */
 	mpg123_fmt_all(mp);
 }
 
@@ -52,14 +56,25 @@ void frame_init_par(mpg123_handle *fr, mpg123_pars *mp)
 	fr->own_buffer = FALSE;
 	fr->buffer.data = NULL;
 	fr->rawbuffs = NULL;
+	fr->rawbuffss = 0;
 	fr->rawdecwin = NULL;
+	fr->rawdecwins = 0;
+#ifndef NO_8BIT
 	fr->conv16to8_buf = NULL;
-	fr->cpu_opts.type = defopt;
-	fr->cpu_opts.class = (defopt == mmx || defopt == sse || defopt == dreidnowext) ? mmxsse : normal;
+#endif
+#ifdef OPT_DITHER
+	fr->dithernoise = NULL;
+#endif
+	fr->layerscratch = NULL;
+	fr->xing_toc = NULL;
+	fr->cpu_opts.type = defdec();
+	fr->cpu_opts.class = decclass(fr->cpu_opts.type);
+#ifndef NO_NTOM
 	/* these two look unnecessary, check guarantee for synth_ntom_set_step (in control_generic, even)! */
 	fr->ntom_val[0] = NTOM_MUL>>1;
 	fr->ntom_val[1] = NTOM_MUL>>1;
 	fr->ntom_step = NTOM_MUL;
+#endif
 	/* unnecessary: fr->buffer.size = fr->buffer.fill = 0; */
 	mpg123_reset_eq(fr);
 	init_icy(&fr->icy);
@@ -67,17 +82,47 @@ void frame_init_par(mpg123_handle *fr, mpg123_pars *mp)
 	/* frame_outbuffer is missing... */
 	/* frame_buffers is missing... that one needs cpu opt setting! */
 	/* after these... frame_reset is needed before starting full decode */
-	fr->af.encoding = 0;
-	fr->af.rate = 0;
-	fr->af.channels = 0;
+	invalidate_format(&fr->af);
 	fr->rdat.r_read = NULL;
 	fr->rdat.r_lseek = NULL;
+	fr->rdat.iohandle = NULL;
+	fr->rdat.r_read_handle = NULL;
+	fr->rdat.r_lseek_handle = NULL;
+	fr->rdat.cleanup_handle = NULL;
+	fr->wrapperdata = NULL;
+	fr->wrapperclean = NULL;
 	fr->decoder_change = 1;
 	fr->err = MPG123_OK;
 	if(mp == NULL) frame_default_pars(&fr->p);
 	else memcpy(&fr->p, mp, sizeof(struct mpg123_pars_struct));
+
+	fr->down_sample = 0; /* Initialize to silence harmless errors when debugging. */
 	frame_fixed_reset(fr); /* Reset only the fixed data, dynamic buffers are not there yet! */
+	fr->synth = NULL;
+	fr->synth_mono = NULL;
+	fr->make_decode_tables = NULL;
+#ifdef FRAME_INDEX
+	fi_init(&fr->index);
+	frame_index_setup(fr); /* Apply the size setting. */
+#endif
 }
+
+#ifdef OPT_DITHER
+/* Also, only allocate the memory for the table on demand.
+   In future, one could create special noise for different sampling frequencies(?). */
+int frame_dither_init(mpg123_handle *fr)
+{
+	/* run-time dither noise table generation */
+	if(fr->dithernoise == NULL)
+	{
+		fr->dithernoise = malloc(sizeof(float)*DITHERSIZE);
+		if(fr->dithernoise == NULL) return 0;
+
+		dither_table_init(fr->dithernoise);
+	}
+	return 1;
+}
+#endif
 
 mpg123_pars attribute_align_arg *mpg123_new_pars(int *error)
 {
@@ -135,6 +180,36 @@ int attribute_align_arg mpg123_replace_buffer(mpg123_handle *mh, unsigned char *
 	mh->buffer.size = size;
 	mh->buffer.fill = 0;
 	return MPG123_OK;
+}
+
+#ifdef FRAME_INDEX
+int frame_index_setup(mpg123_handle *fr)
+{
+	int ret = MPG123_ERR;
+	if(fr->p.index_size >= 0)
+	{ /* Simple fixed index. */
+		fr->index.grow_size = 0;
+		debug1("resizing index to %li", fr->p.index_size);
+		ret = fi_resize(&fr->index, (size_t)fr->p.index_size);
+		debug2("index resized... %lu at %p", (unsigned long)fr->index.size, (void*)fr->index.data);
+	}
+	else
+	{ /* A growing index. We give it a start, though. */
+		fr->index.grow_size = (size_t)(- fr->p.index_size);
+		if(fr->index.size < fr->index.grow_size)
+		ret = fi_resize(&fr->index, fr->index.grow_size);
+		else
+		ret = MPG123_OK; /* We have minimal size already... and since growing is OK... */
+	}
+	debug2("set up frame index of size %lu (ret=%i)", (unsigned long)fr->index.size, ret);
+
+	return ret;
+}
+#endif
+
+static void frame_decode_buffers_reset(mpg123_handle *fr)
+{
+	memset(fr->rawbuffs, 0, fr->rawbuffss);
 }
 
 int frame_buffers(mpg123_handle *fr)
@@ -206,7 +281,6 @@ int frame_buffers(mpg123_handle *fr)
 	/* The MMX ones want 32byte alignment, which I'll try to ensure manually */
 	{
 		int decwin_size = (512+32)*sizeof(real);
-		if(fr->rawdecwin != NULL) free(fr->rawdecwin);
 #ifdef OPT_MMXORSSE
 #ifdef OPT_MULTI
 		if(fr->cpu_opts.class == mmxsse)
@@ -214,14 +288,32 @@ int frame_buffers(mpg123_handle *fr)
 #endif
 			/* decwin_mmx will share, decwins will be appended ... sizeof(float)==4 */
 			if(decwin_size < (512+32)*4) decwin_size = (512+32)*4;
-			decwin_size += (512+32)*4 + 31; /* the second window + alignment zone */
-			/* (512+32)*4/32 == 2176/32 == 68, so one decwin block retains alignment */
+
+			/* the second window + alignment zone -- we align for 32 bytes for SSE as
+			   requirement, 64 byte for matching cache line size (that matters!) */
+			decwin_size += (512+32)*4 + 63;
+			/* (512+32)*4/32 == 2176/32 == 68, so one decwin block retains alignment for 32 or 64 bytes */
 #ifdef OPT_MULTI
 		}
 #endif
 #endif
+#if defined(OPT_ALTIVEC) || defined(OPT_ARM) 
+		if(decwin_size < (512+32)*4) decwin_size = (512+32)*4;
+		decwin_size += 512*4;
+#endif
+		/* Hm, that's basically realloc() ... */
+		if(fr->rawdecwin != NULL && fr->rawdecwins != decwin_size)
+		{
+			free(fr->rawdecwin);
+			fr->rawdecwin = NULL;
+		}
+
+		if(fr->rawdecwin == NULL)
 		fr->rawdecwin = (unsigned char*) malloc(decwin_size);
+
 		if(fr->rawdecwin == NULL) return -1;
+
+		fr->rawdecwins = decwin_size;
 		fr->decwin = (real*) fr->rawdecwin;
 #ifdef OPT_MMXORSSE
 #ifdef OPT_MULTI
@@ -229,8 +321,8 @@ int frame_buffers(mpg123_handle *fr)
 		{
 #endif
 			/* align decwin, assign that to decwin_mmx, append decwins */
-			/* I need to add to decwin what is missing to the next full 32 byte -- also I want to make gcc -pedantic happy... */
-			fr->decwin = aligned_pointer(fr->rawdecwin,real,32);
+			/* I need to add to decwin what is missing to the next full 64 byte -- also I want to make gcc -pedantic happy... */
+			fr->decwin = aligned_pointer(fr->rawdecwin,real,64);
 			debug1("aligned decwin: %p", (void*)fr->decwin);
 			fr->decwin_mmx = (float*)fr->decwin;
 			fr->decwins = fr->decwin_mmx+512+32;
@@ -240,7 +332,54 @@ int frame_buffers(mpg123_handle *fr)
 #endif
 #endif
 	}
-	frame_buffers_reset(fr);
+
+	/* Layer scratch buffers are of compile-time fixed size, so allocate only once. */
+	if(fr->layerscratch == NULL)
+	{
+		/* Allocate specific layer1/2/3 buffers, so that we know they'll work for SSE. */
+		size_t scratchsize = 0;
+		real *scratcher;
+#ifndef NO_LAYER1
+		scratchsize += sizeof(real) * 2 * SBLIMIT;
+#endif
+#ifndef NO_LAYER2
+		scratchsize += sizeof(real) * 2 * 4 * SBLIMIT;
+#endif
+#ifndef NO_LAYER3
+		scratchsize += sizeof(real) * 2 * SBLIMIT * SSLIMIT; /* hybrid_in */
+		scratchsize += sizeof(real) * 2 * SSLIMIT * SBLIMIT; /* hybrid_out */
+#endif
+		/*
+			Now figure out correct alignment:
+			We need 16 byte minimum, smallest unit of the blocks is 2*SBLIMIT*sizeof(real), which is 64*4=256. Let's do 64bytes as heuristic for cache line (as proven useful in buffs above).
+		*/
+		fr->layerscratch = malloc(scratchsize+63);
+		if(fr->layerscratch == NULL) return -1;
+
+		/* Get aligned part of the memory, then divide it up. */
+		scratcher = aligned_pointer(fr->layerscratch,real,64);
+		/* Those funky pointer casts silence compilers...
+		   One might change the code at hand to really just use 1D arrays, but in practice, that would not make a (positive) difference. */
+#ifndef NO_LAYER1
+		fr->layer1.fraction = (real(*)[SBLIMIT])scratcher;
+		scratcher += 2 * SBLIMIT;
+#endif
+#ifndef NO_LAYER2
+		fr->layer2.fraction = (real(*)[4][SBLIMIT])scratcher;
+		scratcher += 2 * 4 * SBLIMIT;
+#endif
+#ifndef NO_LAYER3
+		fr->layer3.hybrid_in = (real(*)[SBLIMIT][SSLIMIT])scratcher;
+		scratcher += 2 * SBLIMIT * SSLIMIT;
+		fr->layer3.hybrid_out = (real(*)[SSLIMIT][SBLIMIT])scratcher;
+		scratcher += 2 * SSLIMIT * SBLIMIT;
+#endif
+		/* Note: These buffers don't need resetting here. */
+	}
+
+	/* Only reset the buffers we created just now. */
+	frame_decode_buffers_reset(fr);
+
 	debug1("frame %p buffer done", (void*)fr);
 	return 0;
 }
@@ -252,21 +391,48 @@ int frame_buffers_reset(mpg123_handle *fr)
 	/* Wondering: could it be actually _wanted_ to retain buffer contents over different files? (special gapless / cut stuff) */
 	fr->bsbuf = fr->bsspace[1];
 	fr->bsbufold = fr->bsbuf;
+	fr->bitreservoir = 0; /* Not entirely sure if this is the right place for that counter. */
+	frame_decode_buffers_reset(fr);
 	memset(fr->bsspace, 0, 2*(MAXFRAMESIZE+512));
 	memset(fr->ssave, 0, 34);
-	memset(fr->rawbuffs, 0, fr->rawbuffss);
 	fr->hybrid_blc[0] = fr->hybrid_blc[1] = 0;
 	memset(fr->hybrid_block, 0, sizeof(real)*2*2*SBLIMIT*SSLIMIT);
-	/* Not totally, but quite, sure that decwin(s) doesn't need cleaning. */
 	return 0;
 }
 
 void frame_icy_reset(mpg123_handle* fr)
 {
+#ifndef NO_ICY
 	if(fr->icy.data != NULL) free(fr->icy.data);
 	fr->icy.data = NULL;
 	fr->icy.interval = 0;
 	fr->icy.next = 0;
+#endif
+}
+
+void frame_free_toc(mpg123_handle *fr)
+{
+	if(fr->xing_toc != NULL){ free(fr->xing_toc); fr->xing_toc = NULL; }
+}
+
+/* Just copy the Xing TOC over... */
+int frame_fill_toc(mpg123_handle *fr, unsigned char* in)
+{
+	if(fr->xing_toc == NULL) fr->xing_toc = malloc(100);
+	if(fr->xing_toc != NULL)
+	{
+		memcpy(fr->xing_toc, in, 100);
+#ifdef DEBUG
+		debug("Got a TOC! Showing the values...");
+		{
+			int i;
+			for(i=0; i<100; ++i)
+			debug2("entry %i = %i", i, fr->xing_toc[i]);
+		}
+#endif
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /* Prepare the handle for a new track.
@@ -275,6 +441,11 @@ int frame_reset(mpg123_handle* fr)
 {
 	frame_buffers_reset(fr);
 	frame_fixed_reset(fr);
+	frame_free_toc(fr);
+#ifdef FRAME_INDEX
+	fi_reset(&fr->index);
+#endif
+
 	return 0;
 }
 
@@ -288,6 +459,10 @@ static void frame_fixed_reset(mpg123_handle *fr)
 	fr->metaflags = 0;
 	fr->outblock = mpg123_safe_buffer();
 	fr->num = -1;
+	fr->playnum = -1;
+	fr->accurate = TRUE;
+	fr->silent_resync = 0;
+	fr->audio_start = 0;
 	fr->clip = 0;
 	fr->oldhead = 0;
 	fr->firsthead = 0;
@@ -306,12 +481,9 @@ static void frame_fixed_reset(mpg123_handle *fr)
 	fr->rva.gain[1] = 0;
 	fr->rva.peak[0] = 0;
 	fr->rva.peak[1] = 0;
-	fr->index.fill = 0;
-	fr->index.step = 1;
 	fr->fsizeold = 0;
-	fr->do_recover = 0;
 	fr->firstframe = 0;
-	fr->ignoreframe = fr->firstframe-IGNORESHIFT;
+	fr->ignoreframe = fr->firstframe-fr->p.preframes;
 	fr->lastframe = -1;
 	fr->fresh = 1;
 	fr->new_format = 0;
@@ -320,36 +492,68 @@ static void frame_fixed_reset(mpg123_handle *fr)
 	fr->lastoff = 0;
 	fr->firstoff = 0;
 #endif
-	fr->bo[0] = 1; /* the usual bo */
-	fr->bo[1] = 0; /* ditherindex */
 #ifdef OPT_I486
-	fr->bo[0] = fr->bo[1] = FIR_SIZE-1;
+	fr->i486bo[0] = fr->i486bo[1] = FIR_SIZE-1;
+#endif
+	fr->bo = 1; /* the usual bo */
+#ifdef OPT_DITHER
+	fr->ditherindex = 0;
 #endif
 	reset_id3(fr);
 	reset_icy(&fr->icy);
 	/* ICY stuff should go into icy.c, eh? */
+#ifndef NO_ICY
 	fr->icy.interval = 0;
 	fr->icy.next = 0;
+#endif
 	fr->halfphase = 0; /* here or indeed only on first-time init? */
+	fr->error_protection = 0;
+	fr->freeformat_framesize = -1;
 }
 
 void frame_free_buffers(mpg123_handle *fr)
 {
 	if(fr->rawbuffs != NULL) free(fr->rawbuffs);
 	fr->rawbuffs = NULL;
+	fr->rawbuffss = 0;
 	if(fr->rawdecwin != NULL) free(fr->rawdecwin);
 	fr->rawdecwin = NULL;
+	fr->rawdecwins = 0;
+#ifndef NO_8BIT
 	if(fr->conv16to8_buf != NULL) free(fr->conv16to8_buf);
 	fr->conv16to8_buf = NULL;
+#endif
+	if(fr->layerscratch != NULL) free(fr->layerscratch);
 }
 
 void frame_exit(mpg123_handle *fr)
 {
-	if(fr->own_buffer && fr->buffer.data != NULL) free(fr->buffer.data);
+	if(fr->own_buffer && fr->buffer.data != NULL)
+	{
+		debug1("freeing buffer at %p", (void*)fr->buffer.data);
+		free(fr->buffer.data);
+	}
 	fr->buffer.data = NULL;
 	frame_free_buffers(fr);
+	frame_free_toc(fr);
+#ifdef FRAME_INDEX
+	fi_exit(&fr->index);
+#endif
+#ifdef OPT_DITHER
+	if(fr->dithernoise != NULL)
+	{
+		free(fr->dithernoise);
+		fr->dithernoise = NULL;
+	}
+#endif
 	exit_id3(fr);
 	clear_icy(&fr->icy);
+	/* Clean up possible mess from LFS wrapper. */
+	if(fr->wrapperclean != NULL)
+	{
+		fr->wrapperclean(fr->wrapperdata);
+		fr->wrapperdata = NULL;
+	}
 }
 
 int attribute_align_arg mpg123_info(mpg123_handle *mh, struct mpg123_frameinfo *mi)
@@ -385,6 +589,54 @@ int attribute_align_arg mpg123_info(mpg123_handle *mh, struct mpg123_frameinfo *
 	return MPG123_OK;
 }
 
+
+/*
+	Fuzzy frame offset searching (guessing).
+	When we don't have an accurate position, we may use an inaccurate one.
+	Possibilities:
+		- use approximate positions from Xing TOC (not yet parsed)
+		- guess wildly from mean framesize and offset of first frame / beginning of file.
+*/
+
+off_t frame_fuzzy_find(mpg123_handle *fr, off_t want_frame, off_t* get_frame)
+{
+	/* Default is to go to the beginning. */
+	off_t ret = fr->audio_start;
+	*get_frame = 0;
+
+	/* But we try to find something better. */
+	/* Xing VBR TOC works with relative positions, both in terms of audio frames and stream bytes.
+	   Thus, it only works when whe know the length of things.
+	   Oh... I assume the offsets are relative to the _total_ file length. */
+	if(fr->xing_toc != NULL && fr->track_frames > 0 && fr->rdat.filelen > 0)
+	{
+		/* One could round... */
+		int toc_entry = (int) ((double)want_frame*100./fr->track_frames);
+		/* It is an index in the 100-entry table. */
+		if(toc_entry < 0)  toc_entry = 0;
+		if(toc_entry > 99) toc_entry = 99;
+
+		/* Now estimate back what frame we get. */
+		*get_frame = (off_t) ((double)toc_entry/100. * fr->track_frames);
+		fr->accurate = FALSE;
+		fr->silent_resync = 1;
+		/* Question: Is the TOC for whole file size (with/without ID3) or the "real" audio data only?
+		   ID3v1 info could also matter. */
+		ret = (off_t) ((double)fr->xing_toc[toc_entry]/256.* fr->rdat.filelen);
+	}
+	else if(fr->mean_framesize > 0)
+	{	/* Just guess with mean framesize (may be exact with CBR files). */
+		/* Query filelen here or not? */
+		fr->accurate = FALSE; /* Fuzzy! */
+		fr->silent_resync = 1;
+		*get_frame = want_frame;
+		ret = (off_t) (fr->audio_start+fr->mean_framesize*want_frame);
+	}
+	debug5("fuzzy: want %li of %li, get %li at %li B of %li B",
+		(long)want_frame, (long)fr->track_frames, (long)*get_frame, (long)ret, (long)(fr->rdat.filelen-fr->audio_start));
+	return ret;
+}
+
 /*
 	find the best frame in index just before the wanted one, seek to there
 	then step to just before wanted one with read_frame
@@ -399,16 +651,42 @@ off_t frame_index_find(mpg123_handle *fr, off_t want_frame, off_t* get_frame)
 	/* default is file start if no index position */
 	off_t gopos = 0;
 	*get_frame = 0;
+#ifdef FRAME_INDEX
+	/* Possibly use VBRI index, too? I'd need an example for this... */
 	if(fr->index.fill)
 	{
 		/* find in index */
 		size_t fi;
 		/* at index fi there is frame step*fi... */
 		fi = want_frame/fr->index.step;
-		if(fi >= fr->index.fill) fi = fr->index.fill - 1;
+		if(fi >= fr->index.fill) /* If we are beyond the end of frame index...*/
+		{
+			/* When fuzzy seek is allowed, we have some limited tolerance for the frames we want to read rather then jump over. */
+			if(fr->p.flags & MPG123_FUZZY && want_frame - (fr->index.fill-1)*fr->index.step > 10)
+			{
+				gopos = frame_fuzzy_find(fr, want_frame, get_frame);
+				if(gopos > fr->audio_start) return gopos; /* Only in that case, we have a useful guess. */
+				/* Else... just continue, fuzzyness didn't help. */
+			}
+			/* Use the last available position, slowly advancing from that one. */
+			fi = fr->index.fill - 1;
+		}
+		/* We have index position, that yields frame and byte offsets. */
 		*get_frame = fi*fr->index.step;
 		gopos = fr->index.data[fi];
+		fr->accurate = TRUE; /* When using the frame index, we are accurate. */
 	}
+	else
+	{
+#endif
+		if(fr->p.flags & MPG123_FUZZY)
+		return frame_fuzzy_find(fr, want_frame, get_frame);
+		/* A bit hackish here... but we need to be fresh when looking for the first header again. */
+		fr->firsthead = 0;
+		fr->oldhead = 0;
+#ifdef FRAME_INDEX
+	}
+#endif
 	debug2("index: 0x%lx for frame %li", (unsigned long)gopos, (long) *get_frame);
 	return gopos;
 }
@@ -419,10 +697,16 @@ off_t frame_ins2outs(mpg123_handle *fr, off_t ins)
 	switch(fr->down_sample)
 	{
 		case 0:
+#		ifndef NO_DOWNSAMPLE
 		case 1:
-		case 2: outs = ins>>fr->down_sample; break;
+		case 2:
+#		endif
+			outs = ins>>fr->down_sample;
+		break;
+#		ifndef NO_NTOM
 		case 3: outs = ntom_ins2outs(fr, ins); break;
-		default: error("Bad down_sample ... should not be possible!!");
+#		endif
+		default: error1("Bad down_sample (%i) ... should not be possible!!", fr->down_sample);
 	}
 	return outs;
 }
@@ -433,10 +717,38 @@ off_t frame_outs(mpg123_handle *fr, off_t num)
 	switch(fr->down_sample)
 	{
 		case 0:
+#		ifndef NO_DOWNSAMPLE
 		case 1:
-		case 2: outs = (spf(fr)>>fr->down_sample)*num; break;
+		case 2:
+#		endif
+			outs = (spf(fr)>>fr->down_sample)*num;
+		break;
+#ifndef NO_NTOM
 		case 3: outs = ntom_frmouts(fr, num); break;
-		default: error("Bad down_sample ... should not be possible!!");
+#endif
+		default: error1("Bad down_sample (%i) ... should not be possible!!", fr->down_sample);
+	}
+	return outs;
+}
+
+/* Compute the number of output samples we expect from this frame.
+   This is either simple spf() or a tad more elaborate for ntom. */
+off_t frame_expect_outsamples(mpg123_handle *fr)
+{
+	off_t outs = 0;
+	switch(fr->down_sample)
+	{
+		case 0:
+#		ifndef NO_DOWNSAMPLE
+		case 1:
+		case 2:
+#		endif
+			outs = spf(fr)>>fr->down_sample;
+		break;
+#ifndef NO_NTOM
+		case 3: outs = ntom_frame_outsamples(fr); break;
+#endif
+		default: error1("Bad down_sample (%i) ... should not be possible!!", fr->down_sample);
 	}
 	return outs;
 }
@@ -447,9 +759,15 @@ off_t frame_offset(mpg123_handle *fr, off_t outs)
 	switch(fr->down_sample)
 	{
 		case 0:
+#		ifndef NO_DOWNSAMPLE
 		case 1:
-		case 2: num = outs/(spf(fr)>>fr->down_sample); break;
+		case 2:
+#		endif
+			num = outs/(spf(fr)>>fr->down_sample);
+		break;
+#ifndef NO_NTOM
 		case 3: num = ntom_frameoff(fr, outs); break;
+#endif
 		default: error("Bad down_sample ... should not be possible!!");
 	}
 	return num;
@@ -473,7 +791,39 @@ void frame_gapless_realinit(mpg123_handle *fr)
 	fr->end_os   = frame_ins2outs(fr, fr->end_s);
 	debug2("frame_gapless_realinit: from %lu to %lu samples", (long unsigned)fr->begin_os, (long unsigned)fr->end_os);
 }
+
+/* When we got a new sample count, update the gaplessness. */
+void frame_gapless_update(mpg123_handle *fr, off_t total_samples)
+{
+	if(fr->end_s < 1)
+	{
+		fr->end_s = total_samples;
+		frame_gapless_realinit(fr);
+	}
+	else if(fr->end_s > total_samples)
+	{
+		if(NOQUIET) error2("end sample count smaller than gapless end! (%"OFF_P" < %"OFF_P").", (off_p)total_samples, (off_p)fr->end_s);
+		/* Humbly disabling gapless stuff on track end. */
+		fr->end_s = 0;
+		frame_gapless_realinit(fr);
+		fr->lastframe = -1;
+		fr->lastoff = 0;
+	}
+}
+
 #endif
+
+/* Compute the needed frame to ignore from, for getting accurate/consistent output for intended firstframe. */
+static off_t ignoreframe(mpg123_handle *fr)
+{
+	off_t preshift = fr->p.preframes;
+	/* Layer 3 _really_ needs at least one frame before. */
+	if(fr->lay==3 && preshift < 1) preshift = 1;
+	/* Layer 1 & 2 reall do not need more than 2. */
+	if(fr->lay!=3 && preshift > 2) preshift = 2;
+
+	return fr->firstframe - preshift;
+}
 
 /* The frame seek... This is not simply the seek to fe*spf(fr) samples in output because we think of _input_ frames here.
    Seek to frame offset 1 may be just seek to 200 samples offset in output since the beginning of first frame is delay/padding.
@@ -501,7 +851,7 @@ void frame_set_frameseek(mpg123_handle *fr, off_t fe)
 		} else fr->lastoff = 0;
 	} else { fr->firstoff = fr->lastoff = 0; fr->lastframe = -1; }
 #endif
-	fr->ignoreframe = fr->lay == 3 ? fr->firstframe-IGNORESHIFT : fr->firstframe;
+	fr->ignoreframe = ignoreframe(fr);
 #ifdef GAPLESS
 	debug5("frame_set_frameseek: begin at %li frames and %li samples, end at %li and %li; ignore from %li",
 	       (long) fr->firstframe, (long) fr->firstoff,
@@ -512,12 +862,22 @@ void frame_set_frameseek(mpg123_handle *fr, off_t fe)
 #endif
 }
 
+void frame_skip(mpg123_handle *fr)
+{
+#ifndef NO_LAYER3
+	if(fr->lay == 3) set_pointer(fr, 512);
+#endif
+}
+
 /* Sample accurate seek prepare for decoder. */
 /* This gets unadjusted output samples and takes resampling into account */
 void frame_set_seek(mpg123_handle *fr, off_t sp)
 {
 	fr->firstframe = frame_offset(fr, sp);
-	fr->ignoreframe = fr->lay == 3 ? fr->firstframe-IGNORESHIFT : fr->firstframe;
+#ifndef NO_NTOM
+	if(fr->down_sample == 3) ntom_set_ntom(fr, fr->firstframe);
+#endif
+	fr->ignoreframe = ignoreframe(fr);
 #ifdef GAPLESS /* The sample offset is used for non-gapless mode, too! */
 	fr->firstoff = sp - frame_outs(fr, fr->firstframe);
 	debug5("frame_set_seek: begin at %li frames and %li samples, end at %li and %li; ignore from %li",
@@ -527,83 +887,23 @@ void frame_set_seek(mpg123_handle *fr, off_t sp)
 	debug3("frame_set_seek: begin at %li frames, end at %li; ignore from %li",
 	       (long) fr->firstframe, (long) fr->lastframe, (long) fr->ignoreframe);
 #endif
-}
-
-/* to vanish */
-void frame_outformat(mpg123_handle *fr, int format, int channels, long rate)
-{
-	fr->af.encoding = format;
-	fr->af.rate = rate;
-	fr->af.channels = channels;
-}
-
-/* set synth functions for current frame, optimizations handled by opt_* macros */
-int set_synth_functions(mpg123_handle *fr)
-{
-	int ds = fr->down_sample;
-	int p8=0;
-	static func_synth funcs[2][4] = { 
-		{ NULL,
-		  synth_2to1,
-		  synth_4to1,
-		  synth_ntom } ,
-		{ NULL,
-		  synth_2to1_8bit,
-		  synth_4to1_8bit,
-		  synth_ntom_8bit } 
-	};
-	static func_synth_mono funcs_mono[2][2][4] = {    
-		{ { NULL ,
-		    synth_2to1_mono2stereo ,
-		    synth_4to1_mono2stereo ,
-		    synth_ntom_mono2stereo } ,
-		  { NULL ,
-		    synth_2to1_8bit_mono2stereo ,
-		    synth_4to1_8bit_mono2stereo ,
-		    synth_ntom_8bit_mono2stereo } } ,
-		{ { NULL ,
-		    synth_2to1_mono ,
-		    synth_4to1_mono ,
-		    synth_ntom_mono } ,
-		  { NULL ,
-		    synth_2to1_8bit_mono ,
-		    synth_4to1_8bit_mono ,
-		    synth_ntom_8bit_mono } }
-	};
-
-	/* possibly non-constand entries filled here */
-	funcs[0][0] = (func_synth) opt_synth_1to1(fr);
-	funcs[1][0] = (func_synth) opt_synth_1to1_8bit(fr);
-	funcs_mono[0][0][0] = (func_synth_mono) opt_synth_1to1_mono2stereo(fr);
-	funcs_mono[0][1][0] = (func_synth_mono) opt_synth_1to1_8bit_mono2stereo(fr);
-	funcs_mono[1][0][0] = (func_synth_mono) opt_synth_1to1_mono(fr);
-	funcs_mono[1][1][0] = (func_synth_mono) opt_synth_1to1_8bit_mono(fr);
-
-	if(fr->af.encoding & MPG123_ENC_8) p8 = 1;
-	fr->synth = funcs[p8][ds];
-	fr->synth_mono = funcs_mono[fr->af.channels==2 ? 0 : 1][p8][ds];
-
-	if(p8)
-	{
-		if(make_conv16to8_table(fr) != 0)
-		{
-			/* it's a bit more work to get proper error propagation up */
-			return -1;
-		}
-	}
-	return 0;
+	/* Old bit reservoir should be invalid, eh? */
+	fr->bitreservoir = 0;
 }
 
 int attribute_align_arg mpg123_volume_change(mpg123_handle *mh, double change)
 {
 	if(mh == NULL) return MPG123_ERR;
-	return mpg123_volume(mh, change + (double) mh->p.outscale / MAXOUTBURST);
+	return mpg123_volume(mh, change + (double) mh->p.outscale);
 }
 
 int attribute_align_arg mpg123_volume(mpg123_handle *mh, double vol)
 {
 	if(mh == NULL) return MPG123_ERR;
-	if(vol >= 0) mh->p.outscale = (double) MAXOUTBURST * vol;
+
+	if(vol >= 0) mh->p.outscale = vol;
+	else mh->p.outscale = 0.;
+
 	do_rva(mh);
 	return MPG123_OK;
 }
@@ -635,7 +935,7 @@ void do_rva(mpg123_handle *fr)
 {
 	double peak = 0;
 	double gain = 0;
-	scale_t newscale;
+	double newscale;
 	double rvafact = 1;
 	if(get_rva(fr, &peak, &gain))
 	{
@@ -646,286 +946,28 @@ void do_rva(mpg123_handle *fr)
 	newscale = fr->p.outscale*rvafact;
 
 	/* if peak is unknown (== 0) this check won't hurt */
-	if((peak*newscale) > MAXOUTBURST)
+	if((peak*newscale) > 1.0)
 	{
-		newscale = (scale_t) ((double) MAXOUTBURST/peak);
-		warning2("limiting scale value to %li to prevent clipping with indicated peak factor of %f", newscale, peak);
+		newscale = 1.0/peak;
+		warning2("limiting scale value to %f to prevent clipping with indicated peak factor of %f", newscale, peak);
 	}
 	/* first rva setting is forced with fr->lastscale < 0 */
-	if(newscale != fr->lastscale)
+	if(newscale != fr->lastscale || fr->decoder_change)
 	{
-		debug3("changing scale value from %li to %li (peak estimated to %li)", fr->lastscale != -1 ? fr->lastscale : fr->p.outscale, newscale, (long) (newscale*peak));
+		debug3("changing scale value from %f to %f (peak estimated to %f)", fr->lastscale != -1 ? fr->lastscale : fr->p.outscale, newscale, (double) (newscale*peak));
 		fr->lastscale = newscale;
-		opt_make_decode_tables(fr); /* the actual work */
+		/* It may be too early, actually. */
+		if(fr->make_decode_tables != NULL) fr->make_decode_tables(fr); /* the actual work */
 	}
 }
+
 
 int attribute_align_arg mpg123_getvolume(mpg123_handle *mh, double *base, double *really, double *rva_db)
 {
 	if(mh == NULL) return MPG123_ERR;
-	if(base)   *base   = (double)mh->p.outscale/MAXOUTBURST;
-	if(really) *really = (double)mh->lastscale/MAXOUTBURST;
+	if(base)   *base   = mh->p.outscale;
+	if(really) *really = mh->lastscale;
 	get_rva(mh, NULL, rva_db);
 	return MPG123_OK;
-}
-
-int  frame_cpu_opt(mpg123_handle *fr, const char* cpu)
-{
-	char* chosen = ""; /* the chosed decoder opt as string */
-	int auto_choose = 0;
-	int done = 0;
-	if(   (cpu == NULL)
-	   || (cpu[0] == 0)
-	   || !strcasecmp(cpu, "auto") )
-	auto_choose = 1;
-#ifndef OPT_MULTI
-	{
-		char **sd = mpg123_decoders(); /* this contains _one_ decoder */
-		if(!auto_choose && strcasecmp(cpu, sd[0])) done = 0;
-		else
-		{
-			chosen = sd[0];
-			done = 1;
-		}
-	}
-#else
-	fr->cpu_opts.type = nodec;
-	/* covers any i386+ cpu; they actually differ only in the synth_1to1 function... */
-	#ifdef OPT_X86
-
-	#ifdef OPT_MMXORSSE
-	fr->cpu_opts.make_decode_tables   = make_decode_tables;
-	fr->cpu_opts.init_layer3_gainpow2 = init_layer3_gainpow2;
-	fr->cpu_opts.init_layer2_table    = init_layer2_table;
-	#endif
-	#ifdef OPT_3DNOW
-	fr->cpu_opts.dct36 = dct36;
-	#endif
-	#ifdef OPT_3DNOWEXT
-	fr->cpu_opts.dct36 = dct36;
-	#endif
-
-	if(cpu_i586(cpu_flags))
-	{
-		debug2("standard flags: 0x%08x\textended flags: 0x%08x", cpu_flags.std, cpu_flags.ext);
-		#ifdef OPT_3DNOWEXT
-		if(   !done && (auto_choose || !strcasecmp(cpu, "3dnowext"))
-		   && cpu_3dnow(cpu_flags)
-		   && cpu_3dnowext(cpu_flags)
-		   && cpu_mmx(cpu_flags) )
-		{
-			int go = 1;
-			if(fr->p.force_rate)
-			{
-				#if defined(K6_FALLBACK) || defined(PENTIUM_FALLBACK)
-				if(!auto_choose){ if(NOQUIET) error("I refuse to choose 3DNowExt as this will screw up with forced rate!"); }
-				else if(VERBOSE) fprintf(stderr, "Note: Not choosing 3DNowExt because flexible rate not supported.\n");
-
-				go = 0;
-				#else
-				if(NOQUIET) error("You will hear some awful sound because of flexible rate being chosen with 3DNowExt decoder!");
-				#endif
-			}
-			if(go){ /* temporary hack for flexible rate bug, not going indent this - fix it instead! */
-			chosen = "3DNowExt";
-			fr->cpu_opts.type = dreidnowext;
-			fr->cpu_opts.class = mmxsse;
-			fr->cpu_opts.dct36 = dct36_3dnowext;
-			fr->cpu_opts.synth_1to1 = synth_1to1_3dnowext;
-			fr->cpu_opts.dct64 = dct64_mmx; /* only use the 3dnow version in the synth_1to1_sse */
-			fr->cpu_opts.make_decode_tables   = make_decode_tables_mmx;
-			fr->cpu_opts.init_layer3_gainpow2 = init_layer3_gainpow2_mmx;
-			fr->cpu_opts.init_layer2_table    = init_layer2_table_mmx;
-			fr->cpu_opts.mpl_dct64 = dct64_3dnowext;
-			done = 1;
-			}
-		}
-		#endif
-		#ifdef OPT_SSE
-		if(   !done && (auto_choose || !strcasecmp(cpu, "sse"))
-		   && cpu_sse(cpu_flags) && cpu_mmx(cpu_flags) )
-		{
-			int go = 1;
-			if(fr->p.force_rate)
-			{
-				#ifdef PENTIUM_FALLBACK
-				if(!auto_choose){ if(NOQUIET) error("I refuse to choose SSE as this will screw up with forced rate!"); }
-				else if(VERBOSE) fprintf(stderr, "Note: Not choosing SSE because flexible rate not supported.\n");
-
-				go = 0;
-				#else
-				if(NOQUIET) error("You will hear some awful sound because of flexible rate being chosen with SSE decoder!");
-				#endif
-			}
-			if(go){ /* temporary hack for flexible rate bug, not going indent this - fix it instead! */
-			chosen = "SSE";
-			fr->cpu_opts.type = sse;
-			fr->cpu_opts.class = mmxsse;
-			fr->cpu_opts.synth_1to1 = synth_1to1_sse;
-			fr->cpu_opts.dct64 = dct64_mmx; /* only use the sse version in the synth_1to1_sse */
-			fr->cpu_opts.make_decode_tables   = make_decode_tables_mmx;
-			fr->cpu_opts.init_layer3_gainpow2 = init_layer3_gainpow2_mmx;
-			fr->cpu_opts.init_layer2_table    = init_layer2_table_mmx;
-			fr->cpu_opts.mpl_dct64 = dct64_sse;
-			done = 1;
-			}
-		}
-		#endif
-		#ifdef OPT_3DNOW
-		fr->cpu_opts.dct36 = dct36;
-		/* TODO: make autodetection for _all_ x86 optimizations (maybe just for i586+ and keep separate 486 build?) */
-		/* check cpuflags bit 31 (3DNow!) and 23 (MMX) */
-		if(    !done && (auto_choose || !strcasecmp(cpu, "3dnow"))
-		    && cpu_3dnow(cpu_flags) && cpu_mmx(cpu_flags) )
-		{
-			chosen = "3DNow";
-			fr->cpu_opts.type = dreidnow;
-			fr->cpu_opts.dct36 = dct36_3dnow; /* 3DNow! optimized dct36() */
-			fr->cpu_opts.synth_1to1 = synth_1to1_3dnow;
-			fr->cpu_opts.dct64 = dct64_i386; /* use the 3dnow one? */
-			done = 1;
-		}
-		#endif
-		#ifdef OPT_MMX
-		if(   !done && (auto_choose || !strcasecmp(cpu, "mmx"))
-		   && cpu_mmx(cpu_flags) )
-		{
-			int go = 1;
-			if(fr->p.force_rate)
-			{
-				#ifdef PENTIUM_FALLBACK
-				if(!auto_choose){ if(NOQUIET) error("I refuse to choose MMX as this will screw up with forced rate!"); }
-				else if(VERBOSE) fprintf(stderr, "Note: Not choosing MMX because flexible rate not supported.\n");
-
-				go = 0;
-				#else
-				error("You will hear some awful sound because of flexible rate being chosen with MMX decoder!");
-				#endif
-			}
-			if(go){ /* temporary hack for flexible rate bug, not going indent this - fix it instead! */
-			chosen = "MMX";
-			fr->cpu_opts.type = mmx;
-			fr->cpu_opts.class = mmxsse;
-			fr->cpu_opts.synth_1to1 = synth_1to1_mmx;
-			fr->cpu_opts.dct64 = dct64_mmx;
-			fr->cpu_opts.make_decode_tables   = make_decode_tables_mmx;
-			fr->cpu_opts.init_layer3_gainpow2 = init_layer3_gainpow2_mmx;
-			fr->cpu_opts.init_layer2_table    = init_layer2_table_mmx;
-			done = 1;
-			}
-		}
-		#endif
-		#ifdef OPT_I586
-		if(!done && (auto_choose || !strcasecmp(cpu, "i586")))
-		{
-			chosen = "i586/pentium";
-			fr->cpu_opts.type = ifuenf;
-			fr->cpu_opts.synth_1to1 = synth_1to1_i586;
-			fr->cpu_opts.synth_1to1_i586_asm = synth_1to1_i586_asm;
-			fr->cpu_opts.dct64 = dct64_i386;
-			done = 1;
-		}
-		#endif
-		#ifdef OPT_I586_DITHER
-		if(!done && (auto_choose || !strcasecmp(cpu, "i586_dither")))
-		{
-			chosen = "dithered i586/pentium";
-			fr->cpu_opts.type = ifuenf_dither;
-			fr->cpu_opts.synth_1to1 = synth_1to1_i586;
-			fr->cpu_opts.dct64 = dct64_i386;
-			fr->cpu_opts.synth_1to1_i586_asm = synth_1to1_i586_asm_dither;
-			done = 1;
-		}
-		#endif
-	}
-	#ifdef OPT_I486 /* that won't cooperate nicely in multi opt mode - forcing i486 in layer3.c */
-	if(!done && (auto_choose || !strcasecmp(cpu, "i486")))
-	{
-		chosen = "i486";
-		fr->cpu_opts.type = ivier;
-		fr->cpu_opts.synth_1to1 = synth_1to1_i386; /* i486 function is special */
-		fr->cpu_opts.dct64 = dct64_i386;
-		done = 1;
-	}
-	#endif
-	#ifdef OPT_I386
-	if(!done && (auto_choose || !strcasecmp(cpu, "i386")))
-	{
-		chosen = "i386";
-		fr->cpu_opts.type = idrei;
-		fr->cpu_opts.synth_1to1 = synth_1to1_i386;
-		fr->cpu_opts.dct64 = dct64_i386;
-		done = 1;
-	}
-	#endif
-
-	if(done) /* set common x86 functions */
-	{
-		fr->cpu_opts.synth_1to1_mono = synth_1to1_mono_i386;
-		fr->cpu_opts.synth_1to1_mono2stereo = synth_1to1_mono2stereo_i386;
-		fr->cpu_opts.synth_1to1_8bit = synth_1to1_8bit_i386;
-		fr->cpu_opts.synth_1to1_8bit_mono = synth_1to1_8bit_mono_i386;
-		fr->cpu_opts.synth_1to1_8bit_mono2stereo = synth_1to1_8bit_mono2stereo_i386;
-	}
-	#endif /* OPT_X86 */
-
-	#ifdef OPT_ALTIVEC
-	if(!done && (auto_choose || !strcasecmp(cpu, "altivec")))
-	{
-		chosen = "AltiVec";
-		fr->cpu_opts.type = altivec;
-		fr->cpu_opts.dct64 = dct64_altivec;
-		fr->cpu_opts.synth_1to1 = synth_1to1_altivec;
-		fr->cpu_opts.synth_1to1_mono = synth_1to1_mono_altivec;
-		fr->cpu_opts.synth_1to1_mono2stereo = synth_1to1_mono2stereo_altivec;
-		fr->cpu_opts.synth_1to1_8bit = synth_1to1_8bit_altivec;
-		fr->cpu_opts.synth_1to1_8bit_mono = synth_1to1_8bit_mono_altivec;
-		fr->cpu_opts.synth_1to1_8bit_mono2stereo = synth_1to1_8bit_mono2stereo_altivec;
-		done = 1;
-	}
-	#endif
-
-	#ifdef OPT_GENERIC
-	if(!done && (auto_choose || !strcasecmp(cpu, "generic")))
-	{
-		chosen = "generic";
-		fr->cpu_opts.type = generic;
-		fr->cpu_opts.dct64 = dct64;
-		fr->cpu_opts.synth_1to1 = synth_1to1;
-		fr->cpu_opts.synth_1to1_mono = synth_1to1_mono;
-		fr->cpu_opts.synth_1to1_mono2stereo = synth_1to1_mono2stereo;
-		fr->cpu_opts.synth_1to1_8bit = synth_1to1_8bit;
-		fr->cpu_opts.synth_1to1_8bit_mono = synth_1to1_8bit_mono;
-		fr->cpu_opts.synth_1to1_8bit_mono2stereo = synth_1to1_8bit_mono2stereo;
-		done = 1;
-	}
-	#endif
-#endif
-	if(done)
-	{
-		if(VERBOSE) fprintf(stderr, "Decoder: %s\n", chosen);
-		return 1;
-	}
-	else
-	{
-		if(NOQUIET) error("Could not set optimization!");
-		return 0;
-	}
-}
-
-enum optdec dectype(const char* decoder)
-{
-	if(decoder == NULL) return autodec;
-	if(!strcasecmp(decoder, "3dnowext"))    return dreidnowext;
-	if(!strcasecmp(decoder, "3dnow"))       return dreidnow;
-	if(!strcasecmp(decoder, "sse"))         return sse;
-	if(!strcasecmp(decoder, "mmx"))         return mmx;
-	if(!strcasecmp(decoder, "generic"))     return generic;
-	if(!strcasecmp(decoder, "altivec"))     return altivec;
-	if(!strcasecmp(decoder, "i386"))        return idrei;
-	if(!strcasecmp(decoder, "i486"))        return ivier;
-	if(!strcasecmp(decoder, "i586"))        return ifuenf;
-	if(!strcasecmp(decoder, "i586_dither")) return ifuenf_dither;
-	return nodec;
 }
 

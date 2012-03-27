@@ -1,7 +1,7 @@
 /*
 	portaudio: audio output via PortAudio cross-platform audio API
 
-	copyright 2006 by the mpg123 project - free software under the terms of the LGPL 2.1
+	copyright 2006-9 by the mpg123 project - free software under the terms of the LGPL 2.1
 	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Nicholas J. Humfrey
 */
@@ -11,12 +11,16 @@
 #include <portaudio.h>
 
 #include "audio.h"
-#include "sfifo.h"
 #include "mpg123app.h"
 
 #ifdef WIN32
 #include <windows.h>
 #endif
+
+/* Including the sfifo code locally, to avoid module linkage issues. */
+#define SFIFO_STATIC
+#include "sfifo.c"
+
 #include "debug.h"
 
 #define SAMPLE_SIZE			(2)

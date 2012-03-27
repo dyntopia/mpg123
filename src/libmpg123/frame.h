@@ -10,11 +10,21 @@
 #define MPG123_FRAME_H
 
 #include <stdio.h>
+#include "config.h"
 #include "mpg123.h"
+#include "optimize.h"
 #include "id3.h"
 #include "icy.h"
 #include "reader.h"
-#include "optimize.h"
+#ifdef FRAME_INDEX
+#include "index.h"
+#endif
+#include "synths.h"
+
+#ifdef OPT_DITHER
+#include "dither.h"
+int frame_dither_init(mpg123_handle *fr);
+#endif
 
 /* max = 1728 */
 #define MAXFRAMESIZE 3456
@@ -23,13 +33,6 @@ struct al_table
 {
   short bits;
   short d;
-};
-
-struct frame_index
-{
-	off_t data[INDEX_SIZE];
-	size_t fill;
-	off_t step;
 };
 
 /* the output buffer, used to be pcm_sample, pcm_point and audiobufsize */
@@ -44,33 +47,39 @@ struct outbuffer
 struct audioformat
 {
 	int encoding;
+	int encsize; /* Size of one sample in bytes, plain int should be fine here... */
 	int channels;
 	long rate;
 };
 
-enum optdec { autodec=-1, nodec=0, generic, idrei, ivier, ifuenf, ifuenf_dither, mmx, dreidnow, dreidnowext, altivec, sse };
-enum optcla { nocla=0, normal, mmxsse };
+void invalidate_format(struct audioformat *af);
 
 struct mpg123_pars_struct
 {
 	int verbose;    /* verbose level */
 	long flags; /* combination of above */
+#ifndef NO_NTOM
 	long force_rate;
+#endif
 	int down_sample;
 	int rva; /* (which) rva to do: 0: nothing, 1: radio/mix/track 2: album/audiophile */
 	long halfspeed;
 	long doublespeed;
-#ifndef WIN32
 	long timeout;
-#endif
 #define NUM_CHANNELS 2
 	char audio_caps[NUM_CHANNELS][MPG123_RATES+1][MPG123_ENCODINGS];
 /*	long start_frame; */ /* frame offset to begin with */
 /*	long frame_number;*/ /* number of frames to decode */
+#ifndef NO_ICY
 	long icy_interval;
-	scale_t outscale;
+#endif
+	double outscale;
 	long resync_limit;
+	long index_size; /* Long, because: negative values have a meaning. */
+	long preframes;
 };
+
+
 
 /* There is a lot to condense here... many ints can be merged as flags; though the main space is still consumed by buffers. */
 struct mpg123_handle_struct
@@ -84,8 +93,16 @@ struct mpg123_handle_struct
 	real *real_buffs[2][2];
 	unsigned char *rawbuffs;
 	int rawbuffss;
-	int bo[2]; /* i486 and dither need a second value */
+#ifdef OPT_I486
+	int i486bo[2];
+#endif
+	int bo; /* Just have it always here. */
+#ifdef OPT_DITHER
+	int ditherindex;
+	float *dithernoise;
+#endif
 	unsigned char* rawdecwin; /* the block with all decwins */
+	int rawdecwins; /* size of rawdecwin memory */
 	real *decwin; /* _the_ decode table */
 #ifdef OPT_MMXORSSE
 	/* I am not really sure that I need both of them... used in assembler */
@@ -98,11 +115,11 @@ struct mpg123_handle_struct
 	/* for halfspeed mode */
 	unsigned char ssave[34];
 	int halfphase;
-
+#ifndef NO_8BIT
 	/* a raw buffer and a pointer into the middle for signed short conversion, only allocated on demand */
 	unsigned char *conv16to8_buf;
 	unsigned char *conv16to8;
-
+#endif
 	/* There's some possible memory saving for stuff that is not _really_ dynamic. */
 
 	/* layer3 */
@@ -113,10 +130,11 @@ struct mpg123_handle_struct
 	/* layer2 */
 	real muls[27][64];	/* also used by layer 1 */
 
+#ifndef NO_NTOM
 	/* decode_ntom */
 	unsigned long ntom_val[2];
 	unsigned long ntom_step;
-
+#endif
 	/* special i486 fun */
 #ifdef OPT_I486
 	int *int_buffs[2][2];
@@ -125,30 +143,17 @@ struct mpg123_handle_struct
 #ifdef OPT_ALTIVEC
 	real *areal_buffs[4][4];
 #endif
+	struct synth_s synths;
 	struct
 	{
 #ifdef OPT_MULTI
-		int (*synth_1to1)(real *,int, mpg123_handle *,int );
-		int (*synth_1to1_mono)(real *, mpg123_handle *);
-		int (*synth_1to1_mono2stereo)(real *, mpg123_handle *);
-		int (*synth_1to1_8bit)(real *,int, mpg123_handle *,int );
-		int (*synth_1to1_8bit_mono)(real *, mpg123_handle *);
-		int (*synth_1to1_8bit_mono2stereo)(real *, mpg123_handle *);
-#ifdef OPT_PENTIUM
-		int (*synth_1to1_i586_asm)(real *,int,unsigned char *, unsigned char *, int *, real *decwin);
-#endif
-#ifdef OPT_MMXORSSE
-		void (*make_decode_tables)(mpg123_handle *fr);
-		real (*init_layer3_gainpow2)(mpg123_handle*, int);
-		real* (*init_layer2_table)(mpg123_handle*, real*, double);
-#endif
-#ifdef OPT_3DNOW
+
+#ifndef NO_LAYER3
+#if (defined OPT_3DNOW || defined OPT_3DNOWEXT)
 		void (*dct36)(real *,real *,real *,real *,real *);
 #endif
-		void (*dct64)(real *,real *,real *);
-#ifdef OPT_MPLAYER
-		void (*mpl_dct64)(real *,real *,real *);
 #endif
+
 #endif
 		enum optdec type;
 		enum optcla class;
@@ -156,11 +161,14 @@ struct mpg123_handle_struct
 
 	int verbose;    /* 0: nothing, 1: just print chosen decoder, 2: be verbose */
 
-	/* mpg123_handle */
 	const struct al_table *alloc;
-	/* could use types from optimize.h */
-	int (*synth)(real *,int, mpg123_handle*, int);
-	int (*synth_mono)(real *, mpg123_handle*);
+	/* The runtime-chosen decoding, based on input and output format. */
+	func_synth synth;
+	func_synth_stereo synth_stereo;
+	func_synth_mono synth_mono;
+	/* Yes, this function is runtime-switched, too. */
+	void (*make_decode_tables)(mpg123_handle *fr); /* That is the volume control. */
+
 	int stereo; /* I _think_ 1 for mono and 2 for stereo */
 	int jsbound;
 #define SINGLE_STEREO -1
@@ -171,6 +179,7 @@ struct mpg123_handle_struct
 	int II_sblimit;
 	int down_sample_sblimit;
 	int lsf; /* 0: MPEG 1.0; 1: MPEG 2.0/2.5 -- both used as bool and array index! */
+	/* Many flags in disguise as integers... wasting bytes. */
 	int mpeg25;
 	int down_sample;
 	int header_change;
@@ -190,6 +199,13 @@ struct mpg123_handle_struct
 	int freesize;  /* free format frame size */
 	enum mpg123_vbr vbr; /* 1 if variable bitrate was detected */
 	off_t num; /* frame offset ... */
+	off_t playnum; /* playback offset... includes repetitions, reset at seeks */
+	off_t audio_start; /* The byte offset in the file where audio data begins. */
+	char accurate; /* Flag to see if we trust the frame number. */
+	char silent_resync; /* Do not complain for the next n resyncs. */
+	unsigned char* xing_toc; /* The seek TOC from Xing header. */
+	int freeformat;
+	long freeformat_framesize;
 
 	/* bitstream info; bsi */
 	int bitindex;
@@ -199,16 +215,15 @@ struct mpg123_handle_struct
 	unsigned char uctmp;
 
 	/* rva data, used in common.c, set in id3.c */
-	
-	scale_t lastscale;
+
+	double maxoutburst; /* The maximum amplitude in current sample represenation. */
+	double lastscale;
 	struct
 	{
 		int level[2];
 		float gain[2];
 		float peak[2];
 	} rva;
-
-	int do_recover;
 
 	/* input data */
 	off_t track_frames;
@@ -217,6 +232,7 @@ struct mpg123_handle_struct
 	off_t mean_frames;
 	int fsizeold;
 	int ssize;
+	unsigned int bitreservoir;
 	unsigned char bsspace[2][MAXFRAMESIZE+512]; /* MAXFRAMESIZE */
 	unsigned char *bsbuf;
 	unsigned char *bsbufold;
@@ -224,7 +240,9 @@ struct mpg123_handle_struct
 	unsigned long oldhead;
 	unsigned long firsthead;
 	int abr_rate;
+#ifdef FRAME_INDEX
 	struct frame_index index;
+#endif
 
 	/* output data */
 	struct outbuffer buffer;
@@ -244,7 +262,7 @@ struct mpg123_handle_struct
 	off_t end_s;    /* overall end offset in samples */
 	off_t end_os;
 #endif
-	unsigned int crc;
+	unsigned int crc; /* Well, I need a safe 16bit type, actually. But wider doesn't hurt. */
 	struct reader *rd; /* pointer to the reading functions */
 	struct reader_data rdat; /* reader data and state info */
 	struct mpg123_pars_struct p;
@@ -255,8 +273,47 @@ struct mpg123_handle_struct
 	/* the meta crap */
 	int metaflags;
 	unsigned char id3buf[128];
+#ifndef NO_ID3V2
 	mpg123_id3v2 id3v2;
+#endif
+#ifndef NO_ICY
 	struct icy_meta icy;
+#endif
+	/*
+		More variables needed for decoders, layerX.c.
+		This time it is not about static variables but about the need for alignment which cannot be guaranteed on the stack by certain compilers (Sun Studio).
+		We do not require the compiler to align stuff for our hand-written assembly. We only hope that it's able to align stuff for SSE and similar ops it generates itself.
+	*/
+	/*
+		Those layer-specific structs could actually share memory, as they are not in use simultaneously. One might allocate on decoder switch, too.
+		They all reside in one lump of memory (after each other), allocated to layerscratch.
+	*/
+	real *layerscratch;
+#ifndef NO_LAYER1
+	struct
+	{
+		real (*fraction)[SBLIMIT]; /* ALIGNED(16) real fraction[2][SBLIMIT]; */
+	} layer1;
+#endif
+#ifndef NO_LAYER2
+	struct
+	{
+		real (*fraction)[4][SBLIMIT]; /* ALIGNED(16) real fraction[2][4][SBLIMIT] */
+	} layer2;
+#endif
+#ifndef NO_LAYER3
+	/* These are significant chunks of memory already... */
+	struct
+	{
+		real (*hybrid_in)[SBLIMIT][SSLIMIT];  /* ALIGNED(16) real hybridIn[2][SBLIMIT][SSLIMIT]; */
+		real (*hybrid_out)[SSLIMIT][SBLIMIT]; /* ALIGNED(16) real hybridOut[2][SSLIMIT][SBLIMIT]; */
+	} layer3;
+#endif
+	/* A place for storing additional data for the large file wrapper.
+	   This is cruft! */
+	void *wrapperdata;
+	/* A callback used to properly destruct the wrapper data. */
+	void (*wrapperclean)(void*);
 };
 
 /* generic init, does not include dynamic buffers */
@@ -271,12 +328,13 @@ int frame_reset(mpg123_handle* fr);   /* reset for next track */
 int frame_buffers_reset(mpg123_handle *fr);
 void frame_exit(mpg123_handle *fr);   /* end, free all buffers */
 
+/* Index functions... */
+/* Well... print it... */
 int mpg123_print_index(mpg123_handle *fr, FILE* out);
+/* Find a seek position in index. */
 off_t frame_index_find(mpg123_handle *fr, off_t want_frame, off_t* get_frame);
-int frame_cpu_opt(mpg123_handle *fr, const char* cpu);
-enum optdec dectype(const char* decoder);
-
-int set_synth_functions(mpg123_handle *fr);
+/* Apply index_size setting. */
+int frame_index_setup(mpg123_handle *fr);
 
 void do_volume(mpg123_handle *fr, double factor);
 void do_rva(mpg123_handle *fr);
@@ -306,11 +364,18 @@ MPEG 2.5
 /* still fine-tuning the "real music" window... see read_frame */
 void frame_gapless_init(mpg123_handle *fr, off_t b, off_t e);
 void frame_gapless_realinit(mpg123_handle *fr);
+void frame_gapless_update(mpg123_handle *mh, off_t total_samples);
 /*void frame_gapless_position(mpg123_handle* fr);
 void frame_gapless_bytify(mpg123_handle *fr);
 void frame_gapless_ignore(mpg123_handle *fr, off_t frames);*/
 /* void frame_gapless_buffercheck(mpg123_handle *fr); */
 #endif
+
+/* Number of samples the decoding of the current frame should yield. */
+off_t frame_expect_outsamples(mpg123_handle *fr);
+
+/* Skip this frame... do some fake action to get away without actually decoding it. */
+void frame_skip(mpg123_handle *fr);
 
 /*
 	Seeking core functions:
@@ -321,10 +386,14 @@ void frame_gapless_ignore(mpg123_handle *fr, off_t frames);*/
 */
 off_t frame_ins2outs(mpg123_handle *fr, off_t ins);
 off_t frame_outs(mpg123_handle *fr, off_t num);
+/* This one just computes the expected sample count for _this_ frame. */
+off_t frame_expect_outsampels(mpg123_handle *fr);
 off_t frame_offset(mpg123_handle *fr, off_t outs);
 void frame_set_frameseek(mpg123_handle *fr, off_t fe);
 void frame_set_seek(mpg123_handle *fr, off_t sp);
 off_t frame_tell_seek(mpg123_handle *fr);
+/* Take a copy of the Xing VBR TOC for fuzzy seeking. */
+int frame_fill_toc(mpg123_handle *fr, unsigned char* in);
 
 
 /* adjust volume to current outscale and rva values if wanted */

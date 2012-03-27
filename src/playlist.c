@@ -80,17 +80,19 @@ static size_t rando(size_t n)
 
 char *get_next_file()
 {
-	char *newfile;
+	struct listitem *newitem = NULL;
 
-	if(pl.fill == 0) newfile = NULL;
-	else
+	if(pl.fill == 0) return NULL;
+
+	++pl.playcount;
+
 	/* normal order, just pick next thing */
 	if(param.shuffle < 2)
 	{
 		do
 		{
-			if(pl.pos < pl.fill) newfile = pl.list[pl.pos].url;
-			else newfile = NULL;
+			if(pl.pos < pl.fill) newitem = &pl.list[pl.pos];
+			else newitem = NULL;
 			/* if we have rounds left, decrease loop, else reinit loop because it's a new track */
 			if(pl.loop > 0) --pl.loop; /* loop for current track... */
 			if(pl.loop == 0)
@@ -98,15 +100,26 @@ char *get_next_file()
 				pl.loop = param.loop;
 				++pl.pos;
 			}
-		} while(pl.loop == 0 && newfile != NULL);
+		} while(pl.loop == 0 && newitem != NULL);
 	}
 	else
 	{	/* Randomly select files, with repeating... but keep track of current track for playlist printing. */
-		pl.pos = rando(pl.fill)+1;
-		newfile = pl.list[ pl.pos-1 ].url;
+		do /* limiting randomness: don't repeat too early */
+		{
+			pl.pos = rando(pl.fill);
+		} while( pl.list[pl.pos].playcount && (pl.playcount - pl.list[pl.pos].playcount) <= pl.fill/2 );
+
+		newitem = &pl.list[pl.pos];
 	}
 
-	return newfile; /* "-" is STDOUT, "" is dumb, NULL is nothing */
+	/* "-" is STDOUT, "" is dumb, NULL is nothing */
+	if(newitem != NULL)
+	{
+		/* Remember the playback position of the track. */
+		newitem->playcount = pl.playcount;
+		return newitem->url;
+	}
+	else return NULL;
 }
 
 /* It doesn't really matter on program exit, but anyway...
@@ -137,6 +150,7 @@ void init_playlist()
 	SRAND(time(NULL));
 	pl.file = NULL;
 	pl.entry = 0;
+	pl.playcount = 0;
 	pl.size = 0;
 	pl.fill = 0;
 	pl.pos = 0;
@@ -146,6 +160,9 @@ void init_playlist()
 	mpg123_init_string(&pl.linebuf);
 	pl.type = UNKNOWN;
 	pl.loop = param.loop;
+#ifdef WANT_WIN32_SOCKETS
+	pl.sockd = -1;
+#endif
 }
 
 /*
@@ -184,7 +201,11 @@ int add_next_file (int argc, char *argv[])
 	if (param.listname || pl.file)
 	{
 		size_t line_offset = 0;
+#ifndef WANT_WIN32_SOCKETS
 		if (!pl.file)
+#else
+		if (!pl.file && pl.sockd == -1)
+#endif
 		{
 			/* empty or "-" */
 			if (!*param.listname || !strcmp(param.listname, "-"))
@@ -198,9 +219,13 @@ int add_next_file (int argc, char *argv[])
 				int fd;
 				struct httpdata htd;
 				httpdata_init(&htd);
+#ifndef WANT_WIN32_SOCKETS
 				fd = http_open(param.listname, &htd);
+#else
+				fd = win32_net_http_open(param.listname, &htd);
+#endif
 				debug1("htd.content_type.p: %p", (void*) htd.content_type.p);
-				if(htd.content_type.p != NULL)
+				if(!param.ignore_mime && htd.content_type.p != NULL)
 				{
 					int mimi;
 					debug1("htd.content_type.p value: %s", htd.content_type.p);
@@ -210,7 +235,13 @@ int add_next_file (int argc, char *argv[])
 					else if(mimi & IS_PLS)	pl.type = PLS;
 					else
 					{
+#ifndef WANT_WIN32_SOCKETS
 						if(fd >= 0) close(fd);
+#else
+						if(fd != SOCKET_ERROR) win32_net_close(fd);
+#endif
+						fd = -1;
+						
 						if(mimi & IS_FILE)
 						{
 							pl.type = NO_LIST;
@@ -226,21 +257,27 @@ int add_next_file (int argc, char *argv[])
 								return 1;
 							}
 						}
-						fprintf(stderr, "Error: unknown playlist MIME type %s; maybe "PACKAGE_NAME" can support it in future if you report this to the maintainer.\n", htd.content_type.p);
-						fd = -1;
+						error1("Unknown playlist MIME type %s; maybe "PACKAGE_NAME" can support it in future if you report this to the maintainer.", htd.content_type.p);
 					}
-					httpdata_reset(&htd);
+					httpdata_free(&htd);
 				}
 				if(fd < 0)
 				{
 					param.listname = NULL;
 					pl.file = NULL;
-					fprintf(stderr, "Error: invalid playlist from http_open()!\n");
+#ifdef WANT_WIN32_SOCKETS
+					pl.sockd = -1;
+#endif
+					error("Invalid playlist from http_open()!\n");
 				}
 				else
 				{
 					pl.entry = 0;
+#ifndef WANT_WIN32_SOCKETS
 					pl.file = fdopen(fd,"r");
+#else
+					pl.sockd = fd;
+#endif
 				}
 			}
 			else if (!(pl.file = fopen(param.listname, "rb")))
@@ -257,7 +294,11 @@ int add_next_file (int argc, char *argv[])
 			firstline = 1; /* just opened */
 		}
 		/* reading the file line by line */
+#ifndef WANT_WIN32_SOCKETS
 		while (pl.file)
+#else
+		while (pl.file || (pl.sockd) != -1)
+#endif
 		{
 			/*
 				now read a string of arbitrary size...
@@ -278,7 +319,11 @@ int add_next_file (int argc, char *argv[])
 					}
 				}
 				/* I rely on fgets writing the \0 at the end! */
+#ifndef WANT_WIN32_SOCKETS
 				if(fgets(pl.linebuf.p+have, pl.linebuf.size-have, pl.file))
+#else
+				if( (pl.file ? (fgets(pl.linebuf.p+have, pl.linebuf.size-have, pl.file)) : (win32_net_fgets(pl.linebuf.p+have, pl.linebuf.size-have, pl.sockd))))
+#endif
 				{
 					have += strlen(pl.linebuf.p+have);
 					debug2("have read %lu characters into linebuf: [%s]", (unsigned long)have, pl.linebuf.p);
@@ -428,9 +473,16 @@ int add_next_file (int argc, char *argv[])
 			else
 			{
 				if (param.listname)
-				fclose (pl.file);
+				if(pl.file) fclose (pl.file);
 				param.listname = NULL;
 				pl.file = NULL;
+#ifdef WANT_WIN32_SOCKETS
+				if( pl.sockd != -1)
+				{
+				  win32_net_close(pl.sockd);
+				  pl.sockd = -1;
+				}
+#endif
 			}
 		}
 	}
@@ -531,6 +583,7 @@ int add_to_playlist(char* new_entry, char freeit)
 	{
 		pl.list[pl.fill].freeit = freeit;
 		pl.list[pl.fill].url = new_entry;
+		pl.list[pl.fill].playcount = 0;
 		++pl.fill;
 	}
 	else

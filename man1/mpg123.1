@@ -48,15 +48,19 @@ Decode only
 .I num
 frames.  By default the complete stream is decoded.
 .TP
-.BR \-y ", " \-\^\-resync
+.BR \-\-fuzzy
+Enable fuzzy seeks (guessing byte offsets or using approximate seek points from Xing TOC).
+Without that, seeks need a first scan through the file before they can jump at positions.
+You can decide here: sample-accurate operation with gapless features or faster (fuzzy) seeking.
+.TP
+.BR \-y ", " \-\^\-no\-resync
 Do NOT try to resync and continue decoding if an error occurs in
 the input file. Normally, 
 .B mpg123
 tries to keep the playback alive at all costs, including skipping invalid material and searching new header when something goes wrong.
 With this switch you can make it bail out on data errors
-(and perhaps spare your ears a bad time). Note that this switch may either disappear
-in future or its meaning be revised since it now does the opposite of what it
-suggests.
+(and perhaps spare your ears a bad time). Note that this switch has been renamed from \-\-resync.
+The old name still works, but is not advertised or recommened to use (subject to removal in future).
 .TP
 \fB\-\^-resync\-limit \fIbytes\fR
 Set number of bytes to search for valid MPEG data; <0 means search whole stream.
@@ -100,6 +104,9 @@ is the number of entry starting at 1. A value of 0 is the default and means play
 \fB\-\-loop \fItimes\fR
 for looping track(s) a certain number of times, < 0 means infinite loop (not with --random!).
 .TP
+.BR \-\-keep\-open
+For remote control mode: Keep loaded file open after reaching end.
+.TP
 \fB\-\-timeout \fIseconds\fR
 Timeout in (integer) seconds before declaring a stream dead (if <= 0, wait forever).
 .TP
@@ -118,6 +125,14 @@ Do not accept ICY meta data.
 \fB\-i, \-\^-\index
 Index / scan through the track before playback.
 This fills the index table for seeking (if enabled in libmpg123) and may make the operating system cache the file contents for smoother operating on playback.
+.TP
+\fB\-\-index\-size \fIsize\fR
+Set the number of entries in the seek frame index table.
+.TP
+\fB\-\-preframes \fInum\fR
+Set the number of frames to be read as lead-in before a seeked-to position.
+This serves to fill the layer 3 bit reservoir, which is needed to faithfully reproduce a certain sample at a certain position.
+Note that for layer 3, a minimum of 1 is enforced (because of frame overlap), and for layer 1 and 2, this is limited to 2 (no bit reservoir in that case, but engine spin-up anyway).
 
 .SH OUTPUT and PROCESSING OPTIONS
 .TP
@@ -184,7 +199,8 @@ Tests your CPU and prints a list of possible choices for \-\-cpu.
 Lists all available decoder choices, regardless of support by your CPU.
 .TP
 \fB\-g \fIgain\fR, \fB\-\^\-gain \fIgain
-Set audio hardware output gain (default: don't change).
+[DEPRECATED] Set audio hardware output gain (default: don't change). The unit of the gain value is hardware and output module dependent.
+(This parameter is only provided for backwards compatibility and may be removed in the future without prior notice. Use the audio player for playing and a mixer app for mixing, UNIX style!)
 .TP
 \fB\-f \fIfactor\fR, \fB\-\^\-scale \fIfactor
 Change scale factor (default: 32768).
@@ -219,6 +235,9 @@ rate. You should then combine this with \-\-stereo or \-\-mono.
 Performs a downsampling of ratio 2:1 (22 kHz) or 4:1 (11 kHz) 
 on the output stream, respectively. Saves some CPU cycles, but 
 at least the 4:1 ratio sounds ugly.
+.TP
+.BR \-\-pitch\ \fIvalue
+Set hardware pitch (speedup/down, 0 is neutral; 0.05 is 5%). This changes the output sampling rate, so it only works in the range your audio system/hardware supports.
 .TP
 .BR \-\-8bit
 Forces 8bit output
@@ -289,6 +308,12 @@ You should specify a buffer size of at least 1024
 less than about 300 does not make much sense.  The default is 0, 
 which turns buffering off.
 .TP
+\fB\-\^\-preload \fIfraction
+Wait for the buffer to be filled to
+.I fraction
+before starting playback (fraction between 0 and 1). You can tune this prebuffering to either get faster sound to your ears or safer uninterrupted web radio.
+Default is 1 (wait for full buffer before playback).
+.TP
 \fB\-\^\-smooth
 Keep buffer over track boundaries -- meaning, do not empty the buffer between tracks for possibly some added smoothness.
 
@@ -310,8 +335,7 @@ numbers during decoding.
 Quiet.  Suppress diagnostic messages.
 .TP
 .BR \-C ", " \-\^\-control
-Enable terminal control keys. By default use 's' to stop, 'p' to
-pause, 'f' to jump forward to the next song, 'b' to jump back to the
+Enable terminal control keys. By default use 's' or the space bar to stop/restart (pause, unpause) playback, 'f' to jump forward to the next song, 'b' to jump back to the
 beginning of the song, ',' to rewind, '.' to fast forward, and 'q' to quit.
 Type 'h' for a full list of available controls.
 .TP
@@ -321,6 +345,9 @@ playing.
 .TP
 \fB\-\^\-long\-tag
 Display ID3 tag info always in long format with one line per item (artist, title, ...)
+.TP
+.BR \-\-utf8
+Regardless of environment, print metadata in UTF-8 (otherwise, when not using UTF-8 locale, you'll get ASCII stripdown).
 .TP
 .BR \-R ", " \-\^\-remote
 Activate generic control interface.
@@ -463,7 +490,7 @@ Thomas Orgis <maintainer@mpg123.org>, <thomas@orgis.org>
 .br
 Nicholas J. Humfrey
 .TP
-Main author:
+Creator:
 .br
 Michael Hipp
 .TP

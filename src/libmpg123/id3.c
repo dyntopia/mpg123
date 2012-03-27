@@ -10,25 +10,32 @@
 #include "id3.h"
 #include "debug.h"
 
+#ifndef NO_ID3V2 /* Only the main parsing routine will always be there. */
+
+/* We know the usual text frames plus some specifics. */
+#define KNOWN_FRAMES 4
+static const char frame_type[KNOWN_FRAMES][5] = { "COMM", "TXXX", "RVA2", "USLT" };
+enum frame_types { unknown = -2, text = -1, comment, extra, rva2, uslt };
+
 /* UTF support definitions */
 
-typedef void (*text_converter)(mpg123_string *sb, unsigned char* source, size_t len);
+typedef void (*text_converter)(mpg123_string *sb, const unsigned char* source, size_t len, const int noquiet);
 
-static void convert_latin1  (mpg123_string *sb, unsigned char* source, size_t len);
-static void convert_utf16   (mpg123_string *sb, unsigned char* source, size_t len, int str_be);
-static void convert_utf16bom(mpg123_string *sb, unsigned char* source, size_t len);
-static void convert_utf16be (mpg123_string *sb, unsigned char* source, size_t len);
-static void convert_utf8    (mpg123_string *sb, unsigned char* source, size_t len);
+static void convert_latin1  (mpg123_string *sb, const unsigned char* source, size_t len, const int noquiet);
+static void convert_utf16bom(mpg123_string *sb, const unsigned char* source, size_t len, const int noquiet);
+static void convert_utf8    (mpg123_string *sb, const unsigned char* source, size_t len, const int noquiet);
 
 static const text_converter text_converters[4] = 
 {
 	convert_latin1,
+	/* We always check for (multiple) BOM in 16bit unicode. Without BOM, UTF16 BE is the default.
+	   Errors in encoding are detected anyway. */
 	convert_utf16bom,
-	convert_utf16be,
+	convert_utf16bom,
 	convert_utf8
 };
 
-const int encoding_widths[4] = { 1, 2, 2, 1 };
+const unsigned int encoding_widths[4] = { 1, 2, 2, 1 };
 
 /* the code starts here... */
 
@@ -173,32 +180,58 @@ void id3_link(mpg123_handle *fr)
 }
 
 /*
-	Store any text in UTF8 encoding; preserve the zero string separator (I don't need strlen for the total size).
+	Store ID3 text data in an mpg123_string; either verbatim copy or everything translated to UTF-8 encoding.
+	Preserve the zero string separator (I don't need strlen for the total size).
+
 	ID3v2 standard says that there should be one text frame of specific type per tag, and subsequent tags overwrite old values.
 	So, I always replace the text that may be stored already (perhaps with a list of zero-separated strings, though).
 */
-void store_id3_text(mpg123_string *sb, char *source, size_t source_size, const int noquiet)
+void store_id3_text(mpg123_string *sb, char *source, size_t source_size, const int noquiet, const int notranslate)
 {
-	int encoding;
-	int bwidth;
 	if(!source_size)
 	{
 		debug("Empty id3 data!");
 		return;
 	}
-	encoding = source[0];
-	++source;
-	--source_size;
-	debug1("encoding: %i", encoding);
+
+	/* We shall just copy the data. Client wants to decode itself. */
+	if(notranslate)
+	{
+		/* Future: Add a path for ID3 errors. */
+		if(!mpg123_resize_string(sb, source_size))
+		{
+			if(noquiet) error("Cannot resize target string, out of memory?");
+			return;
+		}
+		memcpy(sb->p, source, source_size);
+		sb->fill = source_size;
+		debug1("stored undecoded ID3 text of size %"SIZE_P, (size_p)source_size);
+		return;
+	}
+
+	id3_to_utf8(sb, ((unsigned char *)source)[0], (unsigned char*)source+1, source_size-1, noquiet);
+
+	if(sb->fill) debug1("UTF-8 string (the first one): %s", sb->p);
+	else if(noquiet) error("unable to convert string to UTF-8 (out of memory, junk input?)!");
+}
+
+/* On error, sb->size is 0. */
+void id3_to_utf8(mpg123_string *sb, unsigned char encoding, const unsigned char *source, size_t source_size, int noquiet)
+{
+	unsigned int bwidth;
+	debug1("encoding: %u", encoding);
 	/* A note: ID3v2.3 uses UCS-2 non-variable 16bit encoding, v2.4 uses UTF16.
 	   UTF-16 uses a reserved/private range in UCS-2 to add the magic, so we just always treat it as UTF. */
-	if(encoding > 3)
+	if(encoding > mpg123_id3_enc_max)
 	{
-		if(noquiet) warning1("Unknown text encoding %d, assuming ISO8859-1 - I will probably screw a bit up!", encoding);
-		encoding = 0;
+		if(noquiet) error1("Unknown text encoding %u, I take no chances, sorry!", encoding);
+
+		mpg123_free_string(sb);
+		return;
 	}
 	bwidth = encoding_widths[encoding];
 	/* Hack! I've seen a stray zero byte before BOM. Is that supposed to happen? */
+	if(encoding != mpg123_id3_utf16be) /* UTF16be _can_ beging with a null byte! */
 	while(source_size > bwidth && source[0] == 0)
 	{
 		--source_size;
@@ -208,39 +241,40 @@ void store_id3_text(mpg123_string *sb, char *source, size_t source_size, const i
 	if(source_size % bwidth)
 	{
 		/* When we need two bytes for a character, it's strange to have an uneven bytestream length. */
-		if(noquiet) warning2("Weird tag size %d for encoding %d - I will probably trim too early or something but I think the MP3 is broken.", (int)source_size, encoding);
+		if(noquiet) warning2("Weird tag size %d for encoding %u - I will probably trim too early or something but I think the MP3 is broken.", (int)source_size, encoding);
 		source_size -= source_size % bwidth;
 	}
-	text_converters[encoding](sb, (unsigned char*)source, source_size);
-	if(sb->size) debug1("UTF-8 string (the first one): %s", sb->p);
-	else if(noquiet) error("unable to convert string to UTF-8 (out of memory, junk input?)!");
+	text_converters[encoding](sb, source, source_size, noquiet);
 }
 
 char *next_text(char* prev, int encoding, size_t limit)
 {
 	char *text = prev;
-	unsigned long neednull = encoding_widths[encoding];
-	/* So I go lengths to find zero or double zero... */
-	while(text-prev < limit)
+	size_t width = encoding_widths[encoding];
+
+	/* So I go lengths to find zero or double zero...
+	   Remember bug 2834636: Only check for aligned NULLs! */
+	while(text-prev < (ssize_t)limit)
 	{
 		if(text[0] == 0)
 		{
-			if(neednull <= limit-(text-prev))
+			if(width <= limit-(text-prev))
 			{
-				unsigned long i = 1;
-				for(; i<neednull; ++i) if(text[i] != 0) break;
+				size_t i = 1;
+				for(; i<width; ++i) if(text[i] != 0) break;
 
-				if(i == neednull) /* found a null wide enough! */
+				if(i == width) /* found a null wide enough! */
 				{
-					text += neednull;
+					text += width;
 					break;
 				}
 			}
-			else{ text = NULL; break; }
+			else return NULL; /* No full character left? This text is broken */
 		}
-		++text;
+
+		text += width;
 	}
-	if(text-prev == limit) text = NULL;
+	if((size_t)(text-prev) >= limit) text = NULL;
 
 	return text;
 }
@@ -269,12 +303,13 @@ static void process_text(mpg123_handle *fr, char *realdata, size_t realsize, cha
 		return;
 	}
 	memcpy(t->id, id, 4);
-	store_id3_text(&t->text, realdata, realsize, NOQUIET);
+	store_id3_text(&t->text, realdata, realsize, NOQUIET, fr->p.flags & MPG123_PLAIN_ID3TEXT);
 	if(VERBOSE4) fprintf(stderr, "Note: ID3v2 %c%c%c%c text frame: %s\n", id[0], id[1], id[2], id[3], t->text.p);
 }
 
-/* Store a new comment that perhaps is a RVA / RVA_ALBUM/AUDIOPHILE / RVA_MIX/RADIO one */
-static void process_comment(mpg123_handle *fr, char *realdata, size_t realsize, int rva_level, char *id)
+/* Store a new comment that perhaps is a RVA / RVA_ALBUM/AUDIOPHILE / RVA_MIX/RADIO one
+   Special gimmik: It also stores USLT to the texts. Stucture is the same as for comments. */
+static void process_comment(mpg123_handle *fr, enum frame_types tt, char *realdata, size_t realsize, int rva_level, char *id)
 {
 	/* Text encoding          $xx */
 	/* Language               $xx xx xx */
@@ -285,12 +320,14 @@ static void process_comment(mpg123_handle *fr, char *realdata, size_t realsize, 
 	char *descr   = realdata+4;
 	char *text = NULL;
 	mpg123_text *xcom = NULL;
-	if(realsize < descr-realdata)
+	mpg123_text localcom; /* UTF-8 variant for local processing. */
+
+	if((int)realsize < descr-realdata)
 	{
 		if(NOQUIET) error1("Invalid frame size of %lu (too small for anything).", (unsigned long)realsize);
 		return;
 	}
-	xcom = add_comment(fr);
+	xcom = (tt == uslt ? add_text(fr) : add_comment(fr));
 	if(VERBOSE4) fprintf(stderr, "Note: Storing comment from %s encoding\n", enc_name(realdata[0]));
 	if(xcom == NULL)
 	{
@@ -299,7 +336,6 @@ static void process_comment(mpg123_handle *fr, char *realdata, size_t realsize, 
 	}
 	memcpy(xcom->lang, lang, 3);
 	memcpy(xcom->id, id, 4);
-	xcom->lang[3] = 0;
 	/* Now I can abuse a byte from lang for the encoding. */
 	descr[-1] = encoding;
 	/* Be careful with finding the end of description, I have to honor encoding here. */
@@ -310,35 +346,51 @@ static void process_comment(mpg123_handle *fr, char *realdata, size_t realsize, 
 		pop_comment(fr);
 		return;
 	}
-	store_id3_text(&xcom->description, descr-1, text-descr+1, NOQUIET);
-	text[-1] = encoding;
-	store_id3_text(&xcom->text, text-1, realsize+1-(text-realdata), NOQUIET);
 
-	if(VERBOSE4)
+	init_mpg123_text(&localcom);
+	/* Store the text, without translation to UTF-8, but for comments always a local copy in UTF-8.
+	   Reminder: No bailing out from here on without freeing the local comment data! */
+	store_id3_text(&xcom->description, descr-1, text-descr+1, NOQUIET, fr->p.flags & MPG123_PLAIN_ID3TEXT);
+	if(tt == comment)
+	store_id3_text(&localcom.description, descr-1, text-descr+1, NOQUIET, 0);
+
+	text[-1] = encoding; /* Byte abusal for encoding... */
+	store_id3_text(&xcom->text, text-1, realsize+1-(text-realdata), NOQUIET, fr->p.flags & MPG123_PLAIN_ID3TEXT);
+	/* Remember: I will probably decode the above (again) for rva comment checking. So no messing around, please. */
+
+	if(VERBOSE4) /* Do _not_ print the verbatim text: The encoding might be funny! */
 	{
-		fprintf(stderr, "Note: ID3 comment desc: %s\n", xcom->description.fill > 0 ? xcom->description.p : "");
-		fprintf(stderr, "Note: ID3 comment text: %s\n", xcom->text.fill > 0 ? xcom->text.p : "");
+		fprintf(stderr, "Note: ID3 comm/uslt desc of length %"SIZE_P".\n", (size_p)xcom->description.fill);
+		fprintf(stderr, "Note: ID3 comm/uslt text of length %"SIZE_P".\n", (size_p)xcom->text.fill);
 	}
-	if(xcom->description.fill > 0 && xcom->text.fill > 0)
+	/* Look out for RVA info only when we really deal with a straight comment. */
+	if(tt == comment && localcom.description.fill > 0)
 	{
 		int rva_mode = -1; /* mix / album */
-		if(   !strcasecmp(xcom->description.p, "rva")
-			 || !strcasecmp(xcom->description.p, "rva_mix")
-			 || !strcasecmp(xcom->description.p, "rva_track")
-			 || !strcasecmp(xcom->description.p, "rva_radio"))
+		if(    !strcasecmp(localcom.description.p, "rva")
+			 || !strcasecmp(localcom.description.p, "rva_mix")
+			 || !strcasecmp(localcom.description.p, "rva_track")
+			 || !strcasecmp(localcom.description.p, "rva_radio") )
 		rva_mode = 0;
-		else if(   !strcasecmp(xcom->description.p, "rva_album")
-						|| !strcasecmp(xcom->description.p, "rva_audiophile")
-						|| !strcasecmp(xcom->description.p, "rva_user"))
+		else if(    !strcasecmp(localcom.description.p, "rva_album")
+		         || !strcasecmp(localcom.description.p, "rva_audiophile")
+		         || !strcasecmp(localcom.description.p, "rva_user") )
 		rva_mode = 1;
 		if((rva_mode > -1) && (fr->rva.level[rva_mode] <= rva_level))
 		{
-			fr->rva.gain[rva_mode] = atof(xcom->text.p);
-			if(VERBOSE3) fprintf(stderr, "Note: RVA value %fdB\n", fr->rva.gain[rva_mode]);
-			fr->rva.peak[rva_mode] = 0;
-			fr->rva.level[rva_mode] = rva_level;
+			/* Only translate the contents in here where we really need them. */
+			store_id3_text(&localcom.text, text-1, realsize+1-(text-realdata), NOQUIET, 0);
+			if(localcom.text.fill > 0)
+			{
+				fr->rva.gain[rva_mode] = (float) atof(localcom.text.p);
+				if(VERBOSE3) fprintf(stderr, "Note: RVA value %fdB\n", fr->rva.gain[rva_mode]);
+				fr->rva.peak[rva_mode] = 0;
+				fr->rva.level[rva_mode] = rva_level;
+			}
 		}
 	}
+	/* Make sure to free the local memory... */
+	free_mpg123_text(&localcom);
 }
 
 void process_extra(mpg123_handle *fr, char* realdata, size_t realsize, int rva_level, char *id)
@@ -350,7 +402,9 @@ void process_extra(mpg123_handle *fr, char* realdata, size_t realsize, int rva_l
 	char *descr  = realdata+1; /* remember, the encoding is descr[-1] */
 	char *text;
 	mpg123_text *xex;
-	if(realsize < descr-realdata)
+	mpg123_text localex;
+
+	if((int)realsize < descr-realdata)
 	{
 		if(NOQUIET) error1("Invalid frame size of %lu (too small for anything).", (unsigned long)realsize);
 		return;
@@ -369,47 +423,62 @@ void process_extra(mpg123_handle *fr, char* realdata, size_t realsize, int rva_l
 		return;
 	}
 	memcpy(xex->id, id, 4);
-	store_id3_text(&xex->description, descr-1, text-descr+1, NOQUIET);
+	init_mpg123_text(&localex); /* For our local copy. */
+
+	/* The outside storage gets reencoded to UTF-8 only if not requested otherwise.
+	   Remember that we really need the -1 here to hand in the encoding byte!*/
+	store_id3_text(&xex->description, descr-1, text-descr+1, NOQUIET, fr->p.flags & MPG123_PLAIN_ID3TEXT);
+	/* Our local copy is always stored in UTF-8! */
+	store_id3_text(&localex.description, descr-1, text-descr+1, NOQUIET, 0);
+	/* At first, only store the outside copy of the payload. We may not need the local copy. */
 	text[-1] = encoding;
-	store_id3_text(&xex->text, text-1, realsize-(text-realdata)+1, NOQUIET);
-	if(xex->description.fill > 0)
+	store_id3_text(&xex->text, text-1, realsize-(text-realdata)+1, NOQUIET, fr->p.flags & MPG123_PLAIN_ID3TEXT);
+
+	/* Now check if we would like to interpret this extra info for RVA. */
+	if(localex.description.fill > 0)
 	{
 		int is_peak = 0;
 		int rva_mode = -1; /* mix / album */
 
-		if(!strncasecmp(xex->description.p, "replaygain_track_",17))
+		if(!strncasecmp(localex.description.p, "replaygain_track_",17))
 		{
-			debug("ID3v2: track gain/peak");
+			if(VERBOSE3) fprintf(stderr, "Note: RVA ReplayGain track gain/peak\n");
+
 			rva_mode = 0;
-			if(!strcasecmp(xex->description.p, "replaygain_track_peak")) is_peak = 1;
-			else if(strcasecmp(xex->description.p, "replaygain_track_gain")) rva_mode = -1;
+			if(!strcasecmp(localex.description.p, "replaygain_track_peak")) is_peak = 1;
+			else if(strcasecmp(localex.description.p, "replaygain_track_gain")) rva_mode = -1;
 		}
 		else
-		if(!strncasecmp(xex->description.p, "replaygain_album_",17))
+		if(!strncasecmp(localex.description.p, "replaygain_album_",17))
 		{
-			debug("ID3v2: album gain/peak");
+			if(VERBOSE3) fprintf(stderr, "Note: RVA ReplayGain album gain/peak\n");
+
 			rva_mode = 1;
-			if(!strcasecmp(xex->description.p, "replaygain_album_peak")) is_peak = 1;
-			else if(strcasecmp(xex->description.p, "replaygain_album_gain")) rva_mode = -1;
+			if(!strcasecmp(localex.description.p, "replaygain_album_peak")) is_peak = 1;
+			else if(strcasecmp(localex.description.p, "replaygain_album_gain")) rva_mode = -1;
 		}
 		if((rva_mode > -1) && (fr->rva.level[rva_mode] <= rva_level))
 		{
-			if(xex->text.fill > 0)
+			/* Now we need the translated copy of the data. */
+			store_id3_text(&localex.text, text-1, realsize-(text-realdata)+1, NOQUIET, 0);
+			if(localex.text.fill > 0)
 			{
 				if(is_peak)
 				{
-					fr->rva.peak[rva_mode] = atof(xex->text.p);
-					if(VERBOSE3) fprintf(stderr, "Note: RVA peak %fdB\n", fr->rva.peak[rva_mode]);
+					fr->rva.peak[rva_mode] = (float) atof(localex.text.p);
+					if(VERBOSE3) fprintf(stderr, "Note: RVA peak %f\n", fr->rva.peak[rva_mode]);
 				}
 				else
 				{
-					fr->rva.gain[rva_mode] = atof(xex->text.p);
+					fr->rva.gain[rva_mode] = (float) atof(localex.text.p);
 					if(VERBOSE3) fprintf(stderr, "Note: RVA gain %fdB\n", fr->rva.gain[rva_mode]);
 				}
 				fr->rva.level[rva_mode] = rva_level;
 			}
 		}
 	}
+
+	free_mpg123_text(&localex);
 }
 
 /* Make a ID3v2.3+ 4-byte ID from a ID3v2.2 3-byte ID
@@ -445,6 +514,8 @@ int promote_framename(mpg123_handle *fr, char *id) /* fr because of VERBOSE macr
 	if(VERBOSE3) fprintf(stderr, "Ignoring untranslated ID3v2.2 frame %c%c%c\n", id[0], id[1], id[2]);
 	return -1;
 }
+
+#endif /* NO_ID3V2 */
 
 /*
 	trying to parse ID3v2.3 and ID3v2.4 tags...
@@ -514,14 +585,17 @@ int parse_new_id3(mpg123_handle *fr, unsigned long first4bytes)
 		return 0;
 	}
 	debug1("ID3v2: tag data length %lu", length);
+#ifndef NO_ID3V2
 	if(VERBOSE2) fprintf(stderr,"Note: ID3v2.%i rev %i tag of %lu bytes\n", major, buf[0], length);
 	/* skip if unknown version/scary flags, parse otherwise */
 	if((flags & UNKNOWN_FLAGS) || (major > 4) || (major < 2))
 	{
 		/* going to skip because there are unknown flags set */
 		if(NOQUIET) warning2("ID3v2: Won't parse the ID3v2 tag with major version %u and flags 0x%xu - some extra code may be needed", major, flags);
+#endif
 		if((ret2 = fr->rd->skip_bytes(fr,length)) < 0) /* will not store data in backbuff! */
 		ret = ret2;
+#ifndef NO_ID3V2
 	}
 	else
 	{
@@ -559,9 +633,7 @@ int parse_new_id3(mpg123_handle *fr, unsigned long first4bytes)
 						int head_part = fr->id3v2.version == 2 ? 3 : 4; /* bytes of frame title and of framesize value */
 						/* level 1,2,3 - 0 is info from lame/info tag! */
 						/* rva tags with ascending significance, then general frames */
-						#define KNOWN_FRAMES 3
-						const char frame_type[KNOWN_FRAMES][5] = { "COMM", "TXXX", "RVA2" }; /* plus all text frames... */
-						enum { unknown = -2, text = -1, comment, extra, rva2 } tt = unknown;
+						enum frame_types tt = unknown;
 						/* we may have entered the padding zone or any other strangeness: check if we have valid frame id characters */
 						for(i=0; i< head_part; ++i)
 						if( !( ((tagdata[tagpos+i] > 47) && (tagdata[tagpos+i] < 58))
@@ -663,14 +735,14 @@ int parse_new_id3(mpg123_handle *fr, unsigned long first4bytes)
 								switch(tt)
 								{
 									case comment:
-										process_comment(fr, (char*)realdata, realsize, comment+1, id);
+									case uslt:
+										process_comment(fr, tt, (char*)realdata, realsize, comment+1, id);
 									break;
 									case extra: /* perhaps foobar2000's work */
 										process_extra(fr, (char*)realdata, realsize, extra+1, id);
 									break;
 									case rva2: /* "the" RVA tag */
 									{
-										#ifdef HAVE_INTTYPES_H
 										/* starts with null-terminated identification */
 										if(VERBOSE3) fprintf(stderr, "Note: RVA2 identification \"%s\"\n", realdata);
 										/* default: some individual value, mix mode */
@@ -687,10 +759,9 @@ int parse_new_id3(mpg123_handle *fr, unsigned long first4bytes)
 												++pos;
 												/* only handle master channel */
 												debug("ID3v2: it is for the master channel");
-												/* two bytes adjustment, one byte for bits representing peak - n bytes for peak */
-												/* 16 bit signed integer = dB * 512 */
-												/* we already assume short being 16 bit */
-												fr->rva.gain[rva_mode] = (float) ((((short) realdata[pos]) << 8) | ((short) realdata[pos+1])) / 512;
+												/* two bytes adjustment, one byte for bits representing peak - n bytes, eh bits, for peak */
+												/* 16 bit signed integer = dB * 512  ... the double cast is needed to preserve the sign of negative values! */
+												fr->rva.gain[rva_mode] = (float) ( (((short)((signed char)realdata[pos])) << 8) | realdata[pos+1] ) / 512;
 												pos += 2;
 												if(VERBOSE3) fprintf(stderr, "Note: RVA value %fdB\n", fr->rva.gain[rva_mode]);
 												/* heh, the peak value is represented by a number of bits - but in what manner? Skipping that part */
@@ -698,9 +769,6 @@ int parse_new_id3(mpg123_handle *fr, unsigned long first4bytes)
 												fr->rva.level[rva_mode] = rva2+1;
 											}
 										}
-										#else
-										if(NOQUIET) warning("ID3v2: Cannot parse RVA2 value because I don't have a guaranteed 16 bit signed integer type");
-										#endif
 									}
 									break;
 									/* non-rva metainfo, simply store... */
@@ -728,7 +796,8 @@ int parse_new_id3(mpg123_handle *fr, unsigned long first4bytes)
 			}
 			else
 			{
-				if(NOQUIET) error("ID3v2: Duh, not able to read ID3v2 tag data.");
+				/* There are tags with zero length. Strictly not an error, then. */
+				if(length > 0 && NOQUIET) error("ID3v2: Duh, not able to read ID3v2 tag data.");
 				ret = ret2;
 			}
 tagparse_cleanup:
@@ -741,6 +810,7 @@ tagparse_cleanup:
 			else ret = 0;
 		}
 	}
+#endif /* NO_ID3V2 */
 	/* skip footer if present */
 	if((ret > 0) && (flags & FOOTER_FLAG) && ((ret2 = fr->rd->skip_bytes(fr,length)) < 0)) ret = ret2;
 
@@ -752,7 +822,9 @@ tagparse_cleanup:
 	#undef UNKOWN_FLAGS
 }
 
-static void convert_latin1(mpg123_string *sb, unsigned char* s, size_t l)
+#ifndef NO_ID3V2 /* Disabling all the rest... */
+
+static void convert_latin1(mpg123_string *sb, const unsigned char* s, size_t l, const int noquiet)
 {
 	size_t length = l;
 	size_t i;
@@ -779,25 +851,72 @@ static void convert_latin1(mpg123_string *sb, unsigned char* s, size_t l)
 	sb->fill = length+1;
 }
 
+/*
+	Check if we have a byte oder mark(s) there, return:
+	-1: little endian
+	 0: no BOM
+	 1: big endian
+
+	This modifies source and len to indicate the data _after_ the BOM(s).
+	Note on nasty data: The last encountered BOM determines the endianess.
+	I have seen data with multiple BOMS, namely from "the" id3v2 program.
+	Not nice, but what should I do?
+*/
+static int check_bom(const unsigned char** source, size_t *len)
+{
+	int this_bom    = 0;
+	int further_bom = 0;
+
+	if(*len < 2) return 0;
+
+	if((*source)[0] == 0xff && (*source)[1] == 0xfe)
+	this_bom = -1;
+
+	if((*source)[0] == 0xfe && (*source)[1] == 0xff)
+	this_bom = 1;
+
+	/* Skip the detected BOM. */
+	if(this_bom != 0)
+	{
+		*source += 2;
+		*len    -= 2;
+		/* Check for following BOMs. The last one wins! */
+		further_bom = check_bom(source, len);
+		if(further_bom == 0) return this_bom; /* End of the recursion. */
+		else                 return further_bom;
+	}
+	else return 0;
+}
+
 #define FULLPOINT(f,s) ( (((f)&0x3ff)<<10) + ((s)&0x3ff) + 0x10000 )
 /* Remember: There's a limit at 0x1ffff. */
 #define UTF8LEN(x) ( (x)<0x80 ? 1 : ((x)<0x800 ? 2 : ((x)<0x10000 ? 3 : 4)))
-static void convert_utf16(mpg123_string *sb, unsigned char* s, size_t l, int str_be)
+static void convert_utf16bom(mpg123_string *sb, const unsigned char* s, size_t l, const int noquiet)
 {
 	size_t i;
+	size_t n; /* number bytes that make up full pairs */
 	unsigned char *p;
 	size_t length = 0; /* the resulting UTF-8 length */
 	/* Determine real length... extreme case can be more than utf-16 length. */
 	size_t high = 0;
 	size_t low  = 1;
+	int bom_endian;
+
 	debug1("convert_utf16 with length %lu", (unsigned long)l);
-	if(!str_be) /* little-endian */
+
+	bom_endian = check_bom(&s, &l);
+	debug1("UTF16 endianess check: %i", bom_endian);
+
+	if(bom_endian == -1) /* little-endian */
 	{
 		high = 1; /* The second byte is the high byte. */
 		low  = 0; /* The first byte is the low byte. */
 	}
+
+	n = (l/2)*2; /* number bytes that make up full pairs */
+
 	/* first: get length, check for errors -- stop at first one */
-	for(i=0; i < l-1; i+=2)
+	for(i=0; i < n; i+=2)
 	{
 		unsigned long point = ((unsigned long) s[i+high]<<8) + s[i+low];
 		if((point & 0xd800) == 0xd800) /* lead surrogate */
@@ -811,21 +930,19 @@ static void convert_utf16(mpg123_string *sb, unsigned char* s, size_t l, int str
 			}
 			else /* if no valid pair, break here */
 			{
-				debug1("Invalid UTF16 surrogate pair at %li.", (unsigned long)i);
-				l = i; /* Forget the half pair, END! */
+				if(noquiet) error2("Invalid UTF16 surrogate pair at %li (0x%04lx).", (unsigned long)i, point);
+				n = i; /* Forget the half pair, END! */
 				break;
 			}
 		}
 		else length += UTF8LEN(point); /* 1,2 or 3 bytes */
 	}
 
-	if(l < 1){ mpg123_set_string(sb, ""); return; }
-
 	if(!mpg123_resize_string(sb, length+1)){ mpg123_free_string(sb); return ; }
 
 	/* Now really convert, skip checks as these have been done just before. */
 	p = (unsigned char*) sb->p; /* Signedness doesn't matter but it shows I thought about the non-issue */
-	for(i=0; i < l-1; i+=2)
+	for(i=0; i < n; i+=2)
 	{
 		unsigned long codepoint = ((unsigned long) s[i+high]<<8) + s[i+low];
 		if((codepoint & 0xd800) == 0xd800) /* lead surrogate */
@@ -837,21 +954,21 @@ static void convert_utf16(mpg123_string *sb, unsigned char* s, size_t l, int str
 		if(codepoint < 0x80) *p++ = (unsigned char) codepoint;
 		else if(codepoint < 0x800)
 		{
-			*p++ = 0xc0 | (codepoint>>6);
-			*p++ = 0x80 | (codepoint & 0x3f);
+			*p++ = (unsigned char) (0xc0 | (codepoint>>6));
+			*p++ = (unsigned char) (0x80 | (codepoint & 0x3f));
 		}
 		else if(codepoint < 0x10000)
 		{
-			*p++ = 0xe0 | (codepoint>>12);
+			*p++ = (unsigned char) (0xe0 | (codepoint>>12));
 			*p++ = 0x80 | ((codepoint>>6) & 0x3f);
 			*p++ = 0x80 | (codepoint & 0x3f);
 		}
 		else if (codepoint < 0x200000) 
 		{
-			*p++ = 0xf0 | codepoint>>18;
-			*p++ = 0x80 | ((codepoint>>12) & 0x3f);
-			*p++ = 0x80 | ((codepoint>>6) & 0x3f);
-			*p++ = 0x80 | (codepoint & 0x3f);
+			*p++ = (unsigned char) (0xf0 | codepoint>>18);
+			*p++ = (unsigned char) (0x80 | ((codepoint>>12) & 0x3f));
+			*p++ = (unsigned char) (0x80 | ((codepoint>>6) & 0x3f));
+			*p++ = (unsigned char) (0x80 | (codepoint & 0x3f));
 		} /* ignore bigger ones (that are not possible here anyway) */
 	}
 	sb->p[sb->size-1] = 0; /* paranoia... */
@@ -860,22 +977,7 @@ static void convert_utf16(mpg123_string *sb, unsigned char* s, size_t l, int str
 #undef UTF8LEN
 #undef FULLPOINT
 
-static void convert_utf16be(mpg123_string *sb, unsigned char* source, size_t len)
-{
-	convert_utf16(sb, source, len, 1);
-}
-
-static void convert_utf16bom(mpg123_string *sb, unsigned char* source, size_t len)
-{
-	if(len < 2){ mpg123_free_string(sb); return; }
-
-	if(source[0] == 0xff && source[1] == 0xfe) /* Little-endian */
-	convert_utf16(sb, source + 2, len - 2, 0);
-	else /* Big-endian */
-	convert_utf16(sb, source + 2, len - 2, 1);
-}
-
-static void convert_utf8(mpg123_string *sb, unsigned char* source, size_t len)
+static void convert_utf8(mpg123_string *sb, const unsigned char* source, size_t len, const int noquiet)
 {
 	if(mpg123_resize_string(sb, len+1))
 	{
@@ -885,3 +987,5 @@ static void convert_utf8(mpg123_string *sb, unsigned char* source, size_t len)
 	}
 	else mpg123_free_string(sb);
 }
+
+#endif

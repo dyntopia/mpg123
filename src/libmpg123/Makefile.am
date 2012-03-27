@@ -19,16 +19,14 @@ testcpu_LDADD = getcpuflags.$(OBJEXT)
 CLEANFILES = *.a
 
 
-#lib_LIBRARIES = libmpg123.a
+# The library can have different names, depending on largefile setup.
+# Libtool macros think they're smart. Because of that mpg123.la does not work, it must be libmpg123.la .
 lib_LTLIBRARIES = libmpg123.la
 nodist_include_HEADERS = mpg123.h
 
-#libmpg123_a_LIBADD = @DECODER_OBJ@
-#libmpg123_a_DEPENDENCIES = @DECODER_OBJ@
-
-libmpg123_la_LDFLAGS = -no-undefined -version-info @LIBMPG123_VERSION@ -export-symbols $(top_srcdir)/src/libmpg123/libmpg123.sym
-libmpg123_la_LIBADD = @DECODER_LOBJ@
-libmpg123_la_DEPENDENCIES = @DECODER_LOBJ@ $(top_srcdir)/src/libmpg123/libmpg123.sym
+libmpg123_la_LDFLAGS = -no-undefined -version-info @LIBMPG123_VERSION@ -export-symbols-regex '^mpg123_'
+libmpg123_la_LIBADD = @DECODER_LOBJ@ @LFS_LOBJ@
+libmpg123_la_DEPENDENCIES = @DECODER_LOBJ@ @LFS_LOBJ@
 
 libmpg123_la_SOURCES = \
 	compat.c \
@@ -41,63 +39,90 @@ libmpg123_la_SOURCES = \
 	reader.h \
 	debug.h \
 	decode.h \
-	decode_2to1.c \
-	decode_4to1.c \
-	decode_ntom.c \
+	sample.h \
+	dct64.c \
+	synth.h \
+	synth_mono.h \
+	synth_ntom.h \
+	synth_8bit.h \
+	synths.h \
 	equalizer.c \
 	huffman.h \
-	icy.c \
 	icy.h \
-	id3.c \
+	icy2utf8.h \
 	id3.h \
+	id3.c \
 	true.h \
-	l2tables.h \
-	layer1.c \
-	layer2.c \
-	layer3.c \
 	getbits.h \
 	optimize.h \
 	optimize.c \
 	readers.c \
 	tabinit.c \
-	stringbuf.c \
 	libmpg123.c \
+	aligncheck.h \
 	mpg123lib_intern.h \
 	mangle.h \
 	getcpuflags.h \
-	libmpg123.sym
+	index.h \
+	index.c
 
 EXTRA_libmpg123_la_SOURCES = \
+	lfs_wrap.c \
+	icy.c \
+	icy2utf8.c \
+	l2tables.h \
+	layer1.c \
+	layer2.c \
+	layer3.c \
+	dither.h \
+	dither.c \
+	feature.c \
 	dct36_3dnowext.S \
 	dct36_3dnow.S \
 	dct64_3dnowext.S \
 	dct64_3dnow.S \
 	dct64_altivec.c \
-	dct64.c \
 	dct64_i386.c \
 	dct64_i486.c \
 	dct64_mmx.S \
 	dct64_sse.S \
-	decode_3dnowext.S \
-	decode_3dnow.S \
-	decode_altivec.c \
-	decode.c \
-	decode_i386.c \
-	decode_i486.c \
-	decode_i586_dither.S \
-	decode_i586.S \
-	decode_mmx.S \
-	decode_sse3d.h \
-	decode_sse.S \
-	dnoise.c \
+	dct64_sse_float.S \
+	dct64_x86_64.S \
+	dct64_x86_64_float.S \
+	synth_3dnowext.S \
+	synth_3dnow.S \
+	synth_altivec.c \
+	synth_i486.c \
+	synth_i586_dither.S \
+	synth_i586.S \
+	synth_mmx.S \
+	synth_sse3d.h \
+	synth_sse.S \
+	synth_sse_float.S \
+	synth_sse_s32.S \
+	synth_sse_accurate.S \
+	synth_stereo_sse_float.S \
+	synth_stereo_sse_s32.S \
+	synth_stereo_sse_accurate.S \
+	synth_x86_64.S \
+	synth_x86_64_float.S \
+	synth_x86_64_s32.S \
+	synth_x86_64_accurate.S \
+	synth_stereo_x86_64.S \
+	synth_stereo_x86_64_float.S \
+	synth_stereo_x86_64_s32.S \
+	synth_stereo_x86_64_accurate.S \
+	synth_arm.S \
+	synth_arm_accurate.S \
+	ntom.c \
+	synth.c \
+	synth_8bit.c \
+	synth_real.c \
+	synth_s32.c \
 	equalizer_3dnow.S \
 	tabinit_mmx.S \
-	getcpuflags.S
+	stringbuf.c \
+	getcpuflags.S \
+	l12_integer_tables.h \
+	l3_integer_tables.h
 
-# explicit preprocessing since mingw32 does not honor the big .S
-.S.o:
-	$(CPP) $(AM_CPPFLAGS) $(DEFAULT_INCLUDES) $(CPPFLAGS) $< > $<.s
-	$(CCAS) $(CCASFLAGS) -c -o $@ $<.s && rm $<.s
-
-.S.lo:
-	$(LTCCASCOMPILE) $(DEFAULT_INCLUDES) -c -o $@ $<

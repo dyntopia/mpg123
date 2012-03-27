@@ -55,7 +55,7 @@ ASM_NAME(dct36_3dnowext):
 	movl	16(%ebp), %ecx
 	movl	20(%ebp), %edx
 	movl	24(%ebp), %ebx
-#APP
+/* APP */
 	movq (%eax),%mm0
 	movq 4(%eax),%mm1
 	pfadd %mm1,%mm0
@@ -502,9 +502,14 @@ ASM_NAME(dct36_3dnowext):
 	movd %mm5,1664(%ebx)
 	femms
 	
-#NO_APP
+/* NO_APP */
 	popl	%ebx
 	popl	%esi
 	leave
 	ret
 	/* .size	ASM_NAME(dct36_3dnowext), .-ASM_NAME(dct36_3dnowext) */
+
+/* Mark non-executable stack. */
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack,"",%progbits
+#endif
