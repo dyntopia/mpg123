@@ -2,19 +2,20 @@
 	mpg123: main code of the program (not of the decoder...)
 
 	copyright 1995-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include "config.h"
-#include "debug.h"
 #define ME "main"
+#include "mpg123.h"
 
-#include <stdlib.h>
-#include <sys/types.h>
-#if !defined(WIN32) && !defined(GENERIC)
+#ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
 
@@ -27,7 +28,12 @@
 #include <sched.h>
 #endif
 
-#include "mpg123.h"
+/* be paranoid about setpriority support */
+#ifndef PRIO_PROCESS
+#undef HAVE_SETPRIORITY
+#endif
+
+#include "common.h"
 #include "getlopt.h"
 #include "buffer.h"
 #include "term.h"
@@ -36,6 +42,12 @@
 #endif
 #include "playlist.h"
 #include "id3.h"
+#include "icy.h"
+
+#ifdef OPT_MPLAYER
+/* disappear! */
+func_dct64 mpl_dct64;
+#endif
 
 static void usage(int err);
 static void want_usage(char* arg);
@@ -58,7 +70,7 @@ struct parameter param = {
 #ifdef HAVE_TERMIOS
   FALSE , /* term control */
 #endif
-  -1 ,     /* force mono */
+  0 ,     /* force mono */
   0 ,     /* force stereo */
   0 ,     /* force 8bit */
   0 ,     /* force rate */
@@ -67,25 +79,44 @@ struct parameter param = {
   0 ,	  /* doublespeed */
   0 ,	  /* halfspeed */
   0 ,	  /* force_reopen, always (re)opens audio device for next song */
-#ifdef USE_3DNOW
+  #ifdef OPT_3DNOW
   0 ,     /* autodetect from CPUFLAGS */
+  #endif
+  /* test_cpu flag is valid for multi and 3dnow.. even if 3dnow is built alone; ensure it appears only once */
+  #ifdef OPT_MULTI
   FALSE , /* normal operation */
-#endif
+  #else
+  #ifdef OPT_3DNOW
+  FALSE , /* normal operation */
+  #endif
+  #endif
   FALSE,  /* try to run process in 'realtime mode' */   
   { 0,},  /* wav,cdr,au Filename */
 #ifdef GAPLESS
 	0, /* gapless off per default - yet */
 #endif
 	0, /* default is to play all titles in playlist */
-	-1, /* do not use rva per default */
-	NULL /* no playlist per default */
+	0, /* do not use rva per default */
+	NULL, /* no playlist per default */
+	0 /* condensed id3 per default */
+	#ifdef OPT_MULTI
+	,NULL /* choose optimization */
+	,0
+	#endif
+#ifdef FIFO
+	,NULL
+#endif
+#ifndef WIN32
+	,0
+#endif
+	,1
 };
 
 char *prgName = NULL;
 char *equalfile = NULL;
 /* ThOr: pointers are not TRUE or FALSE */
 int have_eq_settings = FALSE;
-long outscale  = MAXOUTBURST;
+scale_t outscale  = MAXOUTBURST;
 long numframes = -1;
 long startFrame= 0;
 int buffer_fd[2];
@@ -95,11 +126,30 @@ static int intflag = FALSE;
 
 int OutputDescriptor;
 
+/* A safe realloc also for very old systems where realloc(NULL, size) returns NULL. */
+void *safe_realloc(void *ptr, size_t size)
+{
+	if(ptr == NULL) return malloc(size);
+	else return realloc(ptr, size);
+}
+
+#ifndef HAVE_STRERROR
+const char *strerror(int errnum)
+{
+  extern int sys_nerr;
+  extern char *sys_errlist[];
+
+  return (errnum < sys_nerr) ?  sys_errlist[errnum]  :  "";
+}
+#endif
+
 #if !defined(WIN32) && !defined(GENERIC)
+#ifndef NOXFERMEM
 static void catch_child(void)
 {
   while (waitpid(-1, NULL, WNOHANG) > 0);
 }
+#endif
 
 static void catch_interrupt(void)
 {
@@ -271,22 +321,35 @@ void set_au(char *arg)
 }
 static void SetOutFile(char *Arg)
 {
-  param.outmode=DECODE_FILE;
-  OutputDescriptor=open(Arg,O_WRONLY,0);
-  if(OutputDescriptor==-1) {
-    error2("Can't open %s for writing (%s).\n",Arg,strerror(errno));
-    safe_exit(1);
-  }
+	param.outmode=DECODE_FILE;
+	#ifdef WIN32
+	OutputDescriptor=_open(Arg,_O_CREAT|_O_WRONLY|_O_BINARY|_O_TRUNC,0666);
+	#else
+	OutputDescriptor=open(Arg,O_CREAT|O_WRONLY|O_TRUNC,0666);
+	#endif
+	if(OutputDescriptor==-1)
+	{
+		error2("Can't open %s for writing (%s).\n",Arg,strerror(errno));
+		safe_exit(1);
+	}
 }
 static void SetOutStdout(char *Arg)
 {
-  param.outmode=DECODE_FILE;
-  OutputDescriptor=1;
+	param.outmode=DECODE_FILE;
+	param.remote_err=TRUE;
+	OutputDescriptor=STDOUT_FILENO;
+	#ifdef WIN32
+	_setmode(STDOUT_FILENO, _O_BINARY);
+	#endif
 }
 static void SetOutStdout1(char *Arg)
 {
   param.outmode=DECODE_AUDIOFILE;
-  OutputDescriptor=1;
+	param.remote_err=TRUE;
+  OutputDescriptor=STDOUT_FILENO;
+	#ifdef WIN32
+	_setmode(STDOUT_FILENO, _O_BINARY);
+	#endif
 }
 
 void realtime_not_compiled(char *arg)
@@ -315,13 +378,13 @@ topt opts[] = {
 	{'v', "verbose",     0,        set_verbose, 0,           0},
 	{'q', "quiet",       GLO_INT,  0, &param.quiet, TRUE},
 	{'y', "resync",      GLO_INT,  0, &param.tryresync, FALSE},
-	{'0', "single0",     GLO_INT,  0, &param.force_mono, 0},
-	{0,   "left",        GLO_INT,  0, &param.force_mono, 0},
-	{'1', "single1",     GLO_INT,  0, &param.force_mono, 1},
-	{0,   "right",       GLO_INT,  0, &param.force_mono, 1},
-	{'m', "singlemix",   GLO_INT,  0, &param.force_mono, 3},
-	{0,   "mix",         GLO_INT,  0, &param.force_mono, 3},
-	{0,   "mono",        GLO_INT,  0, &param.force_mono, 3},
+	{'0', "single0",     GLO_INT,  0, &param.force_mono, MONO_LEFT},
+	{0,   "left",        GLO_INT,  0, &param.force_mono, MONO_LEFT},
+	{'1', "single1",     GLO_INT,  0, &param.force_mono, MONO_RIGHT},
+	{0,   "right",       GLO_INT,  0, &param.force_mono, MONO_RIGHT},
+	{'m', "singlemix",   GLO_INT,  0, &param.force_mono, MONO_MIX},
+	{0,   "mix",         GLO_INT,  0, &param.force_mono, MONO_MIX},
+	{0,   "mono",        GLO_INT,  0, &param.force_mono, MONO_MIX},
 	{0,   "stereo",      GLO_INT,  0, &param.force_stereo, 1},
 	{0,   "reopen",      GLO_INT,  0, &param.force_reopen, 1},
 	{'g', "gain",        GLO_ARG | GLO_LONG, 0, &ai.gain,    0},
@@ -331,7 +394,11 @@ topt opts[] = {
 	{0,   "speaker",     0,                  set_output_s, 0,0},
 	{0,   "lineout",     0,                  set_output_l, 0,0},
 	{'o', "output",      GLO_ARG | GLO_CHAR, set_output, 0,  0},
+#ifdef FLOATOUT
+	{'f', "scale",       GLO_ARG | GLO_DOUBLE, 0, &outscale,   0},
+#else
 	{'f', "scale",       GLO_ARG | GLO_LONG, 0, &outscale,   0},
+#endif
 	{'n', "frames",      GLO_ARG | GLO_LONG, 0, &numframes,  0},
 	#ifdef HAVE_TERMIOS
 	{'C', "control",     GLO_INT,  0, &param.term_ctrl, TRUE},
@@ -350,10 +417,15 @@ topt opts[] = {
 	#ifdef HAVE_SETPRIORITY
 	{0,   "aggressive",	 GLO_INT,  0, &param.aggressive, 2},
 	#endif
-	#ifdef USE_3DNOW
+	#ifdef OPT_3DNOW
 	{0,   "force-3dnow", GLO_INT,  0, &param.stat_3dnow, 1},
 	{0,   "no-3dnow",    GLO_INT,  0, &param.stat_3dnow, 2},
-	{0,   "test-3dnow",  GLO_INT,  0, &param.test_3dnow, TRUE},
+	{0,   "test-3dnow",  GLO_INT,  0, &param.test_cpu, TRUE},
+	#endif
+	#ifdef OPT_MULTI
+	{0, "cpu", GLO_ARG | GLO_CHAR, 0, &param.cpu,  0},
+	{0, "test-cpu",  GLO_INT,  0, &param.test_cpu, TRUE},
+	{0, "list-cpu", GLO_INT,  0, &param.list_cpu , 1},
 	#endif
 	#if !defined(WIN32) && !defined(GENERIC)
 	{'u', "auth",        GLO_ARG | GLO_CHAR, 0, &httpauth,   0},
@@ -375,10 +447,18 @@ topt opts[] = {
 	{0 , "longhelp" ,        0,  want_long_usage, 0,      0 },
 	{0 , "version" ,         0,  give_version, 0,         0 },
 	{'l', "listentry",       GLO_ARG | GLO_LONG, 0, &param.listentry, 0 },
-	{0, "rva-mix",         GLO_INT,  0, &param.rva, 0 },
-	{0, "rva-radio",         GLO_INT,  0, &param.rva, 0 },
-	{0, "rva-album",         GLO_INT,  0, &param.rva, 1 },
-	{0, "rva-audiophile",         GLO_INT,  0, &param.rva, 1 },
+	{0, "rva-mix",         GLO_INT,  0, &param.rva, 1 },
+	{0, "rva-radio",         GLO_INT,  0, &param.rva, 1 },
+	{0, "rva-album",         GLO_INT,  0, &param.rva, 2 },
+	{0, "rva-audiophile",         GLO_INT,  0, &param.rva, 2 },
+	{0, "long-tag",         GLO_INT,  0, &param.long_id3, 1 },
+#ifdef FIFO
+	{0, "fifo", GLO_ARG | GLO_CHAR, 0, &param.fifo,  0},
+#endif
+#ifndef WIN32
+	{0, "timeout", GLO_ARG | GLO_LONG, 0, &param.timeout, 0},
+#endif
+	{0, "loop", GLO_ARG | GLO_LONG, 0, &param.loop, 0},
 	{0, 0, 0, 0, 0, 0}
 };
 
@@ -511,14 +591,14 @@ int play_frame(int init,struct frame *fr)
 			init_output();
 			if(ai.rate != old_rate || ai.channels != old_channels ||
 			   ai.format != old_format || param.force_reopen) {
-				if(param.force_mono < 0) {
+				if(!param.force_mono) {
 					if(ai.channels == 1)
 						fr->single = 3;
 					else
 						fr->single = -1;
 				}
 				else
-					fr->single = param.force_mono;
+					fr->single = param.force_mono-1;
 
 				param.force_stereo &= ~0x2;
 				if(fr->single >= 0 && ai.channels == 2) {
@@ -582,77 +662,52 @@ int play_frame(int init,struct frame *fr)
 	return 1;
 }
 
+/* set synth functions for current frame, optimizations handled by opt_* macros */
 void set_synth_functions(struct frame *fr)
 {
-	typedef int (*func)(real *,int,unsigned char *,int *);
-	typedef int (*func_mono)(real *,unsigned char *,int *);
-	typedef void (*func_dct36)(real *,real *,real *,real *,real *);
 	int ds = fr->down_sample;
 	int p8=0;
-#ifdef USE_3DNOW
-	static func funcs[3][4] = {
-#else
-	static func funcs[2][4] = { 
-#endif
-		{ synth_1to1,
+	static func_synth funcs[2][4] = { 
+		{ NULL,
 		  synth_2to1,
 		  synth_4to1,
 		  synth_ntom } ,
-		{ synth_1to1_8bit,
+		{ NULL,
 		  synth_2to1_8bit,
 		  synth_4to1_8bit,
 		  synth_ntom_8bit } 
-#ifdef USE_3DNOW
-  	       ,{ synth_1to1_3dnow,
-  		  synth_2to1,
- 		  synth_4to1,
-  		  synth_ntom }
-#endif
 	};
-
-	static func_mono funcs_mono[2][2][4] = {    
-		{ { synth_1to1_mono2stereo ,
+	static func_synth_mono funcs_mono[2][2][4] = {    
+		{ { NULL ,
 		    synth_2to1_mono2stereo ,
 		    synth_4to1_mono2stereo ,
 		    synth_ntom_mono2stereo } ,
-		  { synth_1to1_8bit_mono2stereo ,
+		  { NULL ,
 		    synth_2to1_8bit_mono2stereo ,
 		    synth_4to1_8bit_mono2stereo ,
 		    synth_ntom_8bit_mono2stereo } } ,
-		{ { synth_1to1_mono ,
+		{ { NULL ,
 		    synth_2to1_mono ,
 		    synth_4to1_mono ,
 		    synth_ntom_mono } ,
-		  { synth_1to1_8bit_mono ,
+		  { NULL ,
 		    synth_2to1_8bit_mono ,
 		    synth_4to1_8bit_mono ,
 		    synth_ntom_8bit_mono } }
 	};
 
-#ifdef USE_3DNOW	
-	static func_dct36 funcs_dct36[2] = {dct36 , dct36_3dnow};
-#endif
+	/* possibly non-constand entries filled here */
+	funcs[0][0] = opt_synth_1to1;
+	funcs[1][0] = opt_synth_1to1_8bit;
+	funcs_mono[0][0][0] = opt_synth_1to1_mono2stereo;
+	funcs_mono[0][1][0] = opt_synth_1to1_8bit_mono2stereo;
+	funcs_mono[1][0][0] = opt_synth_1to1_mono;
+	funcs_mono[1][1][0] = opt_synth_1to1_8bit_mono;
 
 	if((ai.format & AUDIO_FORMAT_MASK) == AUDIO_FORMAT_8)
 		p8 = 1;
 	fr->synth = funcs[p8][ds];
-	fr->synth_mono = funcs_mono[param.force_stereo?0:1][p8][ds];
-
-/* TODO: make autodetection for _all_ x86 optimizations (maybe just for i586+ and keep separate 486 build?) */
-#ifdef USE_3DNOW
-	/* check cpuflags bit 31 (3DNow!) and 23 (MMX) */
-	if((param.stat_3dnow < 2) && 
-	   ((param.stat_3dnow == 1) ||
-	    (getcpuflags() & 0x80800000) == 0x80800000))
-      	{
-	  fr->synth = funcs[2][ds]; /* 3DNow! optimized synth_1to1() */
-	  fr->dct36 = funcs_dct36[1]; /* 3DNow! optimized dct36() */
-	}
-	else
-	{
-	       	  fr->dct36 = funcs_dct36[0];
-      	}
-#endif
+	fr->synth_mono = funcs_mono[ai.channels==2 ? 0 : 1][p8][ds];
 
 	if(p8) {
 		if(make_conv16to8_table(ai.format) != 0)
@@ -704,19 +759,38 @@ int main(int argc, char *argv[])
 				prgName, loptarg);
 			usage(1);
 	}
-#ifdef USE_3DNOW
-	if (param.test_3dnow) {
-		int cpuflags = getcpuflags();
-		fprintf(stderr,"CPUFLAGS = %08x\n",cpuflags);
-		if ((cpuflags & 0x00800000) == 0x00800000) {
+
+	#ifdef OPT_MULTI
+	if(param.list_cpu)
+	{
+		list_cpu_opt();
+		safe_exit(0);
+	}
+	if (param.test_cpu)
+	{
+		test_cpu_flags();
+		safe_exit(0);
+	}
+	if(!set_cpu_opt()) safe_exit(1);
+	#else
+	#ifdef OPT_3DNOW
+	if (param.test_cpu) {
+		struct cpuflags cf;
+		getcpuflags(&cf);
+		fprintf(stderr,"CPUFLAGS = %08x\n",cf.ext);
+		if ((cf.ext & 0x00800000) == 0x00800000) {
 			fprintf(stderr,"MMX instructions are supported.\n");
 		}
-		if ((cpuflags & 0x80000000) == 0x80000000) {
+		if ((cf.ext & 0x80000000) == 0x80000000) {
 			fprintf(stderr,"3DNow! instructions are supported.\n");
 		}
 		safe_exit(0);
 	}
-#endif
+	#endif
+	#endif
+	#ifdef OPT_MPLAYER
+	mpl_dct64 = opt_mpl_dct64;
+	#endif
 
 	if (loptind >= argc && !param.listname && !param.remote)
 		usage(1);
@@ -731,8 +805,8 @@ int main(int argc, char *argv[])
 	if (!(param.listentry < 0) && !param.quiet)
 		print_title(stderr); /* do not pollute stdout! */
 
-	if(param.force_mono >= 0) {
-		fr.single = param.force_mono;
+	if(param.force_mono) {
+		fr.single = param.force_mono-1;
 	}
 
 	if(param.force_rate && param.down_sample) {
@@ -794,7 +868,7 @@ int main(int argc, char *argv[])
 
 	if(!param.remote) prepare_playlist(argc, argv);
 
-	make_decode_tables(outscale);
+	opt_make_decode_tables(outscale);
 	init_layer2(); /* inits also shared tables with layer1 */
 	init_layer3(fr.down_sample);
 
@@ -808,16 +882,19 @@ int main(int argc, char *argv[])
 		#endif
 	)
 	catchsignal (SIGINT, catch_interrupt);
+#endif
 
 	if(param.remote) {
 		int ret;
 		init_id3();
+		init_icy();
 		ret = control_generic(&fr);
+		clear_icy();
 		exit_id3();
 		safe_exit(ret);
 	}
-#endif
 
+	init_icy();
 	init_id3(); /* prepare id3 memory */
 	while ((fname = get_next_file())) {
 		char *dirname, *filename;
@@ -1023,6 +1100,7 @@ tc_hack:
 #endif
       }
     } /* end of loop over input files */
+    clear_icy();
     exit_id3(); /* free id3 memory */
 #ifndef NOXFERMEM
     if (param.usebuffer) {
@@ -1080,7 +1158,7 @@ static void usage(int err)  /* print syntax & exit */
 	fprintf(o,"   -w <filename> write Output as WAV file\n");
 	fprintf(o,"   -k n  skip first n frames [0]        -n n  decode only n frames [all]\n");
 	fprintf(o,"   -c    check range violations         -y    DISABLE resync on errors\n");
-	fprintf(o,"   -b n  output buffer: n Kbytes [0]    -f n  change scalefactor [32768]\n");
+	fprintf(o,"   -b n  output buffer: n Kbytes [0]    -f n  change scalefactor [%g]\n", (double)outscale);
 	fprintf(o,"   -r n  set/force samplerate [auto]    -g n  set audio hardware output gain\n");
 	fprintf(o,"   -os,-ol,-oh  output to built-in speaker,line-out connector,headphones\n");
 	#ifdef NAS
@@ -1135,6 +1213,10 @@ static void long_usage(int err)
 	fprintf(o," -u     --auth             set auth values for HTTP access\n");
 	fprintf(o," -@ <f> --list <f>         play songs in playlist <f> (plain list, m3u, pls (shoutcast))\n");
 	fprintf(o," -l <n> --listentry <n>    play nth title in playlist; show whole playlist for n < 0\n");
+	fprintf(o,"        --loop <n>         loop track(s) <n> times, < 0 means infinite loop (not with --random!)\n");
+#ifndef WIN32
+	fprintf(o,"        --timeout <n>      Timeout in seconds before declaring a stream dead (if <= 0, wait forever)\n");
+#endif
 	fprintf(o," -z     --shuffle          shuffle song-list before playing\n");
 	fprintf(o," -Z     --random           full random play\n");
 
@@ -1146,13 +1228,22 @@ static void long_usage(int err)
 	fprintf(o,"        --au <f>           write samples as Sun AU file in <f> (- is stdout)\n");
 	fprintf(o,"        --cdr <f>          write samples as CDR file in <f> (- is stdout)\n");
 	fprintf(o,"        --reopen           force close/open on audiodevice\n");
+	#ifdef OPT_MULTI
+	fprintf(o,"        --cpu <string>     set cpu optimization\n");
+	fprintf(o,"        --test-cpu         list optmizations possible with cpu and exit\n");
+	fprintf(o,"        --list-cpu         list builtin optimizations and exit\n");
+	#endif
+	#ifdef OPT_3DNOW
+	fprintf(o,"        --test-3dnow       display result of 3DNow! autodetect and exit (obsoleted by --cpu)\n");
+	fprintf(o,"        --force-3dnow      force use of 3DNow! optimized routine (obsoleted by --test-cpu)\n");
+	fprintf(o,"        --no-3dnow         force use of floating-pointer routine (obsoleted by --cpu)\n");
+	#endif
 	fprintf(o," -g     --gain             set audio hardware output gain\n");
-	fprintf(o," -f <n> --scale <n>        scale output samples (soft gain, default=%li)\n", outscale);
+	fprintf(o," -f <n> --scale <n>        scale output samples (soft gain, default=%g)\n", (double)outscale);
 	fprintf(o,"        --rva-mix,\n");
 	fprintf(o,"        --rva-radio        use RVA2/ReplayGain values for mix/radio mode\n");
 	fprintf(o,"        --rva-album,\n");
 	fprintf(o,"        --rva-audiophile   use RVA2/ReplayGain values for album/audiophile mode\n");
-	fprintf(o,"        --reopen           force close/open on audiodevice\n");
 	fprintf(o," -0     --left --single0   play only left channel\n");
 	fprintf(o," -1     --right --single1  play only right channel\n");
 	fprintf(o," -m     --mono --mix       mix stereo to mono\n");
@@ -1184,18 +1275,17 @@ static void long_usage(int err)
 	#ifndef GENERIG
 	fprintf(o,"        --title            set xterm/rxvt title to filename\n");
 	#endif
+	fprintf(o,"        --long-tag         spacy id3 display with every item on a separate line\n");
 	fprintf(o," -R     --remote           generic remote interface\n");
-	fprintf(o,"        --remote-err       use stderr for generic remote interface\n");
+	fprintf(o,"        --remote-err       force use of stderr for generic remote interface\n");
+#ifdef FIFO
+	fprintf(o,"        --fifo <path>      open a FIFO at <path> for commands instead of stdin\n");
+#endif
 	#ifdef HAVE_SETPRIORITY
 	fprintf(o,"        --aggressive       tries to get higher priority (nice)\n");
 	#endif
 	#ifdef HAVE_SCHED_SETSCHEDULER
 	fprintf(o," -T     --realtime         tries to get realtime priority\n");
-	#endif
-	#ifdef USE_3DNOW
-	fprintf(o,"        --test-3dnow       display result of 3DNow! autodetect and exit\n");
-	fprintf(o,"        --force-3dnow      force use of 3DNow! optimized routine\n");
-	fprintf(o,"        --no-3dnow         force use of floating-pointer routine\n");
 	#endif
 	fprintf(o," -?     --help             give compact help\n");
 	fprintf(o,"        --longhelp         give this long help listing\n");

@@ -2,23 +2,19 @@
 	xfermem: unidirectional fast pipe
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Oliver Fromme
 	old timestamp: Sun Apr  6 02:26:26 MET DST 1997
 
 	See xfermem.h for documentation/description.
 */
 
-#include "config.h"
 
 #ifndef NOXFERMEM
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "mpg123.h"
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
-#include <sys/types.h>
 #include <sys/time.h>
 #include <sys/uio.h>
 #include <sys/mman.h>
@@ -29,7 +25,6 @@
 #include <sys/select.h>
 #endif
 
-#include "mpg123.h"
 
 #ifndef HAVE_MMAP
 #include <sys/ipc.h>
@@ -224,33 +219,22 @@ int xfermem_block (int readwrite, txfermem *xf)
 	return ((result <= 0) ? -1 : result);
 }
 
-#elif defined(WIN32)
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <fcntl.h>
+#else /* stubs for generic / win32 */
 
+#include "mpg123.h"
 #include "xfermem.h"
-
-extern int errno;
 
 void xfermem_init (txfermem **xf, int bufsize, int msize, int skipbuf)
 {
-  return 0;
 }
 void xfermem_done (txfermem *xf)
 {
-  return 0;
 }
 void xfermem_init_writer (txfermem *xf)
 {
-  return 0;
 }
 void xfermem_init_reader (txfermem *xf)
 {
-  return 0;
 }
 int xfermem_get_freespace (txfermem *xf)
 {

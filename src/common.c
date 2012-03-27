@@ -2,39 +2,25 @@
 	common: anything can happen here... frame reading, output, messages
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include <ctype.h>
-#include <stdlib.h>
-#include <signal.h>
+#include "mpg123.h"
 
-#include <sys/types.h>
+/* #include <ctype.h> */
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <math.h>
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#endif
 
 #include <fcntl.h>
 
-#include "config.h"
-
-#if 0
-#ifdef READ_MMAP
-#include <sys/mman.h>
-#ifndef MAP_FAILED
-#define MAP_FAILED ( (void *) -1 )
-#endif
-#endif
-#endif
-
-#include "mpg123.h"
 #include "id3.h"
+#include "icy.h"
 #include "common.h"
-#include "debug.h"
+
+#ifdef WIN32
+#include <winsock.h>
+#endif
 
 /* bitrates for [mpeg1/2][layer] */
 int tabsel_123[2][3][16] = {
@@ -68,20 +54,14 @@ int abr_rate = 0;
 #endif
 unsigned long track_frames = 0;
 /* a limit for number of frames in a track; beyond that unsigned long may not be enough to hold byte addresses */
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
-#ifndef ULONG_MAX
-/* hm, is this portable across preprocessors? */
-#define ULONG_MAX ((unsigned long)-1)
-#endif
 #define TRACK_MAX_FRAMES ULONG_MAX/4/1152
 
 /* this could become a struct... */
-long lastscale = -1; /* last used scale */
+scale_t lastscale = -1; /* last used scale */
 int rva_level[2] = {-1,-1}; /* significance level of stored rva */
 float rva_gain[2] = {0,0}; /* mix, album */
 float rva_peak[2] = {0,0};
+const char* rva_name[3] = { "off", "mix", "album" };
 
 static double mean_framesize;
 static unsigned long mean_frames;
@@ -133,6 +113,9 @@ unsigned long samples_to_bytes(unsigned long s, struct frame *fr , struct audio_
 	samf = floor(sammy);
 	return (unsigned long)
 		(((ai->format & AUDIO_FORMAT_MASK) == AUDIO_FORMAT_16) ? 2 : 1)
+#ifdef FLOATOUT
+		* 2
+#endif
 		* ai->channels
 		* (int) (((sammy - samf) < 0.5) ? samf : ( sammy-samf > 0.5 ? samf+1 : ((unsigned long) samf % 2 == 0 ? samf : samf + 1)));
 }
@@ -140,6 +123,7 @@ unsigned long samples_to_bytes(unsigned long s, struct frame *fr , struct audio_
 
 void audio_flush(int outmode, struct audio_info_struct *ai)
 {
+	/* the gapless code is not in effect for buffered mode... as then condition for audio_flush is never met */
 	#ifdef GAPLESS
 	if(param.gapless) layer3_gapless_buffercheck();
 	#endif
@@ -154,6 +138,7 @@ void audio_flush(int outmode, struct audio_info_struct *ai)
 				audio_play_samples (ai, pcm_sample, pcm_point);
 			break;
 			case DECODE_BUFFER:
+				error("The buffer doesn't work like that... I shouldn't ever be getting here.");
 				write (buffer_fd[1], pcm_sample, pcm_point);
 			break;
 			case DECODE_WAV:
@@ -188,7 +173,7 @@ void (*catchsignal(int signum, void(*handler)()))()
 
 void read_frame_init (struct frame* fr)
 {
-	fr->num = 0;
+	fr->num = -1;
 	oldhead = 0;
 	firsthead = 0;
 	vbr = CBR;
@@ -240,35 +225,52 @@ int head_check(unsigned long head)
 	}
 }
 
-static void do_rva()
+void do_volume(double factor)
 {
-	if(param.rva != -1)
+	if(factor < 0) factor = 0;
+	/* change the output scaling and apply with rva */
+	outscale = (double) MAXOUTBURST * factor;
+	do_rva();
+}
+
+/* adjust the volume, taking both outscale and rva values into account */
+void do_rva()
+{
+	double rvafact = 1;
+	float peak = 0;
+	scale_t newscale;
+
+	if(param.rva)
 	{
 		int rt = 0;
 		/* Should one assume a zero RVA as no RVA? */
-		if(param.rva == 1 && rva_level[1] != -1) rt = 1;
+		if(param.rva == 2 && rva_level[1] != -1) rt = 1;
 		if(rva_level[rt] != -1)
 		{
-			long newscale = outscale*pow(10,rva_gain[rt]/20);
-			fprintf(stderr, "Note: doing RVA with gain %f\n", rva_gain[rt]);
-			/* if peak is unknown (== 0) this check won't hurt */
-			if((rva_peak[rt]*newscale) > MAXOUTBURST)
-			{
-				newscale = (long) ((float) MAXOUTBURST/rva_peak[rt]);
-				warning2("limiting scale value to %li to prevent clipping with indicated peak factor of %f", newscale, rva_peak[rt]);
-			}
-			if(lastscale < 0) lastscale = outscale;
-			if(newscale != lastscale)
-			{
-				debug3("changing scale value from %li to %li (peak estimated to %li)", lastscale, newscale, (long) (newscale*rva_peak[rt]));
-				make_decode_tables(newscale);
-				lastscale = newscale;
-			}
+			rvafact = pow(10,rva_gain[rt]/20);
+			peak = rva_peak[rt];
+			if(param.verbose > 1) fprintf(stderr, "Note: doing RVA with gain %f\n", rva_gain[rt]);
 		}
 		else
 		{
 			warning("no RVA value found");
 		}
+	}
+
+	newscale = outscale*rvafact;
+
+	/* if peak is unknown (== 0) this check won't hurt */
+	if((peak*newscale) > MAXOUTBURST)
+	{
+		newscale = (scale_t) ((double) MAXOUTBURST/peak);
+		warning2("limiting scale value to %li to prevent clipping with indicated peak factor of %f", newscale, peak);
+	}
+	/* first rva setting is forced with lastscale < 0 */
+	if(newscale != lastscale)
+	{
+		debug3("changing scale value from %li to %li (peak estimated to %li)", lastscale != -1 ? lastscale : outscale, newscale, (long) (newscale*peak));
+		opt_make_decode_tables(newscale); /* the actual work */
+		lastscale = newscale;
 	}
 }
 
@@ -292,7 +294,7 @@ int read_frame(struct frame *fr)
   unsigned long newhead;
   static unsigned char ssave[34];
 	off_t framepos;
-  int give_note = param.quiet ? 0 : (do_recover ? 0 : 1 );
+  int give_note = param.verbose > 1 ? 1 : (do_recover ? 0 : 1 );
   fsizeold=fr->framesize;       /* for Layer3 */
 
   if (param.halfspeed) {
@@ -343,11 +345,11 @@ init_resync:
 			id3length = parse_new_id3(newhead, rd);
 			goto read_again;
 		}
-		else if(!param.quiet) fprintf(stderr,"Note: Junk at the beginning (0x%08lx)\n",newhead);
+		else if(param.verbose > 1) fprintf(stderr,"Note: Junk at the beginning (0x%08lx)\n",newhead);
 
 		/* I even saw RIFF headers at the beginning of MPEG streams ;( */
 		if(newhead == ('R'<<24)+('I'<<16)+('F'<<8)+'F') {
-			if(!param.quiet) fprintf(stderr, "Note: Looks like a RIFF header.\n");
+			if(param.verbose > 1) fprintf(stderr, "Note: Looks like a RIFF header.\n");
 			if(!rd->head_read(rd,&newhead))
 				return 0;
 			while(newhead != ('d'<<24)+('a'<<16)+('t'<<8)+'a') {
@@ -356,22 +358,24 @@ init_resync:
 			}
 			if(!rd->head_read(rd,&newhead))
 				return 0;
-			if(!param.quiet) fprintf(stderr,"Note: Skipped RIFF header!\n");
+			if(param.verbose > 1) fprintf(stderr,"Note: Skipped RIFF header!\n");
 			goto read_again;
 		}
 		/* unhandled junk... just continue search for a header */
 		/* step in byte steps through next 64K */
+		debug("searching for header...");
 		for(i=0;i<65536;i++) {
 			if(!rd->head_shift(rd,&newhead))
 				return 0;
 			/* if(head_check(newhead)) */
 			if(head_check(newhead) && decode_header(fr, newhead))
-			break;
+				break;
 		}
 		if(i == 65536) {
 			if(!param.quiet) error("Giving up searching valid MPEG header after 64K of junk.");
 			return 0;
 		}
+		else debug("hopefully found one...");
 		/* 
 		 * should we additionaly check, whether a new frame starts at
 		 * the next expected position? (some kind of read ahead)
@@ -411,6 +415,7 @@ init_resync:
 			if(!head_check(nexthead) || (nexthead & HDRCMPMASK) != (newhead & HDRCMPMASK))
 			{
 				debug("No, the header was not valid, start from beginning...");
+				oldhead = 0; /* start over */
 				/* try next byte for valid header */
 				if(rd->back_bytes(rd, 3))
 				{
@@ -434,8 +439,7 @@ init_resync:
     /* and those ugly ID3 tags */
       if((newhead & 0xffffff00) == ('T'<<24)+('A'<<16)+('G'<<8)) {
            rd->skip_bytes(rd,124);
-	   if (!param.quiet)
-             fprintf(stderr,"Note: Skipped ID3 Tag!\n");
+	   if (param.verbose > 1) fprintf(stderr,"Note: Skipped ID3 Tag!\n");
            goto read_again;
       }
       /* duplicated code from above! */
@@ -464,7 +468,7 @@ init_resync:
         do {
           if(!rd->head_shift(rd,&newhead))
 		return 0;
-          /* debug2("resync try %i, got newhead 0x%08lx", try, newhead); */
+          debug2("resync try %i, got newhead 0x%08lx", try, newhead);
           if (!oldhead)
           {
             debug("going to init_resync...");
@@ -543,10 +547,12 @@ init_resync:
 			{
 				size_t i;
 				int lame_type = 0;
+				debug("do we have lame tag?");
 				/* only search for tag when all zero before it (apart from checksum) */
 				for(i=2; i < lame_offset; ++i) if(bsbuf[i] != 0) break;
 				if(i == lame_offset)
 				{
+					debug("possibly...");
 					if
 					(
 					       (bsbuf[lame_offset] == 'I')
@@ -573,7 +579,7 @@ init_resync:
 						unsigned long xing_flags;
 						
 						/* we have one of these headers... */
-						if(!param.quiet) fprintf(stderr, "Note: Xing/Lame/Info header detected\n");
+						if(param.verbose > 1) fprintf(stderr, "Note: Xing/Lame/Info header detected\n");
 						/* now interpret the Xing part, I have 120 bytes total for sure */
 						/* there are 4 bytes for flags, but only the last byte contains known ones */
 						lame_offset += 4; /* now first byte after Xing/Name */
@@ -746,8 +752,13 @@ init_resync:
 		debug1("firsthead: %08lx", firsthead);
 		/* now adjust volume */
 		do_rva();
-		/* and print id3 info */
-		if(!param.quiet) print_id3_tag(rd->flags & READER_ID3TAG ? rd->id3buf : NULL);
+		/* and print id3/stream info */
+		if(!param.quiet)
+		{
+			print_id3_tag(rd->flags & READER_ID3TAG ? rd->id3buf : NULL);
+			if(icy.name.fill) fprintf(stderr, "ICY-NAME: %s\n", icy.name.p);
+			if(icy.url.fill) fprintf(stderr, "ICY-URL: %s\n", icy.url.p);
+		}
 	}
   bsi.bitindex = 0;
   bsi.wordpointer = (unsigned char *) bsbuf;
@@ -755,10 +766,12 @@ init_resync:
   if (param.halfspeed && fr->lay == 3)
     memcpy (ssave, bsbuf, ssize);
 
+	debug2("N %08lx %i", newhead, fr->framesize);
 	if(++mean_frames != 0)
 	{
 		mean_framesize = ((mean_frames-1)*mean_framesize+compute_bpf(fr)) / mean_frames ;
 	}
+	++fr->num; /* 0 for the first! */
 	/* index the position */
 	if(INDEX_SIZE > 0) /* any sane compiler should make a no-brainer out of this */
 	{
@@ -782,7 +795,6 @@ init_resync:
 			}
 		}
 	}
-	++fr->num;
   return 1;
 }
 
@@ -894,9 +906,12 @@ static int decode_header(struct frame *fr,unsigned long newhead)
       }
       else
         fr->sampling_frequency = ((newhead>>10)&0x3) + (fr->lsf*3);
-      fr->error_protection = ((newhead>>16)&0x1)^0x1;
     }
 
+    #ifdef DEBUG
+    if((((newhead>>16)&0x1)^0x1) != fr->error_protection) debug("changed crc bit!");
+    #endif
+    fr->error_protection = ((newhead>>16)&0x1)^0x1; /* seen a file where this varies (old lame tag without crc, track with crc) */
     fr->bitrate_index = ((newhead>>12)&0xf);
     fr->padding   = ((newhead>>9)&0x1);
     fr->extension = ((newhead>>8)&0x1);
@@ -966,11 +981,10 @@ debug2("bitrate index: %i (%i)", fr->bitrate_index, tabsel_123[fr->lsf][1][fr->b
 
 /* concurring to print_rheader... here for control_generic */
 const char* remote_header_help = "S <mpeg-version> <layer> <sampling freq> <mode(stereo/mono/...)> <mode_ext> <framesize> <stereo> <copyright> <error_protected> <emphasis> <bitrate> <extension> <vbr(0/1=yes/no)>";
-void make_remote_header(struct frame* fr, char *target)
+void print_remote_header(struct frame* fr)
 {
-	/* redundancy */
 	static char *modes[4] = {"Stereo", "Joint-Stereo", "Dual-Channel", "Single-Channel"};
-	snprintf(target, 1000, "S %s %d %ld %s %d %d %d %d %d %d %d %d %d",
+	generic_sendmsg("S %s %d %ld %s %d %d %d %d %d %d %d %d %d",
 		fr->mpeg25 ? "2.5" : (fr->lsf ? "2.0" : "1.0"),
 		fr->lay,
 		freqs[fr->sampling_frequency],
@@ -985,24 +999,6 @@ void make_remote_header(struct frame* fr, char *target)
 		fr->extension,
 		vbr);
 }
-
-
-#ifdef MPG123_REMOTE
-void print_rheader(struct frame *fr)
-{
-	static char *modes[4] = { "Stereo", "Joint-Stereo", "Dual-Channel", "Single-Channel" };
-	static char *layers[4] = { "Unknown" , "I", "II", "III" };
-	static char *mpeg_type[2] = { "1.0" , "2.0" };
-
-	/* version, layer, freq, mode, channels, bitrate, BPF, VBR*/
-	fprintf(stderr,"@I %s %s %ld %s %d %d %d %i\n",
-			mpeg_type[fr->lsf],layers[fr->lay],freqs[fr->sampling_frequency],
-			modes[fr->mode],fr->stereo,
-			vbr == ABR ? abr_rate : tabsel_123[fr->lsf][fr->lay-1][fr->bitrate_index],
-			fr->framesize+4,
-			vbr);
-}
-#endif
 
 void print_header(struct frame *fr)
 {
@@ -1260,6 +1256,16 @@ int position_info(struct frame* fr, unsigned long no, long buffsize, struct audi
 	return 0;
 }
 
+long time_to_frame(struct frame *fr, double seconds)
+{
+	return (long) (seconds/compute_tpf(fr));
+}
+
+unsigned int roundui(double val)
+{
+	double base = floor(val);
+	return (unsigned int) ((val-base) < 0.5 ? base : base + 1 );
+}
 
 void print_stat(struct frame *fr,unsigned long no,long buffsize,struct audio_info_struct *ai)
 {
@@ -1269,14 +1275,24 @@ void print_stat(struct frame *fr,unsigned long no,long buffsize,struct audio_inf
 	{
 		/* All these sprintf... only to avoid two writes to stderr in case of using buffer?
 		   I guess we can drop that. */
-		fprintf(stderr, "\rFrame# %5lu [%5lu], Time: %02lu:%02u.%02u [%02u:%02u.%02u], ",
+		fprintf(stderr, "\rFrame# %5lu [%5lu], Time: %02lu:%02u.%02u [%02u:%02u.%02u], RVA:%6s, Vol: %3u(%3u)",
 		        no,rno,
 		        (unsigned long) tim1/60, (unsigned int)tim1%60, (unsigned int)(tim1*100)%100,
-		        (unsigned int)tim2/60, (unsigned int)tim2%60, (unsigned int)(tim2*100)%100 );
-		if(param.usebuffer) fprintf(stderr,"[%8ld] ",(long)buffsize);
+		        (unsigned int)tim2/60, (unsigned int)tim2%60, (unsigned int)(tim2*100)%100,
+		        rva_name[param.rva], roundui((double)outscale/MAXOUTBURST*100), roundui((double)lastscale/MAXOUTBURST*100) );
+		if(param.usebuffer) fprintf(stderr,", [%8ld] ",(long)buffsize);
+	}
+	if(icy.changed && icy.data)
+	{
+		fprintf(stderr, "\nICY-META: %s\n", icy.data);
+		icy.changed = 0;
 	}
 }
 
+void clear_stat()
+{
+	fprintf(stderr, "\r                                                                                       \r");
+}
 
 int get_songlen(struct frame *fr,int no)
 {

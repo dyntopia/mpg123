@@ -1,4 +1,4 @@
-.TH mpg123 1 "20 Oct 2006"
+.TH mpg123 1 "7 Aug 2007"
 .SH NAME
 mpg123 \- play audio MPEG 1.0/2.0/2.5 stream (layers 1, 2 and 3)
 .SH SYNOPSIS
@@ -35,6 +35,7 @@ options may be either the traditional POSIX one letter options,
 or the GNU style long options.  POSIX style options start with a
 single ``\-'', while GNU long options start with ``\-\^\-''.
 Option arguments (if needed) follow separated by whitespace (not ``='').
+Note that some options can be absent from your installation when disabled in the build process.
 .SH INPUT OPTIONS
 .TP
 \fB\-k \fInum\fR, \fB\-\^\-skip \fInum
@@ -92,6 +93,12 @@ Of the playlist, play specified entry only.
 .I n
 is the number of entry starting at 1. A value of 0 is the default and means playling the whole list,  a negative value means showing of the list of titles with their numbers...
 .TP
+\fB\-\-loop \fItimes\fR
+for looping track(s) a certain number of times, < 0 means infinite loop (not with --random!).
+.TP
+\fB\-\-timeout \fIseconds\fR
+Timeout in (integer) seconds before declaring a stream dead (if <= 0, wait forever).
+.TP
 .BR \-z ", " \-\^\-shuffle
 Shuffle play.  Randomly shuffles the order of files specified on the command
 line, or in the list file.
@@ -117,6 +124,9 @@ by
 .BR mpg123 .
 The output format per default is raw (headerless) linear PCM audio data,
 16 bit, stereo, host byte order (you can force mono or 8bit).
+.TP
+\fB\-O \fIfile\fR, \fB\-\^\-outfile
+Write raw output into a file (instead of simply redirecting standard output to a file with the shell).
 .TP
 \fB\-w \fIfile\fR, \fB\-\^\-wav
 Write output as WAV file. This will cause the MPEG stream to be decoded 
@@ -145,17 +155,28 @@ to stdout.
 .BR \-\-reopen
 Forces reopen of the audiodevice after ever song
 .TP
+.BR \-\-cpu\ \fIdecoder\-type
+Selects a certain decoder (optimized for specific CPU), for example i586 or MMX.
+The list of available decoders can vary; depending on the build and what your CPU supports.
+This options is only availabe when the build actually includes several optimized decoders.
+.TP
+.BR \-\-test\-cpu
+Tests your CPU and prints a list of possible choices for \-\-cpu.
+.TP
+.BR \-\-list\-cpu
+Lists all available decoder choices, regardless of support by your CPU.
+.TP
 \fB\-g \fIgain\fR, \fB\-\^\-gain \fIgain
 Set audio hardware output gain (default: don't change).
 .TP
 \fB\-f \fIfactor\fR, \fB\-\^\-scale \fIfactor
 Change scale factor (default: 32768).
 .TP
-.BR \-\-rva-mix, \-\-rva-radio
+.BR \-\-rva-mix,\ \-\-rva-radio
 Enable RVA (relative volume adjustment) using the values stored for ReplayGain radio mode / mix mode with all tracks roughly equal loudness.
 The first valid information found in ID3V2 Tags (Comment named RVA or the RVA2 frame) or ReplayGain header in Lame/Info Tag is used.
 .TP
-.BR \-\-rva-album, \-\-rva-audiophile
+.BR \-\-rva-album,\ \-\-rva-audiophile
 Enable RVA (relative volume adjustment) using the values stored for ReplayGain audiophile mode / album mode with usually the effect of adjusting album loudness but keeping relative loudness inside album.
 The first valid information found in ID3V2 Tags (Comment named RVA_ALBUM or the RVA2 frame) or ReplayGain header in Lame/Info Tag is used.
 .TP
@@ -221,6 +242,10 @@ a certain frequency band, respectively.  The first line corresponds to the
 lowest, the 32nd to the highest frequency band.
 Note that you can control the equalizer interactively with the generic control interface.
 .TP
+\fB\-\^\-gapless
+Enable code that cuts (junk) samples at beginning and end of tracks, enabling gapless transitions between MPEG files when encoder padding and codec delays would prevent it.
+This will be enabled per default in some future.
+.TP
 .BR "\-o h" ", " \-\^\-headphones
 Direct audio output to the headphone connector (some hardware only; AIX, HP, SUN).
 .TP
@@ -262,10 +287,14 @@ Quiet.  Suppress diagnostic messages.
 Enable terminal control keys. By default use 's' to stop, 'p' to
 pause, 'f' to jump forward to the next song, 'b' to jump back to the
 beginning of the song, ',' to rewind, '.' to fast forward, and 'q' to quit.
+Type 'h' for a full list of available controls.
 .TP
 \fB\-\^\-title
 In an xterm, or rxvt (compatible, TERM environment variable is examined), change the window's title to the name of song currently
 playing.
+.TP
+\fB\-\^\-long\-tag
+Display ID3 tag info always in long format with one line per item (artist, title, ...)
 .TP
 .BR \-R ", " \-\^\-remote
 Activate generic control interface.
@@ -275,12 +304,13 @@ will then read and execute commands from stdin. Basic usage is ``load <filename>
 Issue ``help'' to get a full list of commands and syntax.
 .TP
 .BR \-\^\-remote\-err
-Print responses for generic control mode to stderr, not stdout.
-That is extremely useful when you want to grab the audio via 
+Print responses for generic control mode to standard error, not standard out.
+This is automatically triggered when using 
 .B -s
-... (in future, that may be automatically triggered when you specify
-.B -s
-)
+\fN.
+.TP
+\fB\-\-fifo \fIpath
+Create a fifo / named pipe on the given path and use that for reading commands instead of standard input.
 .TP
 \fB\-\^\-aggressive
 Tries to get higher priority
@@ -361,7 +391,7 @@ than one or two seconds.
 .SH NOTES
 MPEG audio decoding requires a good deal of CPU performance,
 especially layer-3.  To decode it in realtime, you should
-have at least a Pentium, Alpha, SuperSparc or equivalent
+have at least an i486DX4, Pentium, Alpha, SuperSparc or equivalent
 processor.  You can also use the
 .B -m
 option to decode mono only, which reduces the CPU load
@@ -413,7 +443,6 @@ Michael Hipp
 .TP
 Uses code or ideas from various people, see the AUTHORS file accompanying the source code.
 .SH LICENSE
-The majority of
 .B mpg123
 is licensed under the GNU Lesser/Library General Public License, LGPL, version 2.1 .
 .SH WEBSITE

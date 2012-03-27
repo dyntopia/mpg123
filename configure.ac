@@ -1,7 +1,7 @@
- dnl configure.ac: source for the configure script
+dnl configure.ac: source for the configure script
 
 dnl copyright by the mpg123 project - free software under the terms of the LGPL 2.1
-dnl see COPYING and AUTHORS files in distribution or http://mpg123.de
+dnl see COPYING and AUTHORS files in distribution or http://mpg123.org
 dnl initially written by Nicholas J. Humfrey
 
 dnl Require autoconf version >= 2.57
@@ -10,7 +10,7 @@ AC_PREREQ(2.57)
 
 dnl ############# Initialisation
 
-AC_INIT([mpg123], [0.61], [mpg123-devel@lists.sourceforge.net])
+AC_INIT([mpg123], [0.67], [mpg123-devel@lists.sourceforge.net])
 
 AC_CONFIG_SRCDIR(src/mpg123.c)
 AC_CONFIG_AUX_DIR(build)
@@ -30,7 +30,6 @@ AC_PROG_INSTALL
 AC_PROG_RANLIB
 
 AC_C_CONST
-AC_C_BIGENDIAN
 AC_INLINE
 
 # Check if system supports termios
@@ -75,16 +74,40 @@ AC_ARG_ENABLE(gapless,
               ]
 )
 
+AC_ARG_ENABLE(fifo,
+              [  --enable-fifo=[no/yes] FIFO support for control interface (auto-enabled on linux) ],
+              [
+                if test "x$enableval" = xyes
+                then
+                  fifo="enabled"
+                  AC_DEFINE(FIFO, 1, [ Define if FIFO support is enabled. ])
+                else
+                  fifo="disabled"
+                fi
+              ],
+              [
+                fifo="auto"
+              ]
+)
+
 AC_ARG_WITH([cpu], [
   --with-cpu=generic[_fpu]      Use generic processor code with floating point arithmetic
+  --with-cpu=generic_float      A special build with generic fpu code that produces 32bit float output
   --with-cpu=generic_nofpu      Use generic processor code with fixed point arithmetic (p.ex. ARM, experimental)
   --with-cpu=i386[_fpu]         Use code optimized for i386 processors with floating point arithmetic
   --with-cpu=i386_nofpu         Use code optimized for i386 processors with fixed point arithmetic (experimental)
   --with-cpu=i486         Use code optimized for i486 processors
   --with-cpu=i586         Use code optimized for i586 processors
-  --with-cpu=i586_dither  Use code optimized for i586 processors with dithering (noise shaping)
-  --with-cpu=3dnow        Use code optimized for 3dnow processors
+  --with-cpu=i586_dither  Use code optimized for i586 processors with dithering (noise shaping), adds 256K to binary size
+  --with-cpu=3dnow        Use code optimized for 3DNow processors
+  --with-cpu=3dnowext     Use code optimized for 3DNowExt processors (K6-3+, Athlon)
+  --with-cpu=3dnowext_alone     Really only 3DNowExt decoder, without 3DNow fallback for flexible rate
   --with-cpu=mmx          Use code optimized for MMX processors
+  --with-cpu=mmx_alone          Really only MMX decoder, without i586 fallback for flexible rate
+  --with-cpu=sse          Use code optimized for SSE processors
+  --with-cpu=mmx_alone          Really only SSE decoder, without i586 fallback for flexible rate
+  --with-cpu=x86          Pack all x86 opts into one binary (excluding i486 and dithered i586)
+  --with-cpu=x86_dither   Pack all x86 opts into one binary (excluding i486, including dither)
   --with-cpu=altivec      Use code optimized for Altivec processors (PowerPC G4 and G5)
 ]) 
 
@@ -105,31 +128,90 @@ AC_ARG_WITH([audio], [
   --with-audio=sdl        Use SDL audio output sub-system (Simple DirectMedia Layer)
   --with-audio=sgi        Use SGI audio output sub-system (IRIX)
   --with-audio=sun        Use Sun audio output sub-system (/dev/audio)
+  --with-audio=win32      Use Windows audio output (WinMM)
 ])
 
 AC_ARG_WITH([optimization], [
   --with-optimization=0   No Optimization
-  --with-optimization=1   Limited Optimization (-O)
-  --with-optimization=2   Default Optimization (-O2)
-  --with-optimization=3   More Optimize than default (-O3)
-  --with-optimization=4   Optimize yet more (-O4)
+  --with-optimization=1   Limited Optimization (-O) (for gcc)
+  --with-optimization=2   Default Optimization (-O2 ...) (for gcc)
+  --with-optimization=3   More Optimize than default (-O3 ...) (for gcc)
+  --with-optimization=4   Optimize yet more (-O4 ...) (for gcc)
 ])
 
 AC_ARG_WITH([seektable], [
   --with-seektable=<size> choose size of seek index table (0 disables it), default 1000
 ])
 
+dnl ############## Assembler, compiler properties
+
+# based on posting from John Dalgliesh <johnd@defyne.org> on ffmpeg (LGPL) mailing list
+# find if .align arg is power-of-two or not
+asmalign_exp="unknown"
+if test $asmalign_exp = "unknown"; then
+	AC_MSG_CHECKING([if .align takes 2-exponent])
+	asmalign_exp="no"
+	echo '.align 3' > conftest.s
+	if $CCAS -c -o conftest.o conftest.s; then
+		asmalign_exp="yes"
+		AC_MSG_RESULT([yes])
+	else
+		AC_MSG_RESULT([no])
+	fi
+	rm -f conftest.o conftest.s
+fi
+if test $asmalign_exp = "yes"; then
+	AC_DEFINE(ASMALIGN_EXP, 1, [ Define if .align takes 3 for alignment of 2^3=8 bytes instead of 8. ])
+fi
+
+ccalign="unknown"
+if test $ccalign = "unknown"; then
+	AC_MSG_CHECKING([__attribute__((aligned(16)))])
+	ccalign="no"
+	echo '__attribute__((aligned(16))) float var;' > conftest.c
+	if $CC -c -o conftest.o conftest.c; then
+		ccalign="yes"
+		AC_MSG_RESULT([yes])
+	else
+		AC_MSG_RESULT([no])
+	fi
+	rm -f conftest.o conftest.c
+fi
+if test $ccalign = "yes"; then
+	AC_DEFINE(CCALIGN, 1, [ Define if __attribute__((aligned(16))) works ])
+fi
+
+dnl ############## Types
+
+AC_TYPE_SIZE_T()
+AC_TYPE_SSIZE_T()
+AC_TYPE_OFF_T()
+
 dnl ############## Function Checks
 
 AC_FUNC_MMAP
 
 # Check for sched_setscheduler
-AC_CHECK_FUNCS( sched_setscheduler )
+AC_CHECK_FUNCS( sched_setscheduler setuid getuid)
 
 # Check for setpriority
 AC_CHECK_FUNCS( setpriority )
 
+AC_CHECK_FUNCS( strerror )
 
+AC_CHECK_FUNCS( mkfifo, [ have_mkfifo=yes ], [ have_mkfifo=no ] )
+
+if test $fifo = "auto"; then
+	if test $have_mkfifo = "yes"; then
+		fifo=yes
+		AC_DEFINE(FIFO, 1, [ Define if FIFO support is enabled. ])
+	else
+		fifo=no
+	fi
+fi
+if test $fifo = "yes" && test $have_mkfifo = "no"; then
+	AC_MSG_WARN( [ You forced FIFO code while I think there is no mkfifo() available! ] )
+fi
 
 dnl ############## Library Checks
 
@@ -155,12 +237,34 @@ AC_CHECK_LIB( [audio], [AuOpenServer],
 )
 
 # Check for PortAudio
-AC_CHECK_LIB( [portaudio], [Pa_Initialize],
-	[ AC_CHECK_HEADER( [portaudio.h],
-		[ HAVE_PORTAUDIO="yes" ],
-		[ AC_MSG_WARN([Found PortAudio library but NOT header files on your system]) ] )
-	]
-)
+case $target in
+	*-*-mingw32)
+		# We tested portaudio with MME
+		if test "x$HAVE_PORTAUDIO" != "xyes"; then
+			AC_CHECK_LIB( [portaudio], [Pa_Initialize],
+				[ AC_CHECK_HEADER( [portaudio.h],
+					[ HAVE_PORTAUDIO_WINMM="yes" && HAVE_PORTAUDIO="yes" ],
+					[ AC_MSG_WARN([Found PortAudio library but NOT header files on your system]) ] )
+				],
+				[ HAVE_PORTAUDIO="no" ],
+				[ -lwinmm ]
+			)
+		fi
+	;;
+	*)
+		AC_CHECK_LIB( [portaudio], [Pa_Initialize],
+			[ AC_CHECK_HEADER( [portaudio.h],
+				[ HAVE_PORTAUDIO="yes" ],
+				[ AC_MSG_WARN([Found PortAudio library but NOT header files on your system]) ] )
+			]
+		)
+	;;
+esac
+
+# Check for windows ... and win32 audio
+# Does not work... instead just check for header
+# AC_CHECK_LIB( [winmm], [waveOutOpen] )
+AC_CHECK_HEADERS([windows.h], HAVE_WINMM=yes, HAVE_WINMM=no)
 
 # Check for ALSA
 AC_CHECK_LIB( [asound], [snd_pcm_open],
@@ -170,39 +274,62 @@ AC_CHECK_LIB( [asound], [snd_pcm_open],
 	]
 )
 
-
 dnl ############## Header Checks
 
 AC_HEADER_STDC
 dnl Is it too paranoid to specifically check for stdint.h and limits.h?
-AC_CHECK_HEADERS([stdlib.h string.h unistd.h sched.h sys/ioctl.h stdint.h limits.h])
+AC_CHECK_HEADERS([stdlib.h string.h unistd.h sched.h sys/ioctl.h stdint.h limits.h inttypes.h sys/time.h sys/wait.h sys/resource.h signal.h])
 
+# attempt to make the signal stuff work... also with GENERIC - later
+#if test $ac_cv_header_sys_signal_h = yes; then
+#	AC_CHECK_FUNCS( sigemptyset sigaddset sigprocmask sigaction )
+#	if test $ac_cv_func_sigemptyset = yes &&
+#	   test $ac_cv_func_sigaddset = yes &&
+#	   test $ac_cv_func_sigprocmask = yes &&
+#	   test $ac_cv_func_sigaction = yes; then
+#	AC_DEFINE( 
+#fi
 
-# OSS Header files
-AC_CHECK_HEADERS([sys/soundcard.h linux/soundcard.h machine/soundcard.h])
+# OSS Header files: One of them is enough.
+AC_CHECK_HEADERS(sys/soundcard.h)
+AC_CHECK_HEADERS(linux/soundcard.h)
+AC_CHECK_HEADERS(machine/soundcard.h)
+if test "x${ac_cv_header_sys_soundcard_h}" = "xyes" ||
+   test "x${ac_cv_header_linux_soundcard_h}" = "xyes" ||
+   test "x${ac_cv_header_machine_soundcard_h}" = "xyes"; then
+	HAVE_OSS=yes
+else
+	HAVE_OSS=no
+fi
 
 # Sun Audio headers
-AC_CHECK_HEADERS([sun/audioio.h sys/audioio.h asm/audioio.h sys/audio.h])
+AC_CHECK_HEADERS([sun/audioio.h sys/audioio.h asm/audioio.h sys/audio.h], HAVE_SUNAUDIO=yes, HAVE_SUNAUDIO=no)
 
 # Mac OS X
-AC_CHECK_HEADERS([CoreAudio/CoreAudio.h], HAVE_COREAUDIO=yes, HAVE_COREAUDIO=no)
+AC_CHECK_HEADERS([AudioUnit/AudioUnit.h CoreServices/CoreServices.h AudioToolbox/AudioToolbox.h],
+					HAVE_MACOSXAUDIO=yes, HAVE_MACOSXAUDIO=no)
 
 
 
 
 dnl ############## Choose compiler flags and CPU
 
-CFLAGS="$CFLAGS -Wall"
+# do not assume gcc here, so no flags by default
+CFLAGS="$CFLAGS"
 LIBS="$LIBS"
 
 # If debugging is enabled then make warnings errors
 if test "$debugging" = "enabled"; then
-	CFLAGS="$CFLAGS -g -Werror -pedantic"
+	CFLAGS="$CFLAGS -g"
+	# gcc specific...
+	if test "$GCC" = "yes"; then
+		CFLAGS="$CFLAGS -Wall -Werror -pedantic -fno-strict-aliasing"
+	fi
 fi
-
 
 case $target in
   arm-*-linux*)
+    # check that... perhaps we are better off on arm with kernel math emulation
     cpu_type="generic_nofpu"
   ;;
   i386-*-linux*|i386-*-kfreebsd*-gnu)
@@ -212,13 +339,16 @@ case $target in
     cpu_type="i486"
   ;;
   i586-*-linux*|i586-*-kfreebsd*-gnu)
-    cpu_type="i586"
+    cpu_type="x86"
   ;;
   i686-*-linux*|i686-*-kfreebsd*-gnu)
-    cpu_type="mmx"
+    cpu_type="x86"
   ;;
   *-*-linux*|*-*-kfreebsd*-gnu)
     cpu_type="generic_fpu"
+  ;;
+  i686-apple-darwin*)
+    cpu_type="x86"
   ;;
   *-apple-darwin*)
     AC_MSG_CHECKING([if CPU type supports AltiVec])
@@ -243,15 +373,17 @@ case $target in
     cpu_type="generic_fpu"
     LIBS="$LIBS -lsocket -lnsl"
   ;;
-# assembler troubles on cygwin...
+  *-dec-osf*)
+    cpu_type="generic_fpu"
+  ;;
   i686-pc-cygwin*)
-    cpu_type="i386"
+    cpu_type="x86"
   ;;
   i586-pc-cygwin*)
-    cpu_type="i386"
+    cpu_type="x86"
   ;;
   i486-pc-cygwin*)
-    cpu_type="i386"
+    cpu_type="i486"
   ;;
   i386-pc-cygwin*)
     cpu_type="i386"
@@ -259,10 +391,35 @@ case $target in
   *-pc-cygwin*)
     cpu_type="generic_fpu"
   ;;
+  *-*-mingw32)
+    LIBS="-lwsock32 $LIBS"
+    CPPFLAGS="-DNOXFERMEM $CPPFLAGS"
+    cpu_type="x86"
+  ;;
+	i386-*)
+		AC_MSG_WARN([Unknown target operating system])
+		cpu_type="i386"
+		CFLAGS="-DGENERIC -DNOXFERMEM $CFLAGS"
+	;;
+	i486-*)
+		AC_MSG_WARN([Unknown target operating system])
+		cpu_type="i486"
+		CFLAGS="-DGENERIC -DNOXFERMEM $CFLAGS"
+	;;
+	i586-*)
+		AC_MSG_WARN([Unknown target operating system])
+		cpu_type="i586"
+		CFLAGS="-DGENERIC -DNOXFERMEM $CFLAGS"
+	;;
+	i686-*)
+		AC_MSG_WARN([Unknown target operating system])
+		cpu_type="x86"
+		CFLAGS="-DGENERIC -DNOXFERMEM $CFLAGS"
+	;;
   *)
   	AC_MSG_WARN([Unknown target operating system])
     cpu_type="generic_fpu"
-    CFLAGS="$CFLAGS -DGENERIC"
+    CFLAGS="-DGENERIC -DNOXFERMEM $CFLAGS"
   ;;
 esac
 
@@ -276,47 +433,79 @@ fi
 dnl CPU specific compiler flags
 case $cpu_type in
   generic)
-    CFLAGS="$CFLAGS -DREAL_IS_FLOAT"
+    CFLAGS="$CFLAGS -DOPT_GENERIC -DREAL_IS_FLOAT"
+  ;;
+  generic_float)
+    CFLAGS="$CFLAGS -DOPT_GENERIC -DFLOATOUT -DNOXFERMEM -DREAL_IS_FLOAT"
   ;;
   generic_fpu)
-    CFLAGS="$CFLAGS -DREAL_IS_FLOAT"
+    CFLAGS="$CFLAGS -DOPT_GENERIC -DREAL_IS_FLOAT"
   ;;
   generic_nofpu)
-    CFLAGS="$CFLAGS -DREAL_IS_FIXED"
+    CFLAGS="$CFLAGS -DOPT_GENERIC -DREAL_IS_FIXED"
   ;;
   altivec)
-    CFLAGS="$CFLAGS -maltivec -faltivec -DREAL_IS_FLOAT -DUSE_ALTIVEC"
+    CFLAGS="$CFLAGS -maltivec -faltivec -DREAL_IS_FLOAT -DOPT_ALTIVEC"
   ;;
   i386) 
-    CFLAGS="$CFLAGS -march=i386 -DI386_ASSEM -DREAL_IS_FLOAT"
+    CFLAGS="$CFLAGS -DOPT_I386 -DREAL_IS_FLOAT"
   ;;
   i386_fpu) 
-    CFLAGS="$CFLAGS -march=i386 -DI386_ASSEM -DREAL_IS_FLOAT"
+    CFLAGS="$CFLAGS -DOPT_I386 -DREAL_IS_FLOAT"
   ;;
   i386_nofpu) 
-    CFLAGS="$CFLAGS -march=i386 -DI386_ASSEM -DREAL_IS_FIXED"
+    CFLAGS="$CFLAGS -DOPT_I386 -DREAL_IS_FIXED"
   ;;
   i486) 
-    CFLAGS="$CFLAGS -march=i486 -DI386_ASSEM -DI486_OPT -DREAL_IS_FLOAT"
+    CFLAGS="$CFLAGS -DOPT_I486 -DREAL_IS_FLOAT"
   ;;
   i586) 
-    CFLAGS="$CFLAGS -DI386_ASSEM -DPENTIUM_OPT -DREAL_IS_FLOAT"
+    CFLAGS="$CFLAGS -DOPT_I586 -DREAL_IS_FLOAT"
   ;;
   i586_dither) 
-    CFLAGS="$CFLAGS -DI386_ASSEM -DPENTIUM_OPT -DREAL_IS_FLOAT"
+    CFLAGS="$CFLAGS -DOPT_I586_DITHER -DREAL_IS_FLOAT"
   ;;
-  3dnow) 
-    CFLAGS="$CFLAGS -DUSE_3DNOW -DI386_ASSEM -DPENTIUM_OPT -DREAL_IS_FLOAT"
+  3dnow)
+    # legacy 3dnow had the 3dnow optional... keeping that
+    CFLAGS="$CFLAGS -DOPT_MULTI -DOPT_I586 -DOPT_3DNOW -DREAL_IS_FLOAT"
   ;;
-  mmx) 
-    CFLAGS="$CFLAGS -DUSE_MMX -DI386_ASSEM -DPENTIUM_OPT -DREAL_IS_FLOAT"
+  3dnowext_alone) 
+    CFLAGS="$CFLAGS -DOPT_3DNOWEXT -DREAL_IS_FLOAT"
+  ;;
+  3dnowext) 
+    AC_MSG_WARN([Combining 3DNowExt decoder with 3DNow for flexible rate, use 3dnowext_alone if you do not want this.])
+    CFLAGS="$CFLAGS -DOPT_MULTI -DOPT_3DNOW -DOPT_3DNOWEXT -DREAL_IS_FLOAT"
+  ;;
+  mmx_alone) 
+    CFLAGS="$CFLAGS -DOPT_MMX -DREAL_IS_FLOAT"
+  ;;
+  mmx)
+    AC_MSG_WARN([Combining MMX decoder with i586 for flexible rate, use mmx_alone if you do not want this.])
+    CFLAGS="$CFLAGS -DOPT_MULTI -DOPT_I586 -DOPT_MMX -DREAL_IS_FLOAT"
+  ;;
+  sse) 
+    AC_MSG_WARN([Combining SSE decoder with i586 for flexible rate, use sse_alone if you do not want this.])
+    CFLAGS="$CFLAGS -DOPT_MULTI -DOPT_I586 -DOPT_SSE -DREAL_IS_FLOAT"
+  ;;
+  sse_alone) 
+    CFLAGS="$CFLAGS -DOPT_SSE -DREAL_IS_FLOAT"
+  ;;
+  x86) 
+    CFLAGS="$CFLAGS -DOPT_MULTI -DOPT_GENERIC -DOPT_I386 -DOPT_I586 -DOPT_MMX -DOPT_3DNOW -DOPT_3DNOWEXT -DOPT_SSE -DREAL_IS_FLOAT"
+  ;;
+  x86_dither) 
+    CFLAGS="$CFLAGS -DOPT_MULTI -DOPT_GENERIC -DOPT_I386 -DOPT_I586 -DOPT_I586_DITHER -DOPT_MMX -DOPT_3DNOW -DOPT_3DNOWEXT -DOPT_SSE -DREAL_IS_FLOAT"
   ;;
   *)
   	AC_MSG_ERROR([Unknown CPU type '$cpu_type'])
   ;;
 esac
 
-CPU_TYPE_LIB="libcpu_$cpu_type.a"
+if test $cpu_type = "generic_float"; then
+	CPU_TYPE_LIB="libcpu_generic.a"
+else
+	CPU_TYPE_LIB="libcpu_$cpu_type.a"
+fi
 AC_SUBST( CPU_TYPE_LIB )
 
 
@@ -329,7 +518,12 @@ if test "x$with_optimization" = "x"; then
 	if test "$debugging" = "enabled"; then
 		with_optimization="0"
 	else
-		with_optimization="2"
+		# enable (gcc specific) default opts only with gcc
+		if test "$GCC" = yes; then
+			with_optimization="2"
+		else
+			with_optimization="0"
+		fi
 	fi
 fi
 
@@ -373,36 +567,34 @@ AC_DEFINE_UNQUOTED(INDEX_SIZE, $seektable, [size of the frame index seek table])
 
 dnl ############## Audio Sub-system Settings
 
-# Choose audio subsystem based on Operating System
-case $target in
-  *-*-linux*)
-    if test "x$HAVE_ALSA" = "xyes" ; then
-        audio_system="alsa"
-    else
-        audio_system="oss"
-    fi
-  ;;
-  *-*-freebsd*)
-    audio_system="oss"
-  ;;
-  *-*-kfreebsd*)
-    audio_system="oss"
-  ;;
-  *-apple-darwin*)
-    audio_system="macosx"
-  ;;
-  *-*-solaris*)
-    audio_system="sun"
-  ;;
-  # esd has been assumed to be the one for cygwin, but plain OSS does it
-  # can even make mpg123 run "natively" with a cygwin.dll
-  *-*-cygwin*)
-    audio_system="oss"
-  ;;
-  *)
-  	audio_system="dummy"
-  ;;
-esac
+# Choose audio subsystem based on what we have.
+if test $cpu_type = "generic_float"; then
+	audio_system="dummy"
+	AC_MSG_WARN( Defaulting to dummy output with float samples, as the audio device system cannot handle floats. )
+elif   test "x$HAVE_ALSA" = "xyes"; then
+	audio_system="alsa"
+elif test "x$HAVE_OSS" = "xyes"; then
+	audio_system="oss"
+elif test "x$HAVE_MACOSXAUDIO" = "xyes"; then
+	audio_system="coreaudio"
+elif test "x$HAVE_SUNAUDIO" = "xyes"; then
+	audio_system="sun"
+elif test "x$HAVE_WINMM" = "xyes"; then
+	audio_system="win32"
+elif test "x$HAVE_JACK" = "xyes"; then
+	audio_system="jack"
+elif test "x$HAVE_PORTAUDIO" = "xyes"; then
+	audio_system="portaudio"
+elif test "x$HAVE_NAS" = "xyes"; then
+	audio_system="nas"
+elif test "x$HAVE_SDL" = "xyes"; then
+	audio_system="sdl"
+elif test "x$HAVE_ESOUND" = "xyes"; then
+	audio_system="esd"
+else
+	audio_system="dummy"
+fi
+
 
 # Did user choose other audio type ?
 if test "x$with_audio" != "x"; then
@@ -410,13 +602,12 @@ if test "x$with_audio" != "x"; then
 fi
 
 
-
 AUDIO_OBJ="audio_$audio_system.\$(OBJEXT)"
 AUDIO_CFLAGS=""
 AUDIO_LIBS=""
 
 case $audio_system in
-  aix)	
+  aix)
     # Currently unsupported in the new build system
   ;;
   alib)
@@ -435,7 +626,7 @@ case $audio_system in
   ;;
   esd)
   	if test "x$HAVE_ESOUND" != "xyes" ; then
-  		AC_MSG_ERROR( ESounD is not available for audio output subsystem. )
+  		AC_MSG_WARN( ESounD is not available for audio output subsystem. )
   	fi
     AUDIO_CFLAGS=$ESOUND_CFLAGS
     AUDIO_LIBS=$ESOUND_LIBS
@@ -452,11 +643,11 @@ case $audio_system in
     AUDIO_CFLAGS=$JACK_CFLAGS
     AUDIO_LIBS=$JACK_LIBS
   ;;
-  macosx)
-  	if test "x$HAVE_COREAUDIO" != "xyes" ; then
-  		AC_MSG_ERROR( Can't find Mac OS X's CoreAudio header files )
+  coreaudio|macosx)
+  	if test "x$HAVE_MACOSXAUDIO" != "xyes" ; then
+  		AC_MSG_ERROR( Can't find Mac OS X's audio header files )
   	fi
-  	AUDIO_LIBS="-framework CoreAudio"
+  	AUDIO_LIBS="-framework AudioToolbox -framework AudioUnit -framework CoreServices"
   ;;
   mint)
     # Currently unsupported in the new build system
@@ -472,9 +663,7 @@ case $audio_system in
     # Currently unsupported in the new build system
   ;;
   oss)
-    if test "x${ac_cv_header_sys_soundcard_h}" = "xyes" \
-         -o "x${ac_cv_header_linux_soundcard_h}" = "xyes" \
-         -o "x${ac_cv_header_machine_soundcard_h}" = "xyes";
+    if test "x$HAVE_OSS" = "xyes"
     then
 		AUDIO_CFLAGS=""
 		AUDIO_LIBS=""
@@ -488,16 +677,21 @@ case $audio_system in
   	fi
     AUDIO_CFLAGS=""
     AUDIO_LIBS="-lportaudio"
+		if test "x$HAVE_PORTAUDIO_WINMM" = "xyes"; then
+			AUDIO_LIBS="$AUDIO_LIBS -lwinmm"
+		fi
   ;;
   sdl)
-  	if test "x$HAVE_SDL" != "xyes" ; then
-  		AC_MSG_ERROR( SDL is not available for audio output subsystem. )
-  	fi
-    AUDIO_CFLAGS=$SDL_CFLAGS
-    AUDIO_LIBS=$SDL_LIBS
+		if test "x$HAVE_SDL" != "xyes" ; then
+			AC_MSG_WARN( SDL not found via pkgconfig. Make sure you add some CPP/CFLAGS and LDFLAGS. )
+		fi
+		AUDIO_CFLAGS=$SDL_CFLAGS
+		AUDIO_LIBS=$SDL_LIBS
   ;;
   sgi)
-    # Currently unsupported in the new build system
+  # experimenting
+    AUDIO_CFLAGS=-DSGI
+    AUDIO_LIBS=-laudio
   ;;
   sun)
     if test "x${ac_cv_header_sun_audioio_h}" = "xyes" \
@@ -510,6 +704,10 @@ case $audio_system in
 		AC_MSG_ERROR([Can't find Sun Audio header files])
 	fi
   ;;
+	win32)
+		AUDIO_LIBS=-lwinmm
+		AUDIO_CFLAGS=
+	;;
   *)
   	AC_MSG_ERROR([Unknown Audio sub-system '$audio_system'.])
   ;;
@@ -529,18 +727,38 @@ AC_OUTPUT([Makefile src/Makefile])
 
 dnl ############## Display Message
 
-echo "
+echo -n "
   $PACKAGE $VERSION
 
   Install path ............ $prefix
   CPU Optimisation......... $cpu_type
   Compiler Optimization ... $with_optimization
-  Audio output ............ $audio_system
+  Audio output ............ $audio_system (detected:"
+test "x$HAVE_ALSA"        = "xyes" && echo -n " alsa"
+test "x$HAVE_OSS"         = "xyes" && echo -n " oss"
+test "x$HAVE_MACOSXAUDIO" = "xyes" && echo -n " coreaudio"
+test "x$HAVE_SUNAUDIO"    = "xyes" && echo -n " sun"
+test "x$HAVE_JACK"        = "xyes" && echo -n " jack"
+test "x$HAVE_PORTAUDIO"   = "xyes" && echo -n " portaudio"
+test "x$HAVE_NAS"         = "xyes" && echo -n " nas"
+test "x$HAVE_SDL"         = "xyes" && echo -n " sdl"
+test "x$HAVE_ESOUND"      = "xyes" && echo -n " esd"
+test "x$HAVE_WINMM"       = "xyes" && echo -n " win32"
+echo ")
   Gapless Support ......... $gapless
   Debugging ............... $debugging
   Seek table size ......... $seektable
+  FIFO support ............ $fifo
 "
-  
+if test $cpu_type = "generic_float"; then
+	echo "You chose the generic build with 32bit float output.
+That means output via -s, -O or -w to a file/pipe and no buffer.
+"
+fi
+if test $with_optimization = "0"; then
+	echo "No optimization flags chosen, make sure you have something basic in your CFLAGS at least...
+"
+fi
 if test "$debugging" = "enabled"; then
 	echo "CFLAGS='$CFLAGS'"
 	echo "LIBS='$LIBS'"

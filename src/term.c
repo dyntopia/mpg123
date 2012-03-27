@@ -2,21 +2,18 @@
 	term: terminal control
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include "config.h"
+#include "mpg123.h"
+
 #ifdef HAVE_TERMIOS
 
 #include <termios.h>
-#include <unistd.h>
 #include <ctype.h>
 #include <sys/time.h>
-#include <sys/types.h>
 
-#include "debug.h"
-#include "mpg123.h"
 #include "buffer.h"
 #include "term.h"
 #include "common.h"
@@ -26,30 +23,50 @@ extern int buffer_pid;
 static int term_enable = 0;
 static struct termios old_tio;
 
-/* initialze terminal */
-void term_init(void)
+void term_sigcont(int sig);
+
+/* This must call only functions safe inside a signal handler. */
+int term_setup(struct termios *pattern)
 {
-  struct termios tio;
-  debug("term_init");
+  struct termios tio = *pattern;
 
-  term_enable = 0;
+  signal(SIGCONT, term_sigcont);
 
-  if(tcgetattr(0,&tio) < 0) {
-    fprintf(stderr,"Can't get terminal attributes\n");
-    return;
-  }
-  old_tio=tio;
   tio.c_lflag &= ~(ICANON|ECHO); 
   tio.c_cc[VMIN] = 1;
   tio.c_cc[VTIME] = 0;
+  return tcsetattr(0,TCSANOW,&tio);
+}
 
-  if(tcsetattr(0,TCSANOW,&tio) < 0) {
+void term_sigcont(int sig)
+{
+  term_enable = 0;
+
+  if (term_setup(&old_tio) < 0) {
     fprintf(stderr,"Can't set terminal attributes\n");
     return;
   }
 
   term_enable = 1;
- 
+}
+
+/* initialze terminal */
+void term_init(void)
+{
+  debug("term_init");
+
+  term_enable = 0;
+
+  if(tcgetattr(0,&old_tio) < 0) {
+    fprintf(stderr,"Can't get terminal attributes\n");
+    return;
+  }
+  if(term_setup(&old_tio) < 0) {
+    fprintf(stderr,"Can't set terminal attributes\n");
+    return;
+  }
+
+  term_enable = 1;
 }
 
 static long term_handle_input(struct frame *,int);
@@ -138,8 +155,7 @@ static long term_handle_input(struct frame *fr, int do_delay)
           break;
 	case NEXT_KEY:
 		if(!param.usebuffer) audio_queueflush(&ai);
-	  if (buffer_pid)
-		  kill(buffer_pid, SIGINT);
+		plain_buffer_resync();
 	  next_track();
 	  break;
 	case QUIT_KEY:
@@ -155,8 +171,7 @@ static long term_handle_input(struct frame *fr, int do_delay)
 	  }
 	  if(stopped) {
 		stopped=0;
-		if(param.usebuffer)
-			buffer_start();
+		buffer_start();
 	  }
 	  fprintf(stderr, "%s", (paused) ? PAUSED_STRING : EMPTY_STRING);
 	  break;
@@ -169,8 +184,7 @@ static long term_handle_input(struct frame *fr, int do_delay)
 		  paused=0;
 		  offset -= pause_cycle;
 	  }
-	  if(param.usebuffer) 
-		  (stopped) ? buffer_stop() : buffer_start();
+	  if(stopped) buffer_stop(); else buffer_start();
 	  fprintf(stderr, "%s", (stopped) ? STOPPED_STRING : EMPTY_STRING);
 	  break;
 	case FINE_REWIND_KEY:
@@ -191,9 +205,28 @@ static long term_handle_input(struct frame *fr, int do_delay)
 	case FAST_FORWARD_KEY:
 	  offset+=50;
 	  break;
+	case VOL_UP_KEY:
+		do_volume((double) outscale / MAXOUTBURST + 0.02);
+	break;
+	case VOL_DOWN_KEY:
+		do_volume((double) outscale / MAXOUTBURST - 0.02);
+	break;
+	case VERBOSE_KEY:
+		param.verbose++;
+		if(param.verbose > VERBOSE_MAX)
+		{
+			param.verbose = 0;
+			clear_stat();
+		}
+	break;
+	case RVA_KEY:
+		param.rva++;
+		if(param.rva > RVA_MAX) param.rva = 0;
+		do_rva();
+	break;
 	case HELP_KEY:
-	  fprintf(stderr,"\n\n -= terminal control keys =-\n[%c] or space bar\t interrupt/restart playback (i.e. 'pause')\n[%c]\t next track\n[%c]\t back to beginning of track\n[%c]\t pause while looping current sound chunk\n[%c]\t forward\n[%c]\t rewind\n[%c]\t fast forward\n[%c]\t fast rewind\n[%c]\t fine forward\n[%c]\t fine rewind\n[%c]\t this help\n[%c]\t quit\n\n",
-		        STOP_KEY, NEXT_KEY, BACK_KEY, PAUSE_KEY, FORWARD_KEY, REWIND_KEY, FAST_FORWARD_KEY, FAST_REWIND_KEY, FINE_FORWARD_KEY, FINE_REWIND_KEY, HELP_KEY, QUIT_KEY);
+	  fprintf(stderr,"\n\n -= terminal control keys =-\n[%c] or space bar\t interrupt/restart playback (i.e. 'pause')\n[%c]\t next track\n[%c]\t back to beginning of track\n[%c]\t pause while looping current sound chunk\n[%c]\t forward\n[%c]\t rewind\n[%c]\t fast forward\n[%c]\t fast rewind\n[%c]\t fine forward\n[%c]\t fine rewind\n[%c]\t volume up\n[%c]\t volume down\n[%c]\t RVA switch\n[%c]\t verbose switch\n[%c]\t this help\n[%c]\t quit\n\n",
+		        STOP_KEY, NEXT_KEY, BACK_KEY, PAUSE_KEY, FORWARD_KEY, REWIND_KEY, FAST_FORWARD_KEY, FAST_REWIND_KEY, FINE_FORWARD_KEY, FINE_REWIND_KEY, VOL_UP_KEY, VOL_DOWN_KEY, RVA_KEY, VERBOSE_KEY, HELP_KEY, QUIT_KEY);
 	break;
 	case FRAME_INDEX_KEY:
 		print_frame_index(stderr);

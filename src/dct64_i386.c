@@ -2,7 +2,7 @@
 	dct64_i386.c: DCT64, a C variant for i386
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
@@ -14,7 +14,6 @@
  * even for Intel processors.
  */
 
-#include "config.h"
 #include "mpg123.h"
 
 static void dct64_1(real *out0,real *out1,real *b1,real *b2,real *samples)
@@ -329,7 +328,7 @@ static void dct64_1(real *out0,real *out1,real *b1,real *b2,real *samples)
  * the call via dct64 is a trick to force GCC to use
  * (new) registers for the b1,b2 pointer to the bufs[xx] field
  */
-void dct64(real *a,real *b,real *c)
+void dct64_i386(real *a,real *b,real *c)
 {
   real bufs[0x40];
   dct64_1(a,b,bufs,bufs+0x20,c);

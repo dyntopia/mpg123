@@ -2,16 +2,14 @@
 	decode.c: decoding samples...
 
 	copyright 1995-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 	altivec optimization by tmkk
 */
 
-#include <stdlib.h>
 #include <math.h>
 #include <string.h>
 
-#include "config.h"
 #include "mpg123.h"
 
 #ifndef __APPLE__
@@ -23,14 +21,14 @@
   else if( (sum) < REAL_MINUS_32768) { *(samples) = -0x8000; (clip)++; } \
   else { *(samples) = REAL_TO_SHORT(sum); }
 
-int synth_1to1_8bit(real *bandPtr,int channel,unsigned char *samples,int *pnt)
+int synth_1to1_8bit_altivec(real *bandPtr,int channel,unsigned char *samples,int *pnt)
 {
   short samples_tmp[64];
   short *tmp1 = samples_tmp + channel;
   int i,ret;
   int pnt1=0;
 
-  ret = synth_1to1(bandPtr,channel,(unsigned char *) samples_tmp,&pnt1);
+  ret = synth_1to1_altivec(bandPtr,channel,(unsigned char *) samples_tmp,&pnt1);
   samples += channel + *pnt;
 
   for(i=0;i<32;i++) {
@@ -43,14 +41,14 @@ int synth_1to1_8bit(real *bandPtr,int channel,unsigned char *samples,int *pnt)
   return ret;
 }
 
-int synth_1to1_8bit_mono(real *bandPtr,unsigned char *samples,int *pnt)
+int synth_1to1_8bit_mono_altivec(real *bandPtr,unsigned char *samples,int *pnt)
 {
   short samples_tmp[64];
   short *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
-  ret = synth_1to1(bandPtr,0,(unsigned char *) samples_tmp,&pnt1);
+  ret = synth_1to1_altivec(bandPtr,0,(unsigned char *) samples_tmp,&pnt1);
   samples += *pnt;
 
   for(i=0;i<32;i++) {
@@ -62,14 +60,14 @@ int synth_1to1_8bit_mono(real *bandPtr,unsigned char *samples,int *pnt)
   return ret;
 }
 
-int synth_1to1_8bit_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
+int synth_1to1_8bit_mono2stereo_altivec(real *bandPtr,unsigned char *samples,int *pnt)
 {
   short samples_tmp[64];
   short *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
-  ret = synth_1to1(bandPtr,0,(unsigned char *) samples_tmp,&pnt1);
+  ret = synth_1to1_altivec(bandPtr,0,(unsigned char *) samples_tmp,&pnt1);
   samples += *pnt;
 
   for(i=0;i<32;i++) {
@@ -82,14 +80,14 @@ int synth_1to1_8bit_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
   return ret;
 }
 
-int synth_1to1_mono(real *bandPtr,unsigned char *samples,int *pnt)
+int synth_1to1_mono_altivec(real *bandPtr,unsigned char *samples,int *pnt)
 {
   short samples_tmp[64];
   short *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
-  ret = synth_1to1(bandPtr,0,(unsigned char *) samples_tmp,&pnt1);
+  ret = synth_1to1_altivec(bandPtr,0,(unsigned char *) samples_tmp,&pnt1);
   samples += *pnt;
 
   for(i=0;i<32;i++) {
@@ -103,11 +101,11 @@ int synth_1to1_mono(real *bandPtr,unsigned char *samples,int *pnt)
 }
 
 
-int synth_1to1_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
+int synth_1to1_mono2stereo_altivec(real *bandPtr,unsigned char *samples,int *pnt)
 {
   int i,ret;
 
-  ret = synth_1to1(bandPtr,0,samples,pnt);
+  ret = synth_1to1_altivec(bandPtr,0,samples,pnt);
   samples = samples + *pnt - 128;
 
   for(i=0;i<32;i++) {
@@ -119,9 +117,9 @@ int synth_1to1_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
 }
 
 
-int synth_1to1(real *bandPtr,int channel,unsigned char *out,int *pnt)
+int synth_1to1_altivec(real *bandPtr,int channel,unsigned char *out,int *pnt)
 {
-  static real __attribute__ ((aligned (16))) buffs[4][4][0x110];
+  static ALIGNED(16) real buffs[4][4][0x110];
   static const int step = 2;
   static int bo = 1;
   short *samples = (short *) (out+*pnt);
@@ -146,12 +144,12 @@ int synth_1to1(real *bandPtr,int channel,unsigned char *out,int *pnt)
   if(bo & 0x1) {
     b0 = buf[0];
     bo1 = bo;
-    dct64(buf[1]+((bo+1)&0xf),buf[0]+bo,bandPtr);
+    dct64_altivec(buf[1]+((bo+1)&0xf),buf[0]+bo,bandPtr);
   }
   else {
     b0 = buf[1];
     bo1 = bo+1;
-    dct64(buf[0]+bo,buf[1]+bo+1,bandPtr);
+    dct64_altivec(buf[0]+bo,buf[1]+bo+1,bandPtr);
   }
 
 
@@ -159,7 +157,7 @@ int synth_1to1(real *bandPtr,int channel,unsigned char *out,int *pnt)
     register int j;
     real *window = decwin + 16 - bo1;
 		
-		int __attribute__ ((aligned (16))) clip_tmp[4];
+		ALIGNED(16) int clip_tmp[4];
 		vector float v1,v2,v3,v4,v5,v6,v7,v8,v9;
 		vector unsigned char vperm1,vperm2,vperm3,vperm4,vperm5;
 		vector float vsum,vsum2,vsum3,vsum4,vmin,vmax;

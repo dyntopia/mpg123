@@ -2,22 +2,15 @@
 	decode_ntom.c: N->M down/up sampling. Not optimized for speed.
 
 	copyright 1995-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include <stdlib.h>
 #include <math.h>
 #include <string.h>
 
-#include "config.h"
 #include "mpg123.h"
-#include "debug.h"
-
-#define WRITE_SAMPLE(samples,sum,clip) \
-  if( (sum) > 32767.0) { *(samples) = 0x7fff; (clip)++; } \
-  else if( (sum) < -32768.0) { *(samples) = -0x8000; (clip)++; } \
-  else { *(samples) = sum; }
+#include "decode.h"
 
 #define NTOM_MUL (32768)
 static unsigned long ntom_val[2] = { NTOM_MUL>>1,NTOM_MUL>>1 };
@@ -48,8 +41,8 @@ int synth_ntom_set_step(long m,long n)
 
 int synth_ntom_8bit(real *bandPtr,int channel,unsigned char *samples,int *pnt)
 {
-  short samples_tmp[8*64];
-  short *tmp1 = samples_tmp + channel;
+  sample_t samples_tmp[8*64];
+  sample_t *tmp1 = samples_tmp + channel;
   int i,ret;
   int pnt1 = 0;
 
@@ -57,7 +50,11 @@ int synth_ntom_8bit(real *bandPtr,int channel,unsigned char *samples,int *pnt)
   samples += channel + *pnt;
 
   for(i=0;i<(pnt1>>2);i++) {
+#ifdef FLOATOUT
+    *samples = 0;
+#else
     *samples = conv16to8[*tmp1>>AUSHIFT];
+#endif
     samples += 2;
     tmp1 += 2;
   }
@@ -68,8 +65,8 @@ int synth_ntom_8bit(real *bandPtr,int channel,unsigned char *samples,int *pnt)
 
 int synth_ntom_8bit_mono(real *bandPtr,unsigned char *samples,int *pnt)
 {
-  short samples_tmp[8*64];
-  short *tmp1 = samples_tmp;
+  sample_t samples_tmp[8*64];
+  sample_t *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
@@ -77,7 +74,11 @@ int synth_ntom_8bit_mono(real *bandPtr,unsigned char *samples,int *pnt)
   samples += *pnt;
 
   for(i=0;i<(pnt1>>2);i++) {
+#ifdef FLOATOUT
+    *samples++ = 0;
+#else
     *samples++ = conv16to8[*tmp1>>AUSHIFT];
+#endif
     tmp1 += 2;
   }
   *pnt += pnt1 >> 2;
@@ -87,8 +88,8 @@ int synth_ntom_8bit_mono(real *bandPtr,unsigned char *samples,int *pnt)
 
 int synth_ntom_8bit_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
 {
-  short samples_tmp[8*64];
-  short *tmp1 = samples_tmp;
+  sample_t samples_tmp[8*64];
+  sample_t *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
@@ -96,8 +97,13 @@ int synth_ntom_8bit_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
   samples += *pnt;
 
   for(i=0;i<(pnt1>>2);i++) {
+#ifdef FLOATOUT
+    *samples++ = 0;
+    *samples++ = 0;
+#else
     *samples++ = conv16to8[*tmp1>>AUSHIFT];
     *samples++ = conv16to8[*tmp1>>AUSHIFT];
+#endif
     tmp1 += 2;
   }
   *pnt += pnt1 >> 1;
@@ -107,8 +113,8 @@ int synth_ntom_8bit_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
 
 int synth_ntom_mono(real *bandPtr,unsigned char *samples,int *pnt)
 {
-  short samples_tmp[8*64];
-  short *tmp1 = samples_tmp;
+  sample_t samples_tmp[8*64];
+  sample_t *tmp1 = samples_tmp;
   int i,ret;
   int pnt1 = 0;
 
@@ -116,11 +122,11 @@ int synth_ntom_mono(real *bandPtr,unsigned char *samples,int *pnt)
   samples += *pnt;
 
   for(i=0;i<(pnt1>>2);i++) {
-    *( (short *)samples) = *tmp1;
-    samples += 2;
+    *( (sample_t *)samples) = *tmp1;
+    samples += sizeof(sample_t);
     tmp1 += 2;
   }
-  *pnt += pnt1 >> 1;
+  *pnt += (pnt1>>2)*sizeof(sample_t);
 
   return ret;
 }
@@ -135,8 +141,8 @@ int synth_ntom_mono2stereo(real *bandPtr,unsigned char *samples,int *pnt)
   samples += pnt1;
   
   for(i=0;i<((*pnt-pnt1)>>2);i++) {
-    ((short *)samples)[1] = ((short *)samples)[0];
-    samples+=4;
+    ((sample_t *)samples)[1] = ((sample_t *)samples)[0];
+    samples+=2*sizeof(sample_t);
   }
 
   return ret;
@@ -148,7 +154,7 @@ int synth_ntom(real *bandPtr,int channel,unsigned char *out,int *pnt)
   static real buffs[2][2][0x110];
   static const int step = 2;
   static int bo = 1;
-  short *samples = (short *) (out + *pnt);
+  sample_t *samples = (sample_t *) (out + *pnt);
 
   real *b0,(*buf)[0x110];
   int clip = 0; 
@@ -174,18 +180,18 @@ int synth_ntom(real *bandPtr,int channel,unsigned char *out,int *pnt)
   if(bo & 0x1) {
     b0 = buf[0];
     bo1 = bo;
-    dct64(buf[1]+((bo+1)&0xf),buf[0]+bo,bandPtr);
+    opt_dct64(buf[1]+((bo+1)&0xf),buf[0]+bo,bandPtr);
   }
   else {
     b0 = buf[1];
     bo1 = bo+1;
-    dct64(buf[0]+bo,buf[1]+bo+1,bandPtr);
+    opt_dct64(buf[0]+bo,buf[1]+bo+1,bandPtr);
   }
 
 
   {
     register int j;
-    real *window = decwin + 16 - bo1;
+    real *window = opt_decwin + 16 - bo1;
  
     for (j=16;j;j--,window+=0x10)
     {

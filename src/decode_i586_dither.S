@@ -1,50 +1,55 @@
-/ decode_i586.s: asm synth
-/
-/ copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-/ see COPYING and AUTHORS files in distribution or http://mpg123.de
-/ initially written by Stefan Bieschewski
-/ 
-/ synth_1to1 works the same way as the c version of this
-/ file.  only two types of changes have been made:
-/ - reordered floating point instructions to
-/   prevent pipline stalls
-/ - made WRITE_SAMPLE use integer instead of
-/   (slower) floating point
-/ all kinds of x86 processors should benefit from these
-/ modifications.
-/
-/ useful sources of information on optimizing x86 code include:
-/
-/     Intel Architecture Optimization Manual
-/     http://www.intel.com/design/pentium/manuals/242816.htm
-/
-/     Cyrix 6x86 Instruction Set Summary
-/     ftp://ftp.cyrix.com/6x86/6x-dbch6.pdf
-/
-/     AMD-K5 Processor Software Development
-/     http://www.amd.com/products/cpg/techdocs/appnotes/20007e.pdf
-/
-/ Stefan Bieschewski <stb@acm.org>
-/
-/ $Id: decode_i586.s 1 2004-09-18 13:30:08Z thomas $
-/
-.bss
-	.comm	buffs,4352,4
+/*
+	synth_1to1 works the same way as the c version of this
+	file.  only two types of changes have been made:
+	- reordered floating point instructions to
+	 prevent pipline stalls
+	- made WRITE_SAMPLE use integer instead of
+	 (slower) floating point
+	all kinds of x86 processors should benefit from these
+	modifications.
+
+	useful sources of information on optimizing x86 code include:
+
+	   Intel Architecture Optimization Manual
+	   http:#/www.intel.com/design/pentium/manuals/242816.htm
+
+	   Cyrix 6x86 Instruction Set Summary
+	   ftp:#/ftp.cyrix.com/6x86/6x-dbch6.pdf
+
+	   AMD-K5 Processor Software Development
+	   http:#/www.amd.com/products/cpg/techdocs/appnotes/20007e.pdf
+
+	Stefan Bieschewski <stb@acm.org>
+
+	You can use this part under GPL.
+
+	This version uses "circular" 64k dither noise.
+	(Patch by Adrian <adrian.bacon@xs4all.nl>)
+*/
+
+#include "mangle.h"
+
+BSS
+	COMM(buffs,4352,4)
+	COMM(ditherindex.1,4,4)
 .data
-	.align 4
+	ALIGN4
 bo:
 	.long 1
-.section .rodata
-	.align 8
+
+#ifndef __APPLE__
+		.section	.rodata
+#endif
+	ALIGN8
 .LC0:
 	.long 0x0,0x40dfffc0
-	.align 8
+	ALIGN8
 .LC1:
 	.long 0x0,0xc0e00000
-	.align 8
+	ALIGN8
 .text
-.globl synth_1to1_pent
-synth_1to1_pent:
+.globl ASM_NAME(synth_1to1_i586_asm_dither)
+ASM_NAME(synth_1to1_i586_asm_dither):
 	subl $12,%esp
 	pushl %ebp
 	pushl %edi
@@ -62,9 +67,16 @@ synth_1to1_pent:
 	movl $buffs,%ecx
 	jmp .L49
 .L48:
+/*       In stereo mode , "rewind" dither pointer 32 samples , so 2nd channel */
+/*       has same dither values. Tested OK for mono and stereo MP2 and MP3 */
+	subl $128,ditherindex.1
+	andl $0x0003fffc,ditherindex.1
 	addl $2,%esi
 	movl $buffs+2176,%ecx
 .L49:
+
+/* Now edi is mine, load it with indexpointer */
+/*	movl $ASM_NAME(dithernoise),%edi */
 	testl $1,%ebp
 	je .L50
 	movl %ecx,%ebx
@@ -89,11 +101,11 @@ synth_1to1_pent:
 	leal (%ecx,%ebp,4),%eax
 .L74:
 	pushl %eax
-	call dct64
+	call ASM_NAME(dct64_i386)
 	addl $12,%esp
 	movl 16(%esp),%edx
 	leal 0(,%edx,4),%edx
-	movl $decwin+64,%eax
+	movl $ASM_NAME(decwin)+64,%eax
 	movl %eax,%ecx
 	subl %edx,%ecx
 	movl $16,%ebp
@@ -162,6 +174,15 @@ synth_1to1_pent:
 	faddp %st,%st(1)
 	fxch %st(1)
 	fsubrp %st,%st(1)
+
+
+	addl $4,ditherindex.1
+	andl $0x0003fffc,ditherindex.1
+	movl $ASM_NAME(dithernoise),%edi
+	addl ditherindex.1,%edi	
+
+	fadd (%edi)
+
 	fistpl (%esp)
 	popl %eax
 	cmpl $32767,%eax
@@ -173,7 +194,8 @@ synth_1to1_pent:
 1:	movw $32767,(%esi)
 	jmp 3f
 2:	movw $-32768,(%esi)
-3:	incl %edi
+3:
+/*	incl %edi */
 4:
 .L54:
 	addl $64,%ebx
@@ -212,6 +234,13 @@ synth_1to1_pent:
 	faddp %st,%st(1)
 	fxch %st(1)
 	faddp %st,%st(1)
+
+	addl $4,ditherindex.1
+	andl $0x0003fffc,ditherindex.1
+	movl $ASM_NAME(dithernoise),%edi
+	addl ditherindex.1,%edi	
+
+	fadd (%edi)
 	fistpl (%esp)
 	popl %eax
 	cmpl $32767,%eax
@@ -223,7 +252,8 @@ synth_1to1_pent:
 1:	movw $32767,(%esi)
 	jmp 3f
 2:	movw $-32768,(%esi)
-3:	incl %edi
+3:
+/*	incl %edi */
 4:
 .L62:
 	addl $-64,%ebx
@@ -297,6 +327,13 @@ synth_1to1_pent:
 	fsubrp %st,%st(1)
 	fxch %st(1)
 	fsubrp %st,%st(1)
+
+	addl $4,ditherindex.1
+	andl $0x0003fffc,ditherindex.1
+	movl $ASM_NAME(dithernoise),%edi
+	addl ditherindex.1,%edi	
+
+	fadd (%edi)
 	fistpl (%esp)
 	popl %eax
 	cmpl $32767,%eax
@@ -308,7 +345,8 @@ synth_1to1_pent:
 1:	movw $32767,(%esi)
 	jmp 3f
 2:	movw $-32768,(%esi)
-3:	incl %edi
+3:
+/*	incl %edi */
 4:
 .L67:
 	addl $-64,%ebx
@@ -316,7 +354,8 @@ synth_1to1_pent:
 	addl $4,%esi
 	decl %ebp
 	jnz .L68
-	movl %edi,%eax
+/* return ipv edi 0 in eax */
+	movl $0,%eax
 	popl %ebx
 	popl %esi
 	popl %edi

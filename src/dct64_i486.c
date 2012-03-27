@@ -2,7 +2,7 @@
 	dct64_i486.c: DCT64, a plain C variant for i486
 
 	copyright 1998-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Fabrice Bellard
 */
 
@@ -17,7 +17,6 @@
  * (c) 1998 Fabrice Bellard.  
  */
 
-#include "config.h"
 #include "mpg123.h"
 
 #define COS_0_0 16403
@@ -318,7 +317,7 @@ void dct64_1_486(int *out0,int *out1,int *b1,int *b2)
  * the call via dct64 is a trick to force GCC to use
  * (new) registers for the b1,b2 pointer to the bufs[xx] field
  */
-void dct64_486(int *a,int *b,real *samples)
+void dct64_i486(int *a,int *b,real *samples)
 {
   int bufs[64];
   int i;

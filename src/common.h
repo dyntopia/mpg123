@@ -2,7 +2,7 @@
 	common: anything can happen here... frame reading, output, messages
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
@@ -37,9 +37,12 @@
 	So a better mask is:
 	11111111 11111111 00001101 00000000
 
+	Even more, I'll allow varying crc bit.
+	11111111 11111110 00001101 00000000
+
 	(still unsure about this private bit)
 */
-#define HDRCMPMASK 0xffff0d00
+#define HDRCMPMASK 0xfffe0d00
 
 extern unsigned long firsthead;
 extern int tabsel_123[2][3][16];
@@ -83,7 +86,8 @@ MPEG 2.5
 
 /* for control_generic */
 extern const char* remote_header_help;
-void make_remote_header(struct frame* fr, char *target);
+void print_remote_header(struct frame* fr);
+void generic_sendmsg (const char *fmt, ...);
 
 int position_info(struct frame* fr, unsigned long no, long buffsize, struct audio_info_struct* ai,
                    unsigned long* frames_left, double* current_seconds, double* seconds_left);
@@ -93,10 +97,27 @@ int read_frame_recover(struct frame* fr);
 off_t frame_index_find(unsigned long want_frame, unsigned long* get_frame);
 void print_frame_index(FILE* out);
 
-/* this could become a struct... */
-extern long lastscale;
+#endif
+
+void print_stat(struct frame *fr,unsigned long no,long buffsize,struct audio_info_struct *ai);
+void clear_stat();
+
+/* rva data, used in common.c, set in id3.c */
+extern scale_t lastscale;
 extern int rva_level[2];
 extern float rva_gain[2];
 extern float rva_peak[2];
 
-#endif
+/* adjust volume to current outscale and rva values if wanted */
+#define RVA_OFF 0
+#define RVA_MIX 1
+#define RVA_ALBUM 2
+#define RVA_MAX RVA_ALBUM
+extern const char* rva_name[3];
+void do_rva();
+/* wrap over do_rva that prepares outscale */
+void do_volume(double factor);
+
+/* positive and negative for offsets... I guess I'll drop the unsigned frame position type anyway */
+long time_to_frame(struct frame *fr, double seconds);
+

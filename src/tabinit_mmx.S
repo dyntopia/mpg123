@@ -1,17 +1,21 @@
-/	tabinit_MMX.s: ...
+/*
+	tabinit_mmx: make_decode_tables_mmx
 
-/	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-/	see COPYING and AUTHORS files in distribution or http://mpg123.de
-/	initially written by the mysterious higway (apparently)
+	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
+	initially written by the mysterious higway (apparently)
+*/
 
-.bss
-	.align 32
-    	.comm	decwin,2176,32
-	.align 32
-	.comm	decwins,2176,32
+#include "mangle.h"
+
+BSS
+	ALIGN32
+	COMM(ASM_NAME(decwin_mmx),2176,32)
+	ALIGN32
+	COMM(ASM_NAME(decwins),2176,32)
 
 .data
-	.align 32
+	ALIGN32
 intwinbase:
 	.value      0,    -1,    -1,    -1,    -1,    -1,    -1,    -2
 	.value     -2,    -2,    -2,    -3,    -3,    -4,    -4,    -5
@@ -50,10 +54,9 @@ intwinbase:
 intwindiv:
 	.long 0x47800000			# 65536.0
 .text
-	.align 32
-.globl make_decode_tables
-
-make_decode_tables:
+	ALIGN32
+.globl ASM_NAME(make_decode_tables_mmx)
+ASM_NAME(make_decode_tables_mmx):
 	pushl %edi
 	pushl %esi
 	pushl %ebx
@@ -62,8 +65,8 @@ make_decode_tables:
 	xorl %ebx,%ebx
 	movl $32,%esi
 	movl $intwinbase,%edi
-	negl 16(%esp)				# scaleval
-	pushl $2				# intwinbase step
+	negl 16(%esp)	/* scaleval */
+	pushl $2	/* intwinbase step */
 .L00:
 	cmpl $528,%ecx
 	jnc .L02
@@ -77,8 +80,8 @@ make_decode_tables:
 	fdivs intwindiv
 	fimull 24(%esp)
 	popl %eax
-	fsts  decwin(,%ecx,4)
-	fstps decwin+64(,%ecx,4)
+	fsts  ASM_NAME(decwin_mmx)(,%ecx,4)
+	fstps ASM_NAME(decwin_mmx)+64(,%ecx,4)
 .L02:
 	leal -1(%esi),%edx
 	and %ebx,%edx
@@ -128,15 +131,15 @@ make_decode_tables:
 	cmpl $512,%ecx
 	jnc .L09
 	subl %ecx,%edx
-	movw %ax,decwins(,%edx,2)
-	movw %ax,decwins-32(,%edx,2)
+	movw %ax,ASM_NAME(decwins)(,%edx,2)
+	movw %ax,ASM_NAME(decwins)-32(,%edx,2)
 .L09:
 	testl $1,%ecx
 	jnz .L10
 	negl %eax
 .L10:
-	movw %ax,decwins(,%ecx,2)
-	movw %ax,decwins+32(,%ecx,2)
+	movw %ax,ASM_NAME(decwins)(,%ecx,2)
+	movw %ax,ASM_NAME(decwins)+32(,%ecx,2)
 .L11:
 	leal -1(%esi),%edx
 	and %ebx,%edx

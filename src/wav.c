@@ -2,7 +2,7 @@
 	wav.c: write wav files
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Samuel Audet
 
 	Geez, why are WAV RIFF headers are so secret?  I got something together,
@@ -14,42 +14,73 @@
 	It's not a very clean code ... Fix this!
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include "config.h"
 #include "mpg123.h"
-#include "debug.h"
+
+#ifdef FLOATOUT
+#define WAVE_FORMAT 3
+#else
+#define WAVE_FORMAT 1
+#endif
 
 struct
 {
-   byte riffheader[4];
-   byte WAVElen[4];
-   struct
-   {
-      byte fmtheader[8];
-      byte fmtlen[4];
-      struct
-      {
-         byte FormatTag[2];
-         byte Channels[2];
-         byte SamplesPerSec[4];
-         byte AvgBytesPerSec[4];
-         byte BlockAlign[2];
-         byte BitsPerSample[2]; /* format specific for PCM */
-      } fmt;
-      struct
-      {
-         byte dataheader[4];
-         byte datalen[4];
-         /* from here you insert your PCM data */
-      } data;
-   } WAVE;
+	byte riffheader[4];
+	byte WAVElen[4]; /* should this include riffheader or not? */
+	struct
+	{
+		byte WAVEID[4];
+		byte fmtheader[4];
+		byte fmtlen[4];
+		struct
+		{
+			byte FormatTag[2];
+			byte Channels[2];
+			byte SamplesPerSec[4];
+			byte AvgBytesPerSec[4];
+			byte BlockAlign[2];
+			byte BitsPerSample[2]; /* format specific for PCM */
+			#ifdef FLOATOUT
+			byte cbSize[2];
+			#endif
+		} fmt;
+		#ifdef FLOATOUT
+		byte factheader[4];
+		byte factlen[4];
+		struct
+		{
+			byte samplelen[4];
+		} fact;
+		#endif
+		struct
+		{
+			byte dataheader[4];
+			byte datalen[4];
+			/* from here you insert your PCM data */
+		} data;
+	} WAVE;
 } RIFF = 
-{  { 'R','I','F','F' } , { sizeof(RIFF.WAVE),0,0,0 } , 
-   {  { 'W','A','V','E','f','m','t',' ' } , { sizeof(RIFF.WAVE.fmt),0,0,0} ,
-      { {1,0} , {0,0},{0,0,0,0},{0,0,0,0},{0,0},{0,0} } ,
-      { { 'd','a','t','a' }  , {0,0,0,0} }
-   }
+{
+	{ 'R','I','F','F' } ,
+	{ sizeof(RIFF.WAVE),0,0,0 } , 
+	{
+		{ 'W','A','V','E' },
+		{ 'f','m','t',' ' },
+		{ sizeof(RIFF.WAVE.fmt),0,0,0 } ,
+		{
+			{WAVE_FORMAT,0} , {0,0},{0,0,0,0},{0,0,0,0},{0,0},{0,0}
+			#ifdef FLOATOUT
+			,{0,0}
+			#endif
+		} ,
+		#ifdef FLOATOUT
+		{ 'f','a','c','t' },
+		{ sizeof(RIFF.WAVE.fact),0,0,0 },
+		{
+			{0,0,0,0} /* to be filled later, like datalen and wavelen */
+		},
+		#endif
+		{ { 'd','a','t','a' }  , {0,0,0,0} }
+	}
 };
 
 struct auhead {
@@ -90,6 +121,17 @@ static void long2bigendian(long inval,byte *outval,int b)
   }
 }
 
+#ifdef FLOATOUT
+static long from_little(byte *inval, int b)
+{
+	long ret = 0;
+	int i;
+	for(i=0;i<b;++i) ret += ((long)inval[i])<<(i*8);
+
+	return ret;
+}
+#endif
+
 static int testEndian(void) 
 {
   long i,a=0,b=0,c=0;
@@ -112,14 +154,14 @@ static int testEndian(void)
 
 static int open_file(char *filename)
 {
-#ifndef GENERIC
+#if defined(HAVE_SETUID) && defined(HAVE_GETUID)
    setuid(getuid()); /* dunno whether this helps. I'm not a security expert */
 #endif
    if(!strcmp("-",filename))  {
       wavfp = stdout;
    }
    else {
-     wavfp = fopen(filename,"w");
+     wavfp = fopen(filename,"wb");
      if(!wavfp)
        return -1;
    }
@@ -129,6 +171,10 @@ static int open_file(char *filename)
 
 int au_open(struct audio_info_struct *ai, char *aufilename)
 {
+#ifdef FLOATOUT
+	error("AU file support for float values not there yet");
+	return -1;
+#else
   flipendian = 0;
 
   switch(ai->format) {
@@ -161,10 +207,15 @@ int au_open(struct audio_info_struct *ai, char *aufilename)
   datalen = 0;
 
   return 0;
+#endif
 }
 
 int cdr_open(struct audio_info_struct *ai, char *cdrfilename)
 {
+#ifdef FLOATOUT
+	error("refusing to produce cdr file with float values");
+	return -1;
+#else
   param.force_stereo = 0;
   ai->format = AUDIO_FORMAT_SIGNED_16;
   ai->rate = 44100;
@@ -182,6 +233,7 @@ int cdr_open(struct audio_info_struct *ai, char *cdrfilename)
     return -1;
 
   return 0;
+#endif
 }
 
 int wav_open(struct audio_info_struct *ai, char *wavfilename)
@@ -191,8 +243,11 @@ int wav_open(struct audio_info_struct *ai, char *wavfilename)
    flipendian = 0;
 
    /* standard MS PCM, and its format specific is BitsPerSample */
-   long2littleendian(1,RIFF.WAVE.fmt.FormatTag,sizeof(RIFF.WAVE.fmt.FormatTag));
-
+   long2littleendian(WAVE_FORMAT,RIFF.WAVE.fmt.FormatTag,sizeof(RIFF.WAVE.fmt.FormatTag));
+#ifdef FLOATOUT
+   long2littleendian(bps=32,RIFF.WAVE.fmt.BitsPerSample,sizeof(RIFF.WAVE.fmt.BitsPerSample));
+   flipendian = testEndian();
+#else
    if(ai->format == AUDIO_FORMAT_SIGNED_16) {
       long2littleendian(bps=16,RIFF.WAVE.fmt.BitsPerSample,sizeof(RIFF.WAVE.fmt.BitsPerSample));
       flipendian = testEndian();
@@ -204,6 +259,7 @@ int wav_open(struct audio_info_struct *ai, char *wavfilename)
       error("Format not supported.");
       return -1;
    }
+#endif
 
    if(ai->rate < 0) ai->rate = 44100;
 
@@ -235,6 +291,20 @@ int wav_write(unsigned char *buf,int len)
      return 0;
   
    if(flipendian) {
+#ifdef FLOATOUT
+		if(len & 3)
+		{
+			error("Number of bytes no multiple of 4 (32bit)!");
+			return 0;
+		}
+		for(i=0;i<len;i+=4)
+		{
+			int j;
+			unsigned char tmp[4];
+			for(j = 0; j<=3; ++j) tmp[j] = buf[i+j];
+			for(j = 0; j<=3; ++j) buf[i+j] = tmp[3-j];
+		}
+#else
      if(len & 1) {
        error("Odd number of bytes!");
        return 0;
@@ -245,6 +315,7 @@ int wav_write(unsigned char *buf,int len)
        buf[i+0] = buf[i+1];
        buf[i+1] = tmp;
      }
+#endif
    }
 
    temp = fwrite(buf, 1, len, wavfp);
@@ -264,6 +335,10 @@ int wav_close(void)
    if(fseek(wavfp, 0L, SEEK_SET) >= 0) {
      long2littleendian(datalen,RIFF.WAVE.data.datalen,sizeof(RIFF.WAVE.data.datalen));
      long2littleendian(datalen+sizeof(RIFF.WAVE),RIFF.WAVElen,sizeof(RIFF.WAVElen));
+#ifdef FLOATOUT
+     long2littleendian(datalen/(from_little(RIFF.WAVE.fmt.Channels,2)*from_little(RIFF.WAVE.fmt.BitsPerSample,2)/8),
+                       RIFF.WAVE.fact.samplelen,sizeof(RIFF.WAVE.fact.samplelen));
+#endif
      fwrite(&RIFF, sizeof(RIFF),1,wavfp);
    }
    else {

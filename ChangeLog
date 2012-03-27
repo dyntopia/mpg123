@@ -1,6 +1,1144 @@
-2006-10-20 22:08  thor
+2007-08-07 00:01  thor
 
-	* tags/0.61: tagging version 0.61
+	* tags/0.67: tagging 0.67
+
+2007-08-06 23:23  thor
+
+	* trunk/NEWS: Little update to NEWS.
+
+2007-08-06 23:04  thor
+
+	* trunk/README, trunk/man1/mpg123.1: - --long-help mentioned in
+	  README - updated man page for --loop and --timeout
+
+2007-08-06 22:52  thor
+
+	* trunk/INSTALL: INSTALL updates inspired by Winston.
+
+2007-08-06 22:38  thor
+
+	* trunk/src/system.c: Well, this file is inactive atm., but we
+	  still can fix some language.
+
+2007-08-06 22:31  thor
+
+	* trunk/src/config.h.legacy: More positive suggestions for integer
+	  types in config.h.legacy.
+
+2007-08-06 22:19  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am: Combine MMX, SSE,
+	  3DNowExt with fallback decoders and add the _alone cpu builds.
+
+2007-08-06 21:12  thor
+
+	* trunk/AUTHORS, trunk/doc/THANKS: update contributors and
+	  supporters
+
+2007-08-06 20:45  thor
+
+	* trunk/AUTHORS: Reorder the maintainer eras in AUTHORS to go into
+	  the past when scrolling down the file.
+
+2007-08-03 23:06  thor
+
+	* trunk/src/common.c: little header cleanup in common.c
+
+2007-08-03 13:09  thor
+
+	* trunk/src/mpg123.h: mpg123.h cleanup, removing old stuff that's
+	  not needed.
+
+2007-08-02 19:48  thor
+
+	* trunk/configure.ac, trunk/src/common.c, trunk/src/mpg123.h: Sort
+	  out some integer type header stuff... central in mpg123.h .
+
+2007-08-02 16:18  thor
+
+	* trunk/src/id3.c: Short is 16 bit, no need for inttypes.h in
+	  id3.c .
+
+2007-08-01 15:28  thor
+
+	* trunk/src/dct64_altivec.c, trunk/src/decode_altivec.c,
+	  trunk/src/layer1.c, trunk/src/layer2.c, trunk/src/layer3.c,
+	  trunk/src/optimize.h, trunk/src/tabinit.c: ALIGN(16) ->
+	  ALIGNED(16), as there is already such a macro on MacOSX.
+
+2007-08-01 15:03  thor
+
+	* trunk/src/dct64_altivec.c, trunk/src/decode_altivec.c,
+	  trunk/src/layer1.c, trunk/src/layer2.c, trunk/src/layer3.c,
+	  trunk/src/optimize.h, trunk/src/tabinit.c: Change alignment
+	  macro name to ALIGN() and applying it everywhere where alignment
+	  is needed in C code. That fixes MacOSX build (the aligned()
+	  macro messed up left over __attribute__((aligned(16))) ...).
+
+2007-07-28 00:58  thor
+
+	* trunk/src/control_generic.c, trunk/src/mpg123.c: Let the control
+	  interface be at least built and in principle activated under
+	  Win32; while it doesn't work because of select() being limited
+	  to sockets.
+
+2007-07-28 00:57  thor
+
+	* trunk/src/readers.c: Need sys/time.h!
+
+2007-07-28 00:46  thor
+
+	* trunk/src/Makefile.legacy: SunOS not having strerror ...?
+
+2007-07-28 00:15  thor
+
+	* trunk/src/mpg123.c, trunk/src/mpg123.h, trunk/src/readers.c:
+	  Hide the timeout code (using select()) from Win32 to make that
+	  build work again.
+
+2007-07-27 23:35  thor
+
+	* trunk/src/Makefile.legacy: -DNO_RT for SunOS
+
+2007-07-27 23:32  thor
+
+	* trunk/configure.ac, trunk/src/config.h.legacy,
+	  trunk/src/mpg123.c, trunk/src/mpg123.h: Another hint from
+	  Winston: be prepared for missing strerror.
+
+2007-07-27 23:23  thor
+
+	* trunk/configure.ac: Going to be 0.67 .
+
+2007-07-27 23:22  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.legacy,
+	  trunk/src/audio.c, trunk/src/audio_aix.c,
+	  trunk/src/audio_alib.c, trunk/src/audio_alsa05.c,
+	  trunk/src/audio_coreaudio.c, trunk/src/audio_hp.c,
+	  trunk/src/audio_jack.c, trunk/src/audio_nas.c,
+	  trunk/src/audio_oss.c, trunk/src/audio_portaudio.c,
+	  trunk/src/audio_sdl.c, trunk/src/audio_sgi.c,
+	  trunk/src/audio_sun.c, trunk/src/audio_win32.c,
+	  trunk/src/buffer.c, trunk/src/common.c, trunk/src/common.h,
+	  trunk/src/config.h.legacy, trunk/src/control_generic.c,
+	  trunk/src/decode.c, trunk/src/decode_2to1.c,
+	  trunk/src/decode_4to1.c, trunk/src/decode_altivec.c,
+	  trunk/src/decode_i386.c, trunk/src/decode_i486.c,
+	  trunk/src/decode_ntom.c, trunk/src/httpget.c, trunk/src/id3.c,
+	  trunk/src/layer3.c, trunk/src/mpg123.c, trunk/src/mpg123.h,
+	  trunk/src/playlist.c, trunk/src/readers.c,
+	  trunk/src/stringbuf.c, trunk/src/system.c, trunk/src/tabinit.c,
+	  trunk/src/term.c, trunk/src/wav.c, trunk/src/xfermem.c: A commit
+	  motivated by SunOS veteran Winston. He gave SunOS 4.1.2 with gcc
+	  2.7.0 a spin. A commit that looks bigger than it is. Most files
+	  only got header #includes removed that are handled in mpg123.h .
+	  Then there are the corresponding changes in mpg123.h; together
+	  with the addition of safe_realloc for ancient systems. The ugly
+	  need for snprintf in make_remote_header() has been avoided by
+	  changing this one into print_remote_header(). The Question of
+	  size_t, ssize_t and off_t is handled in configure now;
+	  respectively in config.h.legacy .
+
+2007-07-27 22:28  thor
+
+	* trunk/NEWS: Preparing NEWS for 0.67 .
+
+2007-07-25 20:05  thor
+
+	* trunk/src/Makefile.am: Let 'make clean' clean *.a files, too.
+
+2007-07-12 21:51  thor
+
+	* trunk/src/audio.c: Enable flexible rate for stdout decoding, too.
+
+2007-07-12 21:34  thor
+
+	* trunk/src/control_generic.c: We can use the external one from
+	  mpg123.c, should even, perhaps.
+
+2007-07-01 08:21  thor
+
+	* trunk/src/id3.c: Hah! Now UTF8 filtering to ASCII finally works
+	  thanks to Mika Tiainen.
+
+2007-06-30 18:47  thor
+
+	* trunk/src/common.c: Notes in audio_flush() about it not being
+	  relevant for buffered decoding. Strangely, there is this write
+	  call for DECODE_BUFFER... I think that should be different... I
+	  am not sure about how safe the buffer code is. I don't claim to
+	  understand it, though.
+
+2007-06-30 15:44  thor
+
+	* trunk/src/common.c: I was one frame off; -k 1 was a no-op since
+	  the first frame number was incremented to 1 too soon. Now the
+	  fresh frame number is -1 before read_frame and 0 for the first
+	  frame after that. The funny part is, that the buggy variant
+	  agrees with 0.59r and the corrected has a shift of 1 frame for
+	  many mp3 files: 0.59r does not recognize the LAME tag and plays
+	  a frame of silence instead. So, now it should be correct, albeit
+	  differing from old mpg123.
+
+2007-06-28 13:15  thor
+
+	* trunk/src/mpg123.c: a ) in help output
+
+2007-06-28 13:07  thor
+
+	* trunk/src/mpg123.c, trunk/src/mpg123.h, trunk/src/playlist.c,
+	  trunk/src/playlist.h: --loop: Specify loop count for tracks; <0
+	  triggers endless loop; good for persistent internet streaming
+	  with unreliable connection and --timeout
+
+2007-06-28 12:07  thor
+
+	* trunk/src/mpg123.c, trunk/src/mpg123.h, trunk/src/readers.c:
+	  --timeout <n>: Possibility to end playback on a stream that
+	  doesn't give data for <n> seconds. I hope this helps the guy of
+	  ROM 106.5FM with the non-static internet connection.
+
+2007-06-12 00:28  thor
+
+	* trunk/src/Makefile.am: DK pointed this fix out to not break
+	  compiles into separate object dirs: use more flags for cpp on .S
+	  files.
+
+2007-06-12 00:25  thor
+
+	* trunk/src/mpg123.c: Add a missing Y for the setpriority paranoia.
+
+2007-06-04 23:22  thor
+
+	* trunk, trunk/src: ignore autogenerated stuff
+
+2007-06-04 23:02  thor
+
+	* trunk/configure.ac, trunk/src/dct64_sse.S, trunk/src/layer1.c,
+	  trunk/src/layer2.c, trunk/src/layer3.c, trunk/src/mangle.h,
+	  trunk/src/optimize.h: If __attribute__((aligned(16))) works,
+	  replace all left movups with movaps for dct64_sse, following a
+	  patch by Zuxy Meng posted to MPlayer list. On my Pentium-M that
+	  seems to gain about 1% of performance, while the other opts seem
+	  to profit from the alignment, too.
+
+2007-06-04 21:31  thor
+
+	* trunk/src/audio.c, trunk/src/audio_aix.c,
+	  trunk/src/audio_alib.c, trunk/src/audio_alsa.c,
+	  trunk/src/audio_alsa05.c, trunk/src/audio_coreaudio.c,
+	  trunk/src/audio_dummy.c, trunk/src/audio_esd.c,
+	  trunk/src/audio_hp.c, trunk/src/audio_jack.c,
+	  trunk/src/audio_libao.c, trunk/src/audio_mint.c,
+	  trunk/src/audio_nas.c, trunk/src/audio_os2.c,
+	  trunk/src/audio_oss.c, trunk/src/audio_portaudio.c,
+	  trunk/src/audio_sdl.c, trunk/src/audio_sgi.c,
+	  trunk/src/audio_sun.c, trunk/src/audio_win32.c,
+	  trunk/src/buffer.c, trunk/src/common.c,
+	  trunk/src/control_generic.c, trunk/src/dct64.c,
+	  trunk/src/dct64_altivec.c, trunk/src/dct64_i386.c,
+	  trunk/src/dct64_i486.c, trunk/src/debug.h, trunk/src/decode.c,
+	  trunk/src/decode_2to1.c, trunk/src/decode_4to1.c,
+	  trunk/src/decode_altivec.c, trunk/src/decode_i386.c,
+	  trunk/src/decode_i486.c, trunk/src/decode_ntom.c,
+	  trunk/src/equalizer.c, trunk/src/getbits.c, trunk/src/httpget.c,
+	  trunk/src/id3.c, trunk/src/layer1.c, trunk/src/layer2.c,
+	  trunk/src/layer3.c, trunk/src/mpg123.c, trunk/src/mpg123.h,
+	  trunk/src/optimize.c, trunk/src/playlist.c, trunk/src/readers.c,
+	  trunk/src/system.c, trunk/src/tabinit.c, trunk/src/term.c,
+	  trunk/src/wav.c, trunk/src/xfermem.c: Include config.h and
+	  debug.h centrally in mpg132.h, remove redundant includes.
+
+2007-06-04 20:10  thor
+
+	* trunk/src/optimize.c: Show decoder options in their priority
+	  order.
+
+2007-06-04 20:07  thor
+
+	* trunk/man1/mpg123.1: Update the man page date.
+
+2007-06-04 19:53  thor
+
+	* trunk/scripts/benchmark-cpu.pl: Modify the script to use the
+	  actually supported decoders.
+
+2007-06-04 14:10  njh
+
+	* trunk/scripts/benchmark-cpu.pl: Perl script to benchmark each of
+	  mpg123's CPU optimisations
+
+2007-06-03 23:41  thor
+
+	* trunk/NEWS: news for 0.66
+
+2007-06-03 23:28  thor
+
+	* trunk/src/optimize.c, trunk/src/optimize.h: complete the forced
+	  / flexible rate fallback for 3DNowExt->3DNow
+
+2007-06-03 23:06  thor
+
+	* trunk/src/optimize.c: Do the pentium fallback for
+	  forced/flexible rate also from 3DNowExt. I guess the root lies
+	  in MMX...
+
+2007-06-03 20:57  thor
+
+	* trunk/src/config.h.legacy: define some HAVE_*_H to make some
+	  legacy builds build again
+
+2007-06-03 20:11  thor
+
+	* trunk/README: little README update/fix
+
+2007-06-01 09:54  thor
+
+	* trunk/configure.ac, trunk/doc/README.remote,
+	  trunk/src/control_generic.c: Let the remote interface print the
+	  greeting string _before_ waiting on the fifo. Also updated
+	  documentation for control interface.
+
+2007-06-01 09:34  thor
+
+	* trunk/man1/mpg123.1, trunk/src/mpg123.c: - set remote_err when
+	  putting audio to stdout. - some documentation consistency
+
+2007-06-01 08:07  thor
+
+	* trunk/configure.ac: OSF1 is not just a generic system - it's
+	  UNIX!
+
+2007-06-01 07:44  thor
+
+	* trunk/configure.ac: For now, define NOXFERMEM for -DGENERIC;
+	  this has to be resolved with indivitual checks later.
+
+2007-06-01 07:27  thor
+
+	* trunk/configure.ac, trunk/src/wav.c: Another GENERIC fix: check
+	  for get/setuid.
+
+2007-06-01 07:25  thor
+
+	* trunk/configure.ac, trunk/src/mpg123.c: One fix for generic
+	  systems that have setpriority - check for the necessary headers
+	  instead of system type.
+
+2007-06-01 06:57  thor
+
+	* trunk/configure.ac: Fix configure for non-gcc
+	  (with_optimization=0).
+
+2007-06-01 00:32  njh
+
+	* trunk/MakeLegacy.sh, trunk/Makefile.am, trunk/autogen.sh,
+	  trunk/configure.ac, trunk/misc/equalizer-control.pl,
+	  trunk/src/Makefile.am, trunk/src/Makefile.legacy,
+	  trunk/src/Makefile.win32, trunk/src/audio.c, trunk/src/audio.h,
+	  trunk/src/audio_aix.c, trunk/src/audio_alib.c,
+	  trunk/src/audio_alsa.c, trunk/src/audio_coreaudio.c,
+	  trunk/src/audio_dummy.c, trunk/src/audio_esd.c,
+	  trunk/src/audio_hp.c, trunk/src/audio_jack.c,
+	  trunk/src/audio_libao.c, trunk/src/audio_mint.c,
+	  trunk/src/audio_nas.c, trunk/src/audio_os2.c,
+	  trunk/src/audio_oss.c, trunk/src/audio_portaudio.c,
+	  trunk/src/audio_sdl.c, trunk/src/audio_sgi.c,
+	  trunk/src/audio_sun.c, trunk/src/audio_win32.c,
+	  trunk/src/buffer.c, trunk/src/buffer.h, trunk/src/common.c,
+	  trunk/src/common.h, trunk/src/control_generic.c,
+	  trunk/src/dct36_3dnow.S, trunk/src/dct64.c,
+	  trunk/src/dct64_3dnow.S, trunk/src/dct64_altivec.c,
+	  trunk/src/dct64_i386.c, trunk/src/dct64_i486.c,
+	  trunk/src/dct64_mmx.S, trunk/src/decode.c, trunk/src/decode.h,
+	  trunk/src/decode_2to1.c, trunk/src/decode_3dnow.S,
+	  trunk/src/decode_4to1.c, trunk/src/decode_altivec.c,
+	  trunk/src/decode_i386.c, trunk/src/decode_i486.c,
+	  trunk/src/decode_i586.S, trunk/src/decode_mmx.S,
+	  trunk/src/decode_ntom.c, trunk/src/equalizer.c,
+	  trunk/src/equalizer_3dnow.S, trunk/src/genre.h,
+	  trunk/src/getbits.c, trunk/src/getbits.h,
+	  trunk/src/getcpuflags.S, trunk/src/getlopt.c,
+	  trunk/src/getlopt.h, trunk/src/httpget.c, trunk/src/huffman.h,
+	  trunk/src/icy.h, trunk/src/l2tables.h, trunk/src/layer1.c,
+	  trunk/src/layer2.c, trunk/src/layer3.c, trunk/src/layer3.h,
+	  trunk/src/mpg123.c, trunk/src/mpg123.h, trunk/src/optimize.c,
+	  trunk/src/optimize.h, trunk/src/playlist.c,
+	  trunk/src/playlist.h, trunk/src/readers.c,
+	  trunk/src/stringbuf.c, trunk/src/stringbuf.h,
+	  trunk/src/system.c, trunk/src/tabinit.c,
+	  trunk/src/tabinit_mmx.S, trunk/src/term.c, trunk/src/term.h,
+	  trunk/src/wav.c, trunk/src/xfermem.c, trunk/src/xfermem.h:
+	  Changed all occurrences of http://mpg123.de to http://mpg123.org
+	  (for consistency)
+
+2007-05-31 22:43  thor
+
+	* trunk/man1/mpg123.1: Add hint for 'h' in terminal control mode.
+
+2007-05-31 22:21  thor
+
+	* trunk/man1/mpg123.1: Add --fifo Option to man page.
+
+2007-05-31 22:08  thor
+
+	* trunk/src/wav.c: Make this compile in normal mode with -Werror.
+
+2007-05-31 22:06  thor
+
+	* trunk/configure.ac: re-enable -Werror for debugging build
+
+2007-05-31 22:05  thor
+
+	* trunk/configure.ac, trunk/src/control_generic.c: Use mkfifo
+	  instead of mknod, test for it in configure instead of guessing
+	  based on operating system.
+
+2007-05-31 21:45  thor
+
+	* trunk/configure.ac: x86 apple default to x86
+
+2007-05-31 21:34  thor
+
+	* trunk/src/Makefile.am: add the x86_dither lib to EXTRA_LIBS
+
+2007-05-31 21:31  thor
+
+	* trunk/src/Makefile.am, trunk/src/decode_i586_dither.S,
+	  trunk/src/dnoise.c: Move the dither noise into a standalone C
+	  file. That saves space (, instead of .float for every number)
+	  and circumvents a workaround for the .float pseudo-op, which is
+	  .single on MacOSX.
+
+2007-05-31 20:09  thor
+
+	* trunk/src/optimize.c: Let --test-cpu print the actually
+	  available decoders, not just the cpu flags.
+
+2007-05-31 19:58  thor
+
+	* trunk/src/optimize.c: Don't claim we have anything with SSE2 or
+	  SSE3.
+
+2007-05-31 19:55  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am: towards a real
+	  separation of x86 and x86_dither
+
+2007-05-31 16:45  thor
+
+	* trunk/Makefile.am, trunk/man1, trunk/man1/mpg123.1,
+	  trunk/mpg123.1, trunk/src/mpg123.c: Updated the manpage a bit.
+
+2007-05-31 16:12  thor
+
+	* trunk/src/mpg123.c: fix file creation mode for -O
+
+2007-05-31 15:55  thor
+
+	* trunk/src/Makefile.am: decode.h shall be distributed.
+
+2007-05-31 15:54  thor
+
+	* trunk/configure.ac, trunk/src/common.c, trunk/src/common.h,
+	  trunk/src/decode.c, trunk/src/decode.h, trunk/src/decode_2to1.c,
+	  trunk/src/decode_4to1.c, trunk/src/decode_ntom.c,
+	  trunk/src/getlopt.c, trunk/src/getlopt.h, trunk/src/mpg123.c,
+	  trunk/src/mpg123.h, trunk/src/optimize.h, trunk/src/tabinit.c,
+	  trunk/src/wav.c: I couldn't help myself... here is the option
+	  for a build using the generic decoder that produces 32bit float
+	  output. You select it via --with-cpu=generic_float, which
+	  implies dummy output and also disables the buffer. The decoded
+	  audio can be written raw or to a IEEE float wav file. This
+	  demonstrates that it's doable and not too complicated for the
+	  generic code. Next would be to a) make it into a runtime option
+	  and b) adapt assembler opts to that. The latter will most likely
+	  not happen for every opt.
+
+2007-05-31 11:26  thor
+
+	* trunk/configure.ac: split x86 opts into x86: everything except
+	  i486 and i586_dither (as it is large) x86_dither: everything
+	  except i486 (x86 + 256K)
+
+2007-05-31 11:25  thor
+
+	* trunk/src/optimize.c: list 3DNowExt
+
+2007-05-30 17:52  thor
+
+	* trunk/configure.ac, trunk/src/dct36_3dnowext.S,
+	  trunk/src/dct64_3dnowext.S, trunk/src/dct64_mmx.S,
+	  trunk/src/dct64_sse.S, trunk/src/decode_3dnow.S,
+	  trunk/src/decode_i586.S, trunk/src/decode_i586_dither.S,
+	  trunk/src/decode_mmxsse.S, trunk/src/equalizer_3dnow.S,
+	  trunk/src/getcpuflags.S, trunk/src/mangle.h,
+	  trunk/src/tabinit_mmx.S: Trying to make assembler stuff work on
+	  MacOSX: - test for behaviour of .align (exponent or direct byte
+	  value) and macros in mangle.h - replace every align/p2align with
+	  ALIGN4, ALIGN8, ALIGN16 or ALIGN32 - more BSS
+
+2007-05-30 16:30  thor
+
+	* trunk/configure.ac: Add a default cpu target of x86 for i686-*
+	  host.
+
+2007-05-30 16:26  thor
+
+	* trunk/src/dct64_sse.S, trunk/src/decode_3dnow.S,
+	  trunk/src/decode_i586.S, trunk/src/mangle.h: A first attempt to
+	  silence the MacOSX assembler.
+
+2007-05-30 16:16  thor
+
+	* trunk/src/audio.c: Some debug printf fixes (%li -> %i).
+
+2007-05-29 13:21  thor
+
+	* trunk/src/mpg123.c, trunk/src/wav.c: Fix wav and raw output
+	  under Win32 by explicitly setting the file mode to binary. The
+	  distortion was caused by line end bytes being converted.
+
+2007-05-29 13:20  thor
+
+	* trunk/configure.ac: Call FIFO suport disabled when it is after
+	  auto detection.
+
+2007-05-29 09:00  thor
+
+	* trunk/src/audio.c: Hopefully a last variant of the error
+	  message. We'll clean up the capabilities code itself later with
+	  the output plugins..
+
+2007-05-28 19:30  thor
+
+	* trunk/src/audio.c: Yet another variant of error message, without
+	  an appended parenthesed part.
+
+2007-05-27 09:12  thor
+
+	* trunk/src/audio.c: More explained error message.
+
+2007-05-27 08:56  thor
+
+	* trunk/src/audio.c: fix "you forced mono"
+
+2007-05-25 10:06  thor
+
+	* trunk/doc/monostereo.txt, trunk/src/audio.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123.h: Fix force_mono logic and give meaningful
+	  error messages when the audio device doesn't play.
+
+2007-05-25 00:32  thor
+
+	* trunk/src/audio_win32.c: 1. Fix (?) the Win32 output. It used to
+	  get a deadlock on waveOutWrite when callback wants the critical
+	  section. Figured that we actually only need the critical section
+	  to keep the block count straight. 2. Reformat the code. Still, I
+	  don't like the win32 output. It cannot be efficient to
+	  allocate/deallocate memory blocks all the time. A fixed set of
+	  buffers makes so much sense. Just manage an array of them (do I
+	  need so many, even?).
+
+2007-05-24 22:56  thor
+
+	* trunk/configure.ac: Detect win32 audio by probing windows.h ...
+	  the winmm library check just doesn't work.
+
+2007-05-24 22:55  thor
+
+	* trunk/src/mpg123.h: no double declaration of REAL_IS_FLOAT on
+	  Win32
+
+2007-05-24 12:57  thor
+
+	* trunk/configure.ac, trunk/src/audio_sdl.c,
+	  trunk/src/audio_win32.c: trying to add win32 again
+
+2007-05-24 12:38  thor
+
+	* trunk/README: little README update regarding SSE/3DNowExt
+
+2007-05-24 12:14  thor
+
+	* trunk/src/decode_mmxsse.S, trunk/src/mpg123.c,
+	  trunk/src/optimize.h: fix single cpu compiles by fixing MPLAYER
+	  -> OPT_MPLAYER
+
+2007-05-24 02:37  thor
+
+	* trunk/src/Makefile.am, trunk/src/dct36_3dnowext.S,
+	  trunk/src/dct64_3dnowext.S: Fix dependencies and comments for
+	  some of the new asms. Now a x86 build "just works".
+
+2007-05-24 02:36  thor
+
+	* trunk/src/control_generic.c: Fix a warning about comstr.
+
+2007-05-24 02:06  thor
+
+	* trunk/src/Makefile.am, trunk/src/dct36_3dnowext.S,
+	  trunk/src/dct36_3dnowext.c, trunk/src/dct64_3dnowext.S,
+	  trunk/src/dct64_3dnowext.c, trunk/src/dct64_sse.S,
+	  trunk/src/dct64_sse.c, trunk/src/decode_mmxsse.S,
+	  trunk/src/decode_mmxsse.c: Really switch to standalone assembler
+	  for SSE and extended 3DNow (some cleanup and mergeing still due)
+	  now. Also use CCASFLAGS for assembler files.
+
+2007-05-24 01:49  thor
+
+	* trunk/src/dct64_3dnowext.S, trunk/src/decode_mmxsse.S: ASM_NAME
+	  fixes
+
+2007-05-24 00:17  thor
+
+	* trunk/src/dct36_3dnowext.S, trunk/src/dct64_3dnowext.S,
+	  trunk/src/dct64_sse.S, trunk/src/decode_i586.S,
+	  trunk/src/decode_i586_dither.S, trunk/src/decode_mmxsse.S,
+	  trunk/src/mangle.h, trunk/src/tabinit_mmx.S: Another step to
+	  convert stuff to (kindof portable) external asm.
+
+2007-05-23 22:36  thor
+
+	* trunk/configure.ac: How smart am I? Now again the OSS check.
+
+2007-05-23 00:18  thor
+
+	* trunk/configure.ac: Now really...
+
+2007-05-22 23:23  thor
+
+	* trunk/configure.ac: fix OSS detection, tell what audio systems
+	  were detected
+
+2007-05-22 22:55  thor
+
+	* trunk/src/decode_mmxsse.S: Turn this into standalone ASM...
+	  gonna see what cygwin/mingw say to this.
+
+2007-05-22 21:26  thor
+
+	* trunk/src/decode_mmxsse.c: typo in comment
+
+2007-05-17 16:28  thor
+
+	* trunk/src/audio_alsa.c: apply fix from Clemens for bug 1691913
+	  handling underrun now
+
+2007-05-09 12:49  thor
+
+	* trunk/configure.ac, trunk/src/control_generic.c,
+	  trunk/src/mpg123.c, trunk/src/mpg123.h: 1. FIFO support in
+	  control_generic just reading from STDIN and mkfifo
+	  /tmp/mpg123_fifo mpg123 -R < /tmp/mpg123_fifo & doesn't make
+	  repeated `echo command > /tmp/mpg123_fifo` possible, so a bit of
+	  extra code added mpg123 -R --fifo /tmp/mpg123_fifo And you have
+	  your mpg123 daemon randomly controlled by the fifo. 2. Fixup
+	  command parsing for multiple commands in one read() (which
+	  usually never happens) ... it was just wrong before. Now it's
+	  still not nice code, but works. Also there's no malloc needed
+	  anymore, which is good.
+
+2007-05-09 12:19  thor
+
+	* trunk/src/audio.c: tell the device dame in verbose mode
+
+2007-05-02 23:02  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am: fix the rename to
+	  coreaudio for configure/make ... cannot test here, but need make
+	  dist to work
+
+2007-05-02 22:52  thor
+
+	* trunk/configure.ac: fall back to dummy output properly
+
+2007-05-02 22:48  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/audio_portaudio.c, trunk/src/buffer.c,
+	  trunk/src/buffer.h, trunk/src/common.c,
+	  trunk/src/control_generic.c, trunk/src/decode_3dnow.S,
+	  trunk/src/decode_i586.S, trunk/src/decode_i586_dither.S,
+	  trunk/src/mangle.h, trunk/src/tabinit_mmx.S, trunk/src/term.c,
+	  trunk/src/wav.c: Hacking MinGW32 into cooperation, in dialog
+	  with Elia Blance. This restores some work of Tony Million from
+	  ages ago... wrapping buffer code properly into #ifndef NOXFERMEM
+	  again (except in term.c, which is a different beast). Hack
+	  Makefile for the preprocessed .S files (mingw doesn't run cpp by
+	  itself). Got autoconf'ed x86 portaudio/mme build working for
+	  *-mingw32; Elia wants SDL ...;-) Also configure now doesn't look
+	  at OS for choosing default audio output but at the available
+	  output systems instead. Let's keep this hardcoding at a minimum.
+	  Sound playback works, control_generic not (no stdin in windows
+	  terminal?). Assembler opts work nicely (including --cpu choice).
+	  WAV writing has distortion ... twisted endianess?
+
+2007-05-02 12:08  thor
+
+	* trunk/src/control_generic.c: wrap buffer code in #ifndef
+	  NOXFERMEM
+
+2007-05-01 16:16  thor
+
+	* trunk/src/optimize.c, trunk/src/optimize.h: Make MMX and SSE
+	  fall back to i586 and friends (what's available) when
+	  auto-choosing cpu and -r <rate> is given. That's what I can do
+	  about bug 1545293 for now. When we have the next release with
+	  the x86 combined build, people are able to properly do flexible
+	  rate mode even with an MMX-enabled (or SSE) build. On the long
+	  term we need a) separating the decoding tables (I guess the
+	  special mmx table is interfering here) b) making the opts work
+	  with resampling natively
+
+2007-04-20 21:47  thor
+
+	* trunk/scripts/debugdef.pl, trunk/src/debug.h,
+	  trunk/src/httpget.c: Fix up the debugging macros; syntactic
+	  appearance as functions again (no closing ; in macro itself) (as
+	  DK suggested, basically).
+
+2007-04-11 23:43  njh
+
+	* trunk/src/audio.c: What was this old ALSA stuff still doing here
+
+2007-04-11 22:29  njh
+
+	* trunk/src/audio_coreaudio.c, trunk/src/audio_macosx.c: Renamed
+	  macosx to coreaudio
+	* trunk/src/audio_jack.c: Fixed C90 problems
+
+2007-04-10 20:59  njh
+
+	* trunk/src/Makefile.am: Added rule to build testcpu
+
+2007-03-11 21:54  thor
+
+	* trunk/src/optimize.c: don't pollute generic control interface
+	  with "decoder: SSE"
+
+2007-03-05 00:09  thor
+
+	* trunk/src/decode_mmxsse.c, trunk/src/optimize.c: fix debug
+	  compile in optimize.c ... noted inevitable failure of debug
+	  compile in decode_mmxsse (long long)
+
+2007-03-05 00:06  thor
+
+	* trunk/configure.ac: make the all-in-one x86 opt the default
+	  guess for i586+ linux/cygwin of course --with-cpu still gives
+	  you the smaller binary optimized for one cpu only
+
+2007-03-04 23:46  thor
+
+	* trunk/src/Makefile.am: add getcpuflags.h to the distro
+
+2007-03-04 22:07  thor
+
+	* trunk/src/Makefile.am, trunk/src/dct36_3dnow.S,
+	  trunk/src/dct64_3dnow.S, trunk/src/dct64_mmx.S,
+	  trunk/src/dct64_mmx.s, trunk/src/decode_3dnow.S,
+	  trunk/src/decode_i586.S, trunk/src/decode_i586.s,
+	  trunk/src/decode_i586_dither.S, trunk/src/decode_i586_dither.s,
+	  trunk/src/decode_mmx.S, trunk/src/decode_mmx.s,
+	  trunk/src/equalizer_3dnow.S, trunk/src/getcpuflags.S,
+	  trunk/src/tabinit_mmx.S, trunk/src/tabinit_mmx.s: convert
+	  standalone assembler codes to C preprocessed asm, using mangle.h
+	  and adding some quirks to make cygwin happy
+
+2007-03-04 22:06  thor
+
+	* trunk/src/optimize.c, trunk/src/optimize.h: fix the optmize
+	  stuff again, optmize.c only for multi, fix mmx standalone with
+	  OPT_MMXORSSE instead of MMXORSSE
+
+2007-03-04 22:04  thor
+
+	* trunk/src/mpg123.c: common.h is needed for print_stat
+
+2007-03-04 11:58  thor
+
+	* trunk/src/mpg123.c, trunk/src/optimize.c: cleaning up cpuflags
+	  stuff ... really enabling test-cpu for 3dnow
+
+2007-03-04 03:17  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/dct36_3dnow.S, trunk/src/dct36_3dnow.s,
+	  trunk/src/dct64_3dnow.S, trunk/src/dct64_3dnow.s,
+	  trunk/src/decode_3dnow.S, trunk/src/decode_3dnow.s,
+	  trunk/src/equalizer_3dnow.S, trunk/src/equalizer_3dnow.s:
+	  cpp-ified some more asm, fix 3dnow in autoconf
+
+2007-03-04 01:55  thor
+
+	* trunk, trunk/AUTHORS, trunk/build, trunk/src,
+	  trunk/src/Makefile.am, trunk/src/Makefile.legacy,
+	  trunk/src/getcpuflags.S, trunk/src/getcpuflags.s,
+	  trunk/src/mangle.h, trunk/src/mpg123.c, trunk/src/mpg123.h,
+	  trunk/src/optimize.c, trunk/src/optimize.h: - fix optimize.c to
+	  compile again, clean up some 3dnow lecacy stuff - getcpuflags
+	  asm is now fed through cpp (.S triggers that for gcc ... for
+	  other compilers we could trivially force this) - also fix some
+	  svn:ignores to lower the noise ...
+
+2007-03-04 01:43  thor
+
+	* trunk/src/getcpuflags.s: now using cpp to get name mangling done
+
+2007-03-02 23:34  thor
+
+	* trunk/src/getcpuflags.h, trunk/src/getcpuflags.s,
+	  trunk/src/mpg123.c, trunk/src/optimize.c, trunk/src/testcpu.c:
+	  refacor the cpu flag code ... now one asm funtion for all flags
+	  adapted the optimize stuff Note: 3dnow has to be fixed again, or
+	  at least documented that the current behaviour is to build
+	  _only_ 3dnow in. To reproduce previous behaviour one would need
+	  to make the 3dnow opt an alias for multi with 3dnow and i586.
+	  That would be compatible, but inconsistent.
+
+2007-02-28 09:18  thor
+
+	* trunk/src/getcpuflags.s, trunk/src/testcpu.c: fix the cpuid asm
+	  to be correctly skipped on a cpu that doesn't support it, add a
+	  simple standalone cpu flag tester still need to reorganize the
+	  split getcpuflags.s functions back into one
+
+2007-02-25 20:55  thor
+
+	* trunk/src/mpg123.c: #ifdef some mplayer import specific code in
+	  mpg123.c
+
+2007-02-25 16:32  thor
+
+	* trunk/README, trunk/src/common.c, trunk/src/common.h,
+	  trunk/src/control_generic.c, trunk/src/mpg123.h,
+	  trunk/src/term.c, trunk/src/term.h: Adding more control to
+	  terminal control: volume, rva and verbosity switch... also added
+	  volume and rva info to status display.
+
+2007-02-22 05:09  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/dct36_3dnowext.c, trunk/src/dct64_3dnowext.c,
+	  trunk/src/decode_i386.c, trunk/src/decode_mmxsse.c,
+	  trunk/src/mpg123.c, trunk/src/optimize.c, trunk/src/optimize.h:
+	  I cannot stop... hacked 3DNowExt from MPlayer in (check license
+	  again...) It builds but I still have to test it on a 3dnowext
+	  box. And... these MPlayer imports are not really nicely crafted.
+	  One should tidy up.
+
+2007-02-22 03:47  thor
+
+	* trunk/src/mpg123.c, trunk/src/mpg123.h: mangle the 3dnow and
+	  multi test option a bit for staying compatible in the solo 3dnow
+	  build
+
+2007-02-22 03:38  thor
+
+	* trunk/src/optimize.c: formatting, lowercase features
+
+2007-02-22 03:29  thor
+
+	* trunk/src/getcpuflags.s, trunk/src/mpg123.c, trunk/src/mpg123.h,
+	  trunk/src/optimize.c, trunk/src/optimize.h: more relentless
+	  duplication in the cpuflags code to detect all interesting
+	  features and cpu family, adding a generic feature set test
+	  (instead of only 3dnow test) and tests for auto selection of
+	  opts not yet decided to prevent user from setting invalid opt
+	  besides for non-pentium class cpus
+
+2007-02-22 02:09  thor
+
+	* trunk/src/mangle.h: adding this header for a moment ... it's
+	  gpl-only and possibly only temporary until I decided what to do
+	  with the SSE stuff
+
+2007-02-22 02:04  thor
+
+	* trunk/src/decode_i386.c, trunk/src/getcpuflags.s,
+	  trunk/src/mpg123.c, trunk/src/optimize.c, trunk/src/optimize.h:
+	  fixing i386 code with gcc-4.1 by using the old WRITE_SAMPLE
+	  again - the new one has distorted sound and gcc complains about
+	  strict aliasing ... the old WRITE_SAMPLE even seems to be faster
+	  with gcc-3.4! Of course I didn't (yet) test on my real i386DX40
+	  if there's an advantage. Started mocking with cpuflags to get
+	  proper MMX and SSE detection.
+
+2007-02-22 00:54  thor
+
+	* trunk/src/optimize.c, trunk/src/optimize.h: some fixing for
+	  multi mode... need to do cpu detection for real
+
+2007-02-21 23:43  thor
+
+	* trunk/configure.ac: debugging mode won't compile the i386 code
+	  with strict aliasing rules because of WRITE_SAMPLE, adding
+	  -fno-strict-aliasing
+
+2007-02-20 04:00  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/decode_i386.c, trunk/src/mpg123.c, trunk/src/mpg123.h,
+	  trunk/src/optimize.c, trunk/src/optimize.h: a first edition of
+	  the merged build ... only serves to produce silence of funny
+	  sounds atm. ... dunno why but getting some sleep looks like a
+	  valid option
+
+2007-02-20 03:07  thor
+
+	* trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/dct64_sse.c, trunk/src/decode_i386.c,
+	  trunk/src/decode_mmxsse.c, trunk/src/layer2.c,
+	  trunk/src/layer3.c, trunk/src/optimize.c, trunk/src/optimize.h:
+	  Adding SSE from MPlayer! Surprised how this worked with some
+	  guessing and late night disrespect. This now is again a bit
+	  faster than the gcc-4.1 enhanced i386 code; and also mpg123 is
+	  now again a bit faster than MPlayer at decoding mp3 on an SSE
+	  cpu (well, mplayer's bigger architecture has to show somewhere
+	  ... perhaps it's even just the faster update of progress display
+	  on terminal, which I only redirected to /dev/null in the test).
+	  What's missing is the 3DNow!Ext code, that should be adaptible
+	  in the same way as the SSE code was, but it may make sense to
+	  make that a bit prettier first. Oh ... and downsampling is quite
+	  silent. I guess mplayer didn't use that and somehow it does not
+	  magically start working for mpg123. I can still switch to
+	  another dct function...
+
+2007-02-20 01:43  thor
+
+	* trunk/src/Makefile.legacy, trunk/src/optimize.c: update the
+	  legacy Makefile
+
+2007-02-19 19:15  thor
+
+	* trunk/NEWS, trunk/configure.ac, trunk/src/Makefile.am,
+	  trunk/src/common.c, trunk/src/dct64_altivec.c,
+	  trunk/src/dct64_i386.c, trunk/src/dct64_i486.c,
+	  trunk/src/dct64_mmx.s, trunk/src/decode.c,
+	  trunk/src/decode_2to1.c, trunk/src/decode_4to1.c,
+	  trunk/src/decode_altivec.c, trunk/src/decode_i386.c,
+	  trunk/src/decode_i486.c, trunk/src/decode_i586.s,
+	  trunk/src/decode_i586_dither.s, trunk/src/decode_ntom.c,
+	  trunk/src/layer2.c, trunk/src/layer3.c, trunk/src/mpg123.c,
+	  trunk/src/mpg123.h, trunk/src/optimize.c, trunk/src/optimize.h,
+	  trunk/src/tabinit.c, trunk/src/tabinit_mmx.s: Starting to hack
+	  for 0.66; with the crazy idea to prepare the possibility of a
+	  unified build featuring a set of (x86) optimizations to choose
+	  from at runtime. I got it now so far that it compiles for the
+	  one-opt builds; optmization metalogic stuff shall cluster
+	  in/around optimize.[hc] . Some interesting numbers I got on -t
+	  with different opts, i386 outpacing all others... Oh: As a
+	  drive-by I removed the -march settings from the cpu_type opts;
+	  that prevented my -march=pentium-m from being effective, which
+	  interestingly didn't harm the i386 build, but the i486 one by a
+	  great deal.
+
+2007-02-07 09:19  thor
+
+	* trunk/NEWS: updating for 0.65
+
+2007-02-07 09:13  thor
+
+	* trunk/configure.ac: wrap gcc specific flags into $GCC = yes,
+	  first attempt to support SGI systems again (untested)
+
+2007-02-07 09:03  thor
+
+	* trunk/src/layer3.c: just a comment about the region1>region2
+	  check, hinting at the possibility that it gives false positives
+	  at lame 3.70 files - or that these files are just broken
+
+2007-01-31 21:37  thor
+
+	* trunk/src/common.c: adding a debug message on crc bit change to
+	  clarify that the fix for bug 1629697 also fixes 1648271
+
+2007-01-31 20:54  thor
+
+	* trunk/configure.ac: Do not use -Wall per default (it's gcc
+	  specific and also why nag the users with the warnings?)
+
+2007-01-22 03:09  thor
+
+	* trunk/src/id3.c: fixing bug 1641195 (id3v2.3 does not store
+	  synchsafe frame sizes) as well as an error with the msb of
+	  synchsafe longs (would have impact with tags >2MiB)
+
+2007-01-22 02:38  thor
+
+	* trunk/src/id3.c: id3v2.2 is a different beast, do not try to
+	  parse that
+
+2007-01-20 21:06  thor
+
+	* trunk/src/common.c, trunk/src/common.h: seen the real root of
+	  the evil of bug 1629697: there is an old lame tag from lame 3.70
+	  that has a header without crc bit but that track has crc. Now
+	  allowing the crc bit to vary in stream - it's no big deal...
+	  This extends the bugfix to no also correctly parsing the lame
+	  tag.
+
+2007-01-20 18:42  thor
+
+	* trunk/src/common.c, trunk/src/getbits.c: fixing 1629697
+	  (awaiting verify from user): the error protection bit was lost
+	  during search for first valid header (an initial bad header set
+	  it to 0, now for the valid header search the stuff is
+	  rerinitialized)
+
+2007-01-15 20:29  thor
+
+	* trunk/configure.ac: incrementing the version number in advance
+	  to 0.65 to not miss it again like for 0.64
+
+2007-01-15 20:22  thor
+
+	* trunk/NEWS: preparing for 0.64
+
+2007-01-15 20:10  thor
+
+	* trunk/src/httpget.c: fixing a DOS issue with read errors on HTTP
+	  (now failing properly instead of endless loop)
+
+2007-01-14 16:33  thor
+
+	* trunk/NEWS, trunk/README, trunk/configure.ac: preparing for 0.63
+
+2007-01-12 15:05  njh
+
+	* trunk/src/id3.c, trunk/src/readers.c: Fixes for warning: format
+	  '%d' expects type 'int', but argument 5 has type 'size_t'
+
+2006-12-30 00:34  thor
+
+	* trunk/doc/BUGS: removed this bug entry because it was no bug but
+	  just entering an url on the shell... an url containing & ...
+	  it's a bit embarassing;-)
+
+2006-12-30 00:25  thor
+
+	* trunk/src/Makefile.legacy, trunk/src/config.h.legacy,
+	  trunk/src/httpget.c, trunk/src/xfermem.c: cleanup generic code
+	  with dummies for xfermem and http
+
+2006-12-24 05:16  thor
+
+	* trunk/AUTHORS, trunk/NEWS, trunk/README, trunk/configure.ac,
+	  trunk/doc/README.remote, trunk/mpg123.1: preparing for 0.62
+
+2006-12-24 04:56  thor
+
+	* trunk/src/common.c, trunk/src/common.h,
+	  trunk/src/control_generic.c: JUMP generic command now accepts
+	  offset/position in seconds (suffix "s" to number)
+
+2006-12-24 04:24  thor
+
+	* trunk/doc/BUGS: this backgrounding is strange... only seen it on
+	  smgl yet, but then for any pls-capable mpg123.
+
+2006-12-24 02:29  thor
+
+	* trunk/src/Makefile.legacy, trunk/src/common.c,
+	  trunk/src/control_generic.c, trunk/src/httpget.c,
+	  trunk/src/readers.c: first working soutcast/ICY meta data
+	  support; we need an unsigned byte and it starts with stream
+	  data, not meta data Info output is in normal console output and
+	  generic control frontend... terminal control mode following
+
+2006-12-22 02:28  thor
+
+	* trunk/scripts/debugdef.pl, trunk/src/Makefile.am,
+	  trunk/src/Makefile.legacy, trunk/src/debug.h,
+	  trunk/src/httpget.c, trunk/src/icy.c, trunk/src/icy.h,
+	  trunk/src/mpg123.c, trunk/src/readers.c, trunk/src/stringbuf.c,
+	  trunk/src/stringbuf.h: Essential part of ICY support. It's in
+	  reader and http_open. Missing is only proper output - and, that
+	  it actually works:-/ There is something fishy in the reader...
+
+2006-12-22 02:26  thor
+
+	* trunk/doc/BUGS: one old entry removed, added one about
+	  backgrounding when playing internet radio
+
+2006-12-21 23:22  thor
+
+	* trunk/src/readers.c: reformatting readers.c before adding the
+	  ICY stuff
+
+2006-12-21 23:11  thor
+
+	* trunk/src/common.c, trunk/src/readers.c: removed the dead
+	  READ_MMAP code
+
+2006-12-21 23:06  thor
+
+	* trunk/src/readers.c: shake hands with open_stream again,
+	  formatting and comments
+
+2006-12-02 14:17  thor
+
+	* trunk/AUTHORS, trunk/src/common.c, trunk/src/common.h,
+	  trunk/src/control_generic.c, trunk/src/id3.c,
+	  trunk/src/mpg123.c, trunk/src/mpg123.h: - added volume setting
+	  for frontend - added rva setting for frontend, refined rva
+	  settign a bit (fixed a bug with first setting not being made ??)
+	  - c90 fixes - rva defines not wrapped in gapless ifdef - updated
+	  pasky's deeds
+
+2006-11-30 11:16  thor
+
+	* trunk/src/httpget.c, trunk/src/playlist.c, trunk/src/readers.c:
+	  adding acceptance of MIME types application/pls and audio/x-mpeg
+	  ... Perhaps this list of aliases for playlists and streams has
+	  to grow further...
+
+2006-11-20 09:08  thor
+
+	* trunk/src/audio_oss.c: Remove byteswapping code that got
+	  accidentally reactivated (OSS output now simply requests native
+	  endianess) - thanks for pointing out, DK!
+
+2006-11-02 17:32  thor
+
+	* trunk/src/id3.c, trunk/src/mpg123.c, trunk/src/mpg123.h: merged
+	  pasky's ide about adaptive condensed tag display and made it
+	  default; added --long-tag option for the previous, space taking,
+	  variant (one may prefer it on occasion)
+
+2006-11-02 17:09  thor
+
+	* trunk/src/common.c, trunk/src/id3.c: de-verbose, moved notes at
+	  least one verbosity level up There was too much noise...
+
+2006-11-02 16:40  thor
+
+	* trunk/src/id3.c, trunk/src/stringbuf.c: adapting and fixing
+	  pasky's (Petr Baudi) utf emergency patch (at least interpreting
+	  and converting to lating1/ascii where possible), avoids messing
+	  up the terminal when encountering unicode
+
+2006-10-31 19:02  njh
+
+	* trunk/configure.ac, trunk/src/audio_macosx.c: Applied patch from
+	  Taihei Monma to using AudioUnit API instead of coreaudio API
+
+2006-10-30 03:15  thor
+
+	* trunk/AUTHORS, trunk/src/term.c: term patch (restore on sigcont)
+	  from petr baudis
+
+2006-10-24 21:56  thor
+
+	* trunk/src/audio_nas.c: corrected is error1 with one argument -
+	  thanks, DK
+
+2006-10-20 23:10  njh
+
+	* trunk/configure.ac: Don't think the space at the start of the
+	  file was deliberate
 
 2006-10-20 22:00  thor
 

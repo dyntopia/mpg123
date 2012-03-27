@@ -2,14 +2,11 @@
 	audio: audio output interface
 
 	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp
 */
 
-#include <stdlib.h>
-#include "config.h"
 #include "mpg123.h"
-#include "debug.h"
 
 void audio_info_struct_init(struct audio_info_struct *ai)
 {
@@ -18,11 +15,6 @@ void audio_info_struct_init(struct audio_info_struct *ai)
   ai->gain = -1;
   ai->output = -1;
   ai->handle = NULL;
-#ifdef ALSA
-  ai->alsa_format.format = -1;
-  ai->alsa_format.rate = -1;
-  ai->alsa_format.channels = -1;
-#endif
   ai->device = NULL;
   ai->channels = -1;
   ai->format = -1;
@@ -80,6 +72,38 @@ static int encodings[NUM_ENCODINGS] = {
 
 static char capabilities[NUM_CHANNELS][NUM_ENCODINGS][NUM_RATES];
 
+void print_capabilities(struct audio_info_struct *ai)
+{
+	int j,k,k1=NUM_RATES-1;
+	if(param.force_rate) {
+		rates[NUM_RATES-1] = param.force_rate;
+		k1 = NUM_RATES;
+	}
+	fprintf(stderr,"\nAudio device: %s\nAudio capabilities:\n(matrix of [S]tereo or [M]ono support for sample format and rate in Hz)\n        |", ai->device != NULL ? ai->device : "<none>");
+	for(j=0;j<NUM_ENCODINGS;j++) {
+		fprintf(stderr," %5s |",audio_val2name[j].sname);
+	}
+	fprintf(stderr,"\n --------------------------------------------------------\n");
+	for(k=0;k<k1;k++) {
+		fprintf(stderr," %5d  |",rates[k]);
+		for(j=0;j<NUM_ENCODINGS;j++) {
+			if(capabilities[0][j][k]) {
+				if(capabilities[1][j][k])
+					fprintf(stderr,"  M/S  |");
+				else
+					fprintf(stderr,"   M   |");
+			}
+			else if(capabilities[1][j][k])
+				fprintf(stderr,"   S   |");
+			else
+				fprintf(stderr,"       |");
+		}
+		fprintf(stderr,"\n");
+	}
+	fprintf(stderr,"\n");
+}
+
+
 void audio_capabilities(struct audio_info_struct *ai)
 {
 	int fmts;
@@ -119,30 +143,7 @@ void audio_capabilities(struct audio_info_struct *ai)
 		audio_close(&ai1);
 	}
 
-	if(param.verbose > 1) {
-		fprintf(stderr,"\nAudio capabilities:\n        |");
-		for(j=0;j<NUM_ENCODINGS;j++) {
-			fprintf(stderr," %5s |",audio_val2name[j].sname);
-		}
-		fprintf(stderr,"\n --------------------------------------------------------\n");
-		for(k=0;k<k1;k++) {
-			fprintf(stderr," %5d  |",rates[k]);
-			for(j=0;j<NUM_ENCODINGS;j++) {
-				if(capabilities[0][j][k]) {
-					if(capabilities[1][j][k])
-						fprintf(stderr,"  M/S  |");
-					else
-						fprintf(stderr,"   M   |");
-				}
-				else if(capabilities[1][j][k])
-					fprintf(stderr,"   S   |");
-				else
-					fprintf(stderr,"       |");
-			}
-			fprintf(stderr,"\n");
-		}
-		fprintf(stderr,"\n");
-	}
+	if(param.verbose > 1) print_capabilities(ai);
 }
 
 static int rate2num(int r)
@@ -183,38 +184,41 @@ int audio_fit_capabilities(struct audio_info_struct *ai,int c,int r)
 	int rn;
 	int f0=0;
 	
-	if(param.force_8bit) {
-		f0 = 2;
-	}
+	if(param.force_8bit) f0 = 2; /* skip the 16bit encodings */
 
 	c--; /* stereo=1 ,mono=0 */
 
-	if(param.force_mono >= 0)
-		c = 0;
-	if(param.force_stereo)
-		c = 1;
+	/* force stereo is stronger */
+	if(param.force_mono) c = 0;
+	if(param.force_stereo) c = 1;
 
 	if(param.force_rate) {
+		rates[NUM_RATES-1] = param.force_rate; /* To make STDOUT decoding work. */
 		rn = rate2num(param.force_rate);
-		if(audio_fit_cap_helper(ai,rn,f0,2,c))
-			return 1;
-		if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c))
-			return 1;
+		/* 16bit encodings */
+		if(audio_fit_cap_helper(ai,rn,f0,2,c)) return 1;
+		/* 8bit encodings */
+		if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c)) return 1;
 
-		if(c == 1 && !param.force_stereo)
-			c = 0;
-		else if(c == 0 && !param.force_mono)
-			c = 1;
+		/* try again with different stereoness */
+		if(c == 1 && !param.force_stereo)	c = 0;
+		else if(c == 0 && !param.force_mono) c = 1;
 
-		if(audio_fit_cap_helper(ai,rn,f0,2,c))
-			return 1;
-		if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c))
-			return 1;
+		/* 16bit encodings */
+		if(audio_fit_cap_helper(ai,rn,f0,2,c)) return 1;
+		/* 8bit encodings */
+		if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c)) return 1;
 
-		error("No supported rate found!");
+		error3("Unable to set up output device! Constraints: %s%s%liHz.",
+		      (param.force_stereo ? "stereo, " :
+		       (param.force_mono ? "mono, " : "")),
+		      (param.force_8bit ? "8bit, " : ""),
+		      param.force_rate);
+		if(param.verbose <= 1) print_capabilities(ai);
 		return 0;
 	}
 
+	/* try different rates with 16bit */
 	rn = rate2num(r>>0);
 	if(audio_fit_cap_helper(ai,rn,f0,2,c))
 		return 1;
@@ -225,6 +229,7 @@ int audio_fit_capabilities(struct audio_info_struct *ai,int c,int r)
 	if(audio_fit_cap_helper(ai,rn,f0,2,c))
 		return 1;
 
+	/* try different rates with 8bit */
 	rn = rate2num(r>>0);
 	if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c))
 		return 1;
@@ -235,33 +240,32 @@ int audio_fit_capabilities(struct audio_info_struct *ai,int c,int r)
 	if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c))
 		return 1;
 
+	/* try again with different stereoness */
+	if(c == 1 && !param.force_stereo)	c = 0;
+	else if(c == 0 && !param.force_mono) c = 1;
 
-        if(c == 1 && !param.force_stereo)
-		c = 0;
-        else if(c == 0 && !param.force_mono)
-                c = 1;
+	/* 16bit */
+	rn = rate2num(r>>0);
+	if(audio_fit_cap_helper(ai,rn,f0,2,c)) return 1;
+	rn = rate2num(r>>1);
+	if(audio_fit_cap_helper(ai,rn,f0,2,c)) return 1;
+	rn = rate2num(r>>2);
+	if(audio_fit_cap_helper(ai,rn,f0,2,c)) return 1;
 
-        rn = rate2num(r>>0);
-        if(audio_fit_cap_helper(ai,rn,f0,2,c))
-                return 1;
-        rn = rate2num(r>>1);
-        if(audio_fit_cap_helper(ai,rn,f0,2,c))
-                return 1;
-        rn = rate2num(r>>2);
-        if(audio_fit_cap_helper(ai,rn,f0,2,c))
-                return 1;
+	/* 8bit */
+	rn = rate2num(r>>0);
+	if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c)) return 1;
+	rn = rate2num(r>>1);
+	if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c)) return 1;
+	rn = rate2num(r>>2);
+	if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c)) return 1;
 
-        rn = rate2num(r>>0);
-        if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c))
-                return 1;
-        rn = rate2num(r>>1);
-        if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c))
-                return 1;
-        rn = rate2num(r>>2);
-        if(audio_fit_cap_helper(ai,rn,2,NUM_ENCODINGS,c))
-                return 1;
-
-	error("No supported rate found!");
+	error5("Unable to set up output device! Constraints: %s%s%i, %i or %iHz.",
+	      (param.force_stereo ? "stereo, " :
+	       (param.force_mono ? "mono, " : "")),
+	      (param.force_8bit ? "8bit, " : ""),
+	      r, r>>1, r>>2);
+	if(param.verbose <= 1) print_capabilities(ai);
 	return 0;
 }
 

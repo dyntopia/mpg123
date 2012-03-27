@@ -1,51 +1,61 @@
-///
-/// dct64_3dnow.s: Replacement of dct36() with AMD's 3DNow! SIMD operations support
-/// 
-/// copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-/// see COPYING and AUTHORS files in distribution or http://mpg123.de
-/// initially written by Syuuhei Kashiyama
+/*
+	dct36_3dnowext: extended 3DNow optimized DCT36
 
-/ This code based 'dct36_3dnow.s' by Syuuhei Kashiyama
-/ <squash@mb.kcom.ne.jp>,only two types of changes have been made:
-/
-/ - remove PREFETCH instruction for speedup
-/ - change function name for support 3DNow! automatic detect
-/
-/ You can find Kashiyama's original 3dnow! support patch
-/ (for mpg123-0.59o) at
-/ http://user.ecc.u-tokyo.ac.jp/~g810370/linux-simd/ (Japanese).
-/
-/ by KIMURA Takuhiro <kim@hannah.ipc.miyakyo-u.ac.jp> - until 31.Mar.1999
-/                    <kim@comtec.co.jp>               - after  1.Apr.1999
-/
+	copyright ?-2007 by the mpg123 project - free software under the terms of the LGPL 2.1
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 
-///
-/// Replacement of dct36() with AMD's 3DNow! SIMD operations support
-/// 
-/// Syuuhei Kashiyama <squash@mb.kcom.ne.jp>
-/// 
-/// The author of this program disclaim whole expressed or implied
-/// warranties with regard to this program, and in no event shall the
-/// author of this program liable to whatever resulted from the use of
-/// this program. Use it at your own risk.
-/// 
+	Transformed back into standalone asm, with help of
+	gcc -S -DHAVE_CONFIG_H -I.  -march=k6-3 -O3 -Wall -pedantic -fno-strict-aliasing  -DREAL_IS_FLOAT -c -o dct36_3dnowext.{S,c}
 
-	.globl dct36_3dnow
-	.type	 dct36_3dnow,@function
-dct36_3dnow:
-	pushl %ebp
-	movl %esp,%ebp
-	subl $120,%esp
-	pushl %esi
-	pushl %ebx
-	movl 8(%ebp),%eax
-	movl 12(%ebp),%esi
-	movl 16(%ebp),%ecx
-	movl 20(%ebp),%edx
-	movl 24(%ebp),%ebx
-	leal -128(%ebp),%esp
+	MPlayer comment follows.
+*/
 
-	femms
+/*
+ * dct36_3dnow.c - 3DNow! optimized dct36()
+ *
+ * This code based 'dct36_3dnow.s' by Syuuhei Kashiyama
+ * <squash@mb.kcom.ne.jp>, only two types of changes have been made:
+ *
+ * - removed PREFETCH instruction for speedup
+ * - changed function name for support 3DNow! automatic detection
+ *
+ * You can find Kashiyama's original 3dnow! support patch
+ * (for mpg123-0.59o) at
+ * http://user.ecc.u-tokyo.ac.jp/~g810370/linux-simd/ (Japanese).
+ *
+ * by KIMURA Takuhiro <kim@hannah.ipc.miyakyo-u.ac.jp> - until 31.Mar.1999
+ *                    <kim@comtec.co.jp>               - after  1.Apr.1999
+ *
+ * Modified for use with MPlayer, for details see the changelog at
+ * http://svn.mplayerhq.hu/mplayer/trunk/
+ * $Id: dct36_3dnow.c 18786 2006-06-22 13:34:00Z diego $
+ *
+ * Original disclaimer:
+ *  The author of this program disclaim whole expressed or implied
+ *  warranties with regard to this program, and in no event shall the
+ *  author of this program liable to whatever resulted from the use of
+ *  this program. Use it at your own risk.
+ *
+ * 2003/06/21: Moved to GCC inline assembly - Alex Beregszaszi
+ */
+
+#include "mangle.h"
+
+	.text
+	ALIGN32,,31
+.globl ASM_NAME(dct36_3dnowext)
+	/* .type	ASM_NAME(dct36_3dnowext), @function */
+ASM_NAME(dct36_3dnowext):
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%esi
+	pushl	%ebx
+	movl	8(%ebp), %eax
+	movl	12(%ebp), %esi
+	movl	16(%ebp), %ecx
+	movl	20(%ebp), %edx
+	movl	24(%ebp), %ebx
+#APP
 	movq (%eax),%mm0
 	movq 4(%eax),%mm1
 	pfadd %mm1,%mm0
@@ -121,12 +131,11 @@ dct36_3dnow:
 	movd %mm3,60(%eax)
 	psrlq $32,%mm3
 	movd %mm3,68(%eax)
-
 	movq 24(%eax),%mm0
 	movq 48(%eax),%mm1
-	movd COS9+12,%mm2
+	movd ASM_NAME(COS9)+12,%mm2
 	punpckldq %mm2,%mm2
-	movd COS9+24,%mm3
+	movd ASM_NAME(COS9)+24,%mm3
 	punpckldq %mm3,%mm3
 	pfmul %mm2,%mm0
 	pfmul %mm3,%mm1
@@ -136,50 +145,49 @@ dct36_3dnow:
 	pi2fd %mm7,%mm7
 	popl %eax
 	movq 8(%eax),%mm2
-	movd COS9+4,%mm3
+	movd ASM_NAME(COS9)+4,%mm3
 	punpckldq %mm3,%mm3
 	pfmul %mm3,%mm2
 	pfadd %mm0,%mm2
 	movq 40(%eax),%mm3
-	movd COS9+20,%mm4
+	movd ASM_NAME(COS9)+20,%mm4
 	punpckldq %mm4,%mm4
 	pfmul %mm4,%mm3
 	pfadd %mm3,%mm2
 	movq 56(%eax),%mm3
-	movd COS9+28,%mm4
+	movd ASM_NAME(COS9)+28,%mm4
 	punpckldq %mm4,%mm4
 	pfmul %mm4,%mm3
 	pfadd %mm3,%mm2
 	movq (%eax),%mm3
 	movq 16(%eax),%mm4
-	movd COS9+8,%mm5
+	movd ASM_NAME(COS9)+8,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfadd %mm4,%mm3
 	movq 32(%eax),%mm4
-	movd COS9+16,%mm5
+	movd ASM_NAME(COS9)+16,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfadd %mm4,%mm3
 	pfadd %mm1,%mm3
 	movq 64(%eax),%mm4
-	movd COS9+32,%mm5
+	movd ASM_NAME(COS9)+32,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfadd %mm4,%mm3
 	movq %mm2,%mm4
 	pfadd %mm3,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+0,%mm5
+	punpckldq ASM_NAME(tfcos36)+0,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
 	movd 108(%edx),%mm6
 	punpckldq 104(%edx),%mm6
 	pfmul %mm6,%mm5
-	movd %mm5,36(%ecx)
-	psrlq $32,%mm5
-	movd %mm5,32(%ecx)
+	pswapd %mm5,%mm5
+	movq %mm5,32(%ecx)
 	movq %mm4,%mm6
 	punpckldq %mm6,%mm5
 	pfsub %mm6,%mm5
@@ -196,7 +204,7 @@ dct36_3dnow:
 	movq %mm3,%mm4
 	pfsub %mm2,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+32,%mm5
+	punpckldq ASM_NAME(tfcos36)+32,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
@@ -224,7 +232,7 @@ dct36_3dnow:
 	pfsub %mm3,%mm2
 	movq 56(%eax),%mm3
 	pfsub %mm3,%mm2
-	movd COS9+12,%mm3
+	movd ASM_NAME(COS9)+12,%mm3
 	punpckldq %mm3,%mm3
 	pfmul %mm3,%mm2
 	movq 16(%eax),%mm3
@@ -232,7 +240,7 @@ dct36_3dnow:
 	pfsub %mm4,%mm3
 	movq 64(%eax),%mm4
 	pfsub %mm4,%mm3
-	movd COS9+24,%mm4
+	movd ASM_NAME(COS9)+24,%mm4
 	punpckldq %mm4,%mm4
 	pfmul %mm4,%mm3
 	movq 48(%eax),%mm4
@@ -242,7 +250,7 @@ dct36_3dnow:
 	movq %mm2,%mm4
 	pfadd %mm3,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+4,%mm5
+	punpckldq ASM_NAME(tfcos36)+4,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
@@ -268,7 +276,7 @@ dct36_3dnow:
 	movq %mm3,%mm4
 	pfsub %mm2,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+28,%mm5
+	punpckldq ASM_NAME(tfcos36)+28,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
@@ -291,43 +299,42 @@ dct36_3dnow:
 	movd %mm5,128(%ebx)
 	psrlq $32,%mm5
 	movd %mm5,2048(%ebx)
-
 	movq 8(%eax),%mm2
-	movd COS9+20,%mm3
+	movd ASM_NAME(COS9)+20,%mm3
 	punpckldq %mm3,%mm3
 	pfmul %mm3,%mm2
 	pfsub %mm0,%mm2
 	movq 40(%eax),%mm3
-	movd COS9+28,%mm4
+	movd ASM_NAME(COS9)+28,%mm4
 	punpckldq %mm4,%mm4
 	pfmul %mm4,%mm3
 	pfsub %mm3,%mm2
 	movq 56(%eax),%mm3
-	movd COS9+4,%mm4
+	movd ASM_NAME(COS9)+4,%mm4
 	punpckldq %mm4,%mm4
 	pfmul %mm4,%mm3
 	pfadd %mm3,%mm2
 	movq (%eax),%mm3
 	movq 16(%eax),%mm4
-	movd COS9+32,%mm5
+	movd ASM_NAME(COS9)+32,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfsub %mm4,%mm3
 	movq 32(%eax),%mm4
-	movd COS9+8,%mm5
+	movd ASM_NAME(COS9)+8,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfsub %mm4,%mm3
 	pfadd %mm1,%mm3
 	movq 64(%eax),%mm4
-	movd COS9+16,%mm5
+	movd ASM_NAME(COS9)+16,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfadd %mm4,%mm3
 	movq %mm2,%mm4
 	pfadd %mm3,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+8,%mm5
+	punpckldq ASM_NAME(tfcos36)+8,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
@@ -353,7 +360,7 @@ dct36_3dnow:
 	movq %mm3,%mm4
 	pfsub %mm2,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+24,%mm5
+	punpckldq ASM_NAME(tfcos36)+24,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
@@ -377,41 +384,41 @@ dct36_3dnow:
 	psrlq $32,%mm5
 	movd %mm5,1920(%ebx)
 	movq 8(%eax),%mm2
-	movd COS9+28,%mm3
+	movd ASM_NAME(COS9)+28,%mm3
 	punpckldq %mm3,%mm3
 	pfmul %mm3,%mm2
 	pfsub %mm0,%mm2
 	movq 40(%eax),%mm3
-	movd COS9+4,%mm4
+	movd ASM_NAME(COS9)+4,%mm4
 	punpckldq %mm4,%mm4
 	pfmul %mm4,%mm3
 	pfadd %mm3,%mm2
 	movq 56(%eax),%mm3
-	movd COS9+20,%mm4
+	movd ASM_NAME(COS9)+20,%mm4
 	punpckldq %mm4,%mm4
 	pfmul %mm4,%mm3
 	pfsub %mm3,%mm2
 	movq (%eax),%mm3
 	movq 16(%eax),%mm4
-	movd COS9+16,%mm5
+	movd ASM_NAME(COS9)+16,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfsub %mm4,%mm3
 	movq 32(%eax),%mm4
-	movd COS9+32,%mm5
+	movd ASM_NAME(COS9)+32,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfadd %mm4,%mm3
 	pfadd %mm1,%mm3
 	movq 64(%eax),%mm4
-	movd COS9+8,%mm5
+	movd ASM_NAME(COS9)+8,%mm5
 	punpckldq %mm5,%mm5
 	pfmul %mm5,%mm4
 	pfsub %mm4,%mm3
 	movq %mm2,%mm4
 	pfadd %mm3,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+12,%mm5
+	punpckldq ASM_NAME(tfcos36)+12,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
@@ -437,7 +444,7 @@ dct36_3dnow:
 	movq %mm3,%mm4
 	pfsub %mm2,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+20,%mm5
+	punpckldq ASM_NAME(tfcos36)+20,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
@@ -460,7 +467,6 @@ dct36_3dnow:
 	movd %mm5,384(%ebx)
 	psrlq $32,%mm5
 	movd %mm5,1792(%ebx)
-
 	movq (%eax),%mm4
 	movq 16(%eax),%mm3
 	pfsub %mm3,%mm4
@@ -471,7 +477,7 @@ dct36_3dnow:
 	movq 64(%eax),%mm3
 	pfadd %mm3,%mm4
 	movq %mm7,%mm5
-	punpckldq tfcos36+16,%mm5
+	punpckldq ASM_NAME(tfcos36)+16,%mm5
 	pfmul %mm5,%mm4
 	movq %mm4,%mm5
 	pfacc %mm5,%mm5
@@ -494,10 +500,11 @@ dct36_3dnow:
 	movd %mm5,512(%ebx)
 	psrlq $32,%mm5
 	movd %mm5,1664(%ebx)
-
 	femms
-	popl %ebx
-	popl %esi
-	movl %ebp,%esp
-	popl %ebp
+	
+#NO_APP
+	popl	%ebx
+	popl	%esi
+	leave
 	ret
+	/* .size	ASM_NAME(dct36_3dnowext), .-ASM_NAME(dct36_3dnowext) */

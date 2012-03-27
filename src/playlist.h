@@ -2,7 +2,7 @@
 	playlist: playlist logic
 
 	copyright 1995-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Michael Hipp, outsourced/reorganized by Thomas Orgis
 */
 #ifndef MPG123_PLAYLIST_H
@@ -22,6 +22,7 @@ typedef struct playlist_struct
 {
 	FILE* file; /* the current playlist stream */
 	size_t entry; /* entry in the playlist file */
+	long loop;    /* repeat a track n times */
 	size_t size;
 	size_t fill;
 	size_t pos;

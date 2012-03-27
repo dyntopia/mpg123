@@ -2,7 +2,7 @@
 	decode_i486.c: i486 decode
 
 	copyright 1998-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
-	see COPYING and AUTHORS files in distribution or http://mpg123.de
+	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Fabrice Bellard
 */
 
@@ -20,9 +20,6 @@
  * (c) 1998 Fabrice Bellard 
  */
 
-#include <stdlib.h>
-
-#include "config.h"
 #include "mpg123.h"
 
 #define FIR_SIZE 16
@@ -147,9 +144,9 @@ int synth_1to1_486(real *bandPtr,int channel,unsigned char *out,int nb_blocks)
     }
     
     if(b & 1) {
-      dct64_486(buf[1]+b,buf[0]+b,bandPtr);
+      dct64_i486(buf[1]+b,buf[0]+b,bandPtr);
     } else {
-      dct64_486(buf[0]+b,buf[1]+b,bandPtr);
+      dct64_i486(buf[0]+b,buf[1]+b,bandPtr);
     }
     bandPtr+=32;
   }
