@@ -9,10 +9,6 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 WRAPPER_TARGETS:=mpg123-oss mpg123-nas
 
-ifeq ($(ARCH),i486)
-WRAPPER_TARGETS += mpg123-oss-i486
-endif
-
 ifeq ($(OS),linux)
 WRAPPER_TARGETS += mpg123-alsa
 endif
@@ -28,19 +24,6 @@ DEV_PKG:=libmpg123-dev
 LIB_PKGSTR:=-p$(LIB_PKG) -p$(DEV_PKG)
 ARCH_PKGSTR=-pmpg123
 ALL_PKGSTR=$(LIB_PKGSTR) $(ARCH_PKGSTR)
-
-DUMMY_PKGSTR=
-ifeq ($(OS),linux)
-ifeq ($(ARCH),i486)
-DUMMY_PKGSTR += -pmpg123-oss-3dnow -pmpg123-oss-i486
-endif
-else
-ifeq ($(OS),kfreebsd)
-ifeq ($(ARCH),i486)
-DUMMY_PKGSTR += -pmpg123-oss-i486
-endif
-endif
-endif
 
 CFLAGS = 
 LDFLAGS =
