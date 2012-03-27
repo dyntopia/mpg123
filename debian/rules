@@ -6,7 +6,7 @@ ARCH:=$(shell dpkg-architecture -qDEB_HOST_GNU_CPU)
 OS:=$(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 CPU:=$(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
 
-WRAPPER_TARGETS:=mpg123-oss mpg123-esd mpg123-nas
+WRAPPER_TARGETS:=mpg123-oss mpg123-nas
 
 ifeq ($(ARCH),i486)
 WRAPPER_TARGETS += mpg123-oss-i486
@@ -28,7 +28,7 @@ LIB_PKGSTR:=-p$(LIB_PKG) -p$(DEV_PKG)
 ARCH_PKGSTR=-pmpg123
 ALL_PKGSTR=$(LIB_PKGSTR) $(ARCH_PKGSTR)
 
-DUMMY_PKGSTR=-pmpg123-esd -pmpg123-nas
+DUMMY_PKGSTR=-pmpg123-nas
 ifeq ($(OS),linux)
 DUMMY_PKGSTR += -pmpg123-alsa
 ifeq ($(ARCH),i486)
@@ -145,16 +145,6 @@ clean:
 		fi; \
 	fi
 
-	# Cleanup after autoreconf
-	-rm -f "$(CURDIR)"/Makefile.in \
-	       "$(CURDIR)"/aclocal.m4 \
-	       "$(CURDIR)"/configure \
-	       "$(CURDIR)"/doc/Makefile.in \
-	       "$(CURDIR)"/src/Makefile.in \
-	       "$(CURDIR)"/src/config.h.in \
-	       "$(CURDIR)"/src/libmpg123/Makefile.in \
-	       "$(CURDIR)"/src/output/Makefile.in
-
 	dh_clean
 
 binary-indep: build
@@ -180,7 +170,7 @@ install: build
 	dh_installdeb $(ALL_PKGSTR)
 	dh_shlibdeps $(ALL_PKGSTR) -Xdebian/mpg123/usr/lib/mpg123/ -- \
 		-dSuggests `find debian/mpg123/usr/lib/mpg123/ -name "output_*.so" -type f` -dDepends
-	for n in alsa dummy esd nas oss; do \
+	for n in alsa dummy nas oss; do \
 		i="debian/mpg123/usr/lib/mpg123/output_$$n.so"; \
 		test -e "$$i" || continue; \
 		dh_shlibdeps $(ARCH_PKGSTR) $(DUMMY_PKGSTR) -Xdebian/mpg123/usr/lib/mpg123 debian/mpg123 -- -p"$$n"plugin -dRecommends "$$i" -dDepends; \
