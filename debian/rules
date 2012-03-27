@@ -60,29 +60,17 @@ export LDFLAGS
 
 #export DH_VERBOSE=1
 
-mpg123: $(WRAPPER_TARGETS)
-	dh_testdir
-
-	$(MAKE)
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
-	find $(CURDIR)/debian -name '*.la' -delete
-	mv $(CURDIR)/debian/tmp/usr/bin/mpg123 \
-	   $(CURDIR)/debian/tmp/usr/bin/mpg123.bin
-	mv $(CURDIR)/debian/tmp/usr/share/man/man1/mpg123.1 \
-	   $(CURDIR)/debian/tmp/usr/share/man/man1/mpg123.bin.1
-	install $(WRAPPER_TARGETS) $(CURDIR)/debian/tmp/usr/bin/
-	for i in $(WRAPPER_TARGETS); do \
-		install debian/mpg123-wrapper.1 \
-		        $(CURDIR)/debian/tmp/usr/share/man/man1/$$i.1; \
-	done
-
 mpg123-%: debian/mpg123-wrapper.in
 	dh_testdir
 	o=`echo $@ | sed -e 's/^mpg123-\([^-]\+\).*/\1/'`; \
 	sed -e "s/@OUTPUT@/$$o/g" < debian/mpg123-wrapper.in > $@
 
-build: build-stamp
-build-stamp: configure mpg123
+build: build-stamp build-arch build-indep
+	dh_auto_build
+
+build-arch: build-stamp
+build-indep: build-stamp
+build-stamp: configure
 	touch build-stamp
 
 configure: configure-stamp
@@ -110,7 +98,22 @@ clean:
 
 binary-indep: build
 
-install: build
+install: build $(WRAPPER_TARGETS)
+	dh_testdir
+
+	dh_auto_install
+
+	find $(CURDIR)/debian -name '*.la' -delete
+	mv $(CURDIR)/debian/tmp/usr/bin/mpg123 \
+	   $(CURDIR)/debian/tmp/usr/bin/mpg123.bin
+	mv $(CURDIR)/debian/tmp/usr/share/man/man1/mpg123.1 \
+	   $(CURDIR)/debian/tmp/usr/share/man/man1/mpg123.bin.1
+	install $(WRAPPER_TARGETS) $(CURDIR)/debian/tmp/usr/bin/
+	for i in $(WRAPPER_TARGETS); do \
+		install debian/mpg123-wrapper.1 \
+		        $(CURDIR)/debian/tmp/usr/share/man/man1/$$i.1; \
+	done
+
 	dh_testdir
 	dh_testroot
 	dh_install $(ALL_PKGSTR)
