@@ -63,16 +63,18 @@ am__mpg123_SOURCES_DIST = audio.c audio.h buffer.c buffer.h common.c \
 	control_generic.c equalizer.c getlopt.c getlopt.h httpget.c \
 	httpget.h resolver.c resolver.h genre.h genre.c module.h \
 	mpg123.c mpg123app.h metaprint.c metaprint.h local.h local.c \
-	playlist.c playlist.h term.c term.h wav.c win32_support.h \
-	wavhead.h xfermem.c xfermem.h win32_support.c win32_net.c
+	playlist.c playlist.h streamdump.h streamdump.c term.c term.h \
+	wav.c win32_support.h wavhead.h xfermem.c xfermem.h \
+	win32_support.c win32_net.c
 @WIN32_CODES_TRUE@am__objects_1 = win32_support.$(OBJEXT) \
 @WIN32_CODES_TRUE@	win32_net.$(OBJEXT)
 am_mpg123_OBJECTS = audio.$(OBJEXT) buffer.$(OBJEXT) common.$(OBJEXT) \
 	compat.$(OBJEXT) control_generic.$(OBJEXT) equalizer.$(OBJEXT) \
 	getlopt.$(OBJEXT) httpget.$(OBJEXT) resolver.$(OBJEXT) \
 	genre.$(OBJEXT) mpg123.$(OBJEXT) metaprint.$(OBJEXT) \
-	local.$(OBJEXT) playlist.$(OBJEXT) term.$(OBJEXT) \
-	wav.$(OBJEXT) xfermem.$(OBJEXT) $(am__objects_1)
+	local.$(OBJEXT) playlist.$(OBJEXT) streamdump.$(OBJEXT) \
+	term.$(OBJEXT) wav.$(OBJEXT) xfermem.$(OBJEXT) \
+	$(am__objects_1)
 mpg123_OBJECTS = $(am_mpg123_OBJECTS)
 mpg123_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(mpg123_LDFLAGS) \
@@ -219,9 +221,6 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 JACK_CFLAGS = @JACK_CFLAGS@
 JACK_LDFLAGS = @JACK_LDFLAGS@
 JACK_LIBS = @JACK_LIBS@
-LARGEFILE_BITS = @LARGEFILE_BITS@
-LARGEFILE_SUFFIX = @LARGEFILE_SUFFIX@
-LARGEFILE_SWITCH = @LARGEFILE_SWITCH@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LFS_LOBJ = @LFS_LOBJ@
@@ -234,6 +233,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_LDFLAGS = @LT_LDFLAGS@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MINT_CFLAGS = @MINT_CFLAGS@
 MINT_LDFLAGS = @MINT_LDFLAGS@
 MINT_LIBS = @MINT_LIBS@
@@ -302,6 +302,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
@@ -334,7 +335,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
@@ -365,8 +365,8 @@ mpg123_SOURCES = audio.c audio.h buffer.c buffer.h common.c common.h \
 	equalizer.c getlopt.c getlopt.h httpget.c httpget.h resolver.c \
 	resolver.h genre.h genre.c module.h mpg123.c mpg123app.h \
 	metaprint.c metaprint.h local.h local.c playlist.c playlist.h \
-	term.c term.h wav.c win32_support.h wavhead.h xfermem.c \
-	xfermem.h $(am__append_1)
+	streamdump.h streamdump.c term.c term.h wav.c win32_support.h \
+	wavhead.h xfermem.c xfermem.h $(am__append_1)
 tests_seek_accuracy_SOURCES = \
 tests/seek_accuracy.c \
 libmpg123/compat.h \
@@ -545,6 +545,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resolver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/seek_accuracy.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/seek_whence.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/streamdump.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/term.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wav.Po@am__quote@

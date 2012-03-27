@@ -13,7 +13,7 @@
 
 #include "getbits.h"
 
-#if (defined (WIN32) && !defined (__CYGWIN__))
+#if defined (WANT_WIN32_SOCKETS)
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
@@ -39,7 +39,7 @@
 	C: layer
 	D: CRC
 	E: bitrate
-	F:sampling rate
+	F: sampling rate
 	G: padding
 	H: private
 	I: channel mode
@@ -61,10 +61,17 @@
 	Even more, I'll allow varying crc bit.
 	11111111 11111110 00001101 00000000
 
-	(still unsure about this private bit)
+	Still unsure about this private bit... well, as Marcel pointed out:
+	The decoder should not care about this.
+	11111111 11111110 00001100 00000000
 */
-#define HDRCMPMASK 0xfffe0d00
-#define HDRSAMPMASK 0xc00 /* 1100 00000000, FF bits (sample rate) */
+#define HDRCMPMASK 0xfffe0c00
+/*
+	This needs cleanup ... The parser is not as strict as documented above.
+	Here comes a mask that checks for anything that can change sampling rate.
+	This includes change of MPEG version and frequency bits.
+	00011000 00001100 00000000, BB and FF bits */
+#define HDRSAMPMASK 0x180c00
 
 /* bitrates for [mpeg1/2][layer] */
 static const int tabsel_123[2][3][16] =
@@ -81,17 +88,12 @@ static const int tabsel_123[2][3][16] =
 	}
 };
 
-const long freqs[9] = { 44100, 48000, 32000, 22050, 24000, 16000 , 11025 , 12000 , 8000 };
+static const long freqs[9] = { 44100, 48000, 32000, 22050, 24000, 16000 , 11025 , 12000 , 8000 };
 
 static int decode_header(mpg123_handle *fr,unsigned long newhead);
 
-int read_frame_init(mpg123_handle* fr)
-{
-	if(frame_reset(fr) != 0) return -1;
-	return 0;
-}
-
 /* These two are to be replaced by one function that gives all the frame parameters (for outsiders).*/
+/* Those functions are unsafe regarding bad arguments (inside the mpg123_handle), but just returning anything would also be unsafe, the caller code has to be trusted. */
 
 int frame_bitrate(mpg123_handle *fr)
 {
@@ -106,7 +108,7 @@ long frame_freq(mpg123_handle *fr)
 #define free_format_header(head) ( ((head & 0xffe00000) == 0xffe00000) && ((head>>17)&3) && (((head>>12)&0xf) == 0x0) && (((head>>10)&0x3) != 0x3 ))
 
 /* compiler is smart enought to inline this one or should I really do it as macro...? */
-int head_check(unsigned long head)
+static int head_check(unsigned long head)
 {
 	if
 	(
@@ -286,14 +288,14 @@ static int check_lame_tag(mpg123_handle *fr)
 					unsigned char lame_vbr;
 					float replay_gain[2] = {0,0};
 					float peak = 0;
-					float gain_offset = 0; /* going to be +6 for old lame that used 83dB */
+					/* float gain_offset = 0; */ /* going to be +6 for old lame that used 83dB */
 					char nb[10];
 					memcpy(nb, fr->bsbuf+lame_offset, 9);
 					nb[9] = 0;
 					if(VERBOSE3) fprintf(stderr, "Note: Info: Encoder: %s\n", nb);
 					if(!strncmp("LAME", nb, 4))
 					{
-						gain_offset = 6;
+						/* gain_offset = 6; */
 						debug("TODO: finish lame detetcion...");
 					}
 					lame_offset += 9;
@@ -354,7 +356,7 @@ static int check_lame_tag(mpg123_handle *fr)
 							else if(gt == 2) gt = 1; /* audiophile */
 							else continue;
 							/* get the 9 bits into a number, divide by 10, multiply sign... happy bit banging */
-							replay_gain[0] = (float) ((fr->bsbuf[lame_offset] & 0x2) ? -0.1 : 0.1) * (make_short(fr->bsbuf, lame_offset) & 0x1f);
+							replay_gain[gt] = (float) ((fr->bsbuf[lame_offset] & 0x2) ? -0.1 : 0.1) * (make_short(fr->bsbuf, lame_offset) & 0x1ff);
 						}
 						lame_offset += 2;
 					}
@@ -423,6 +425,7 @@ int read_frame(mpg123_handle *fr)
 	unsigned long newhead;
 	off_t framepos;
 	int ret;
+	off_t oret;
 	/* stuff that needs resetting if complete frame reading fails */
 	int oldsize  = fr->framesize;
 	int oldphase = fr->halfphase;
@@ -554,9 +557,11 @@ init_resync:
 
 		debug2("doing ahead check with BPF %d at %"OFF_P, fr->framesize+4, (off_p)start);
 		/* step framesize bytes forward and read next possible header*/
-		if((ret=fr->rd->skip_bytes(fr, fr->framesize))<0)
+		if((oret=fr->rd->skip_bytes(fr, fr->framesize))<0)
 		{
-			if(ret==READER_ERROR && NOQUIET) error("cannot seek!");
+			if(oret==READER_ERROR && NOQUIET) error("cannot seek!");
+
+			ret = oret; /* Purposeful negative values aren't big. */
 			goto read_frame_bad;
 		}
 		hd = fr->rd->head_read(fr,&nexthead);
@@ -592,8 +597,21 @@ init_resync:
 		}
 	}
 
-	/* why has this head check been avoided here before? */
-	if(!head_check(newhead))
+	/*
+		Why has this head check been avoided here before? And apart from that:
+		Tricky business: Bug 3267863 triggers endless loop because an invalid free format header does not trigger head_check(), hence does not trigger resync.
+		This whole logic is going to be reworked, code untangled, but 1.13.3 needs some minimal patching.
+		So we try to fully decode the header (which includes free format size checking), not just check.
+	*/
+	/* Check in advance to avoid premature error message in decode_header() */
+	ret = head_check(newhead);
+	if(ret)
+	{
+		ret = decode_header(fr, newhead);
+		if(ret < 0) goto read_frame_bad;
+	}
+
+	if(!ret)
 	{
 		/* and those ugly ID3 tags */
 		if((newhead & 0xffffff00) == ('T'<<24)+('A'<<16)+('G'<<8))
@@ -624,6 +642,9 @@ init_resync:
 			fprintf(stderr,"Note: Illegal Audio-MPEG-Header 0x%08lx at offset %"OFF_P".\n",
 				newhead, (off_p)fr->rd->tell(fr)-4);
 		}
+
+		/* We reach this point only for invalid headers.
+		   And: All paths lead to a jump out of this block! So there is no "after". */
 
 		if(NOQUIET && (newhead & 0xffffff00) == ('b'<<24)+('m'<<16)+('p'<<8)) fprintf(stderr,"Note: Could be a BMP album art.\n");
 		/* Do resync if not forbidden by flag.
@@ -697,31 +718,9 @@ init_resync:
 			return READER_ERROR;
 		}
 	}
+	/* There used to be code here ... and turned out to be totally redundant. */
 
-	/* Man, that code looks awfully redundant...
-	   I need to untangle the spaghetti here in a future version. */
-	if(!fr->firsthead)
-	{
-		ret=decode_header(fr,newhead);
-		if(ret == 0)
-		{
-			if(NOQUIET) error("decode header failed before first valid one, going to read again");
-
-			goto read_again;
-		}
-		else if(ret < 0){ debug("need more?"); goto read_frame_bad; }
-	}
-	else
-	{
-		ret=decode_header(fr,newhead);
-		if(ret == 0)
-		{
-			if(NOQUIET) error("decode header failed - goto resync");
-			/* return 0; */
-			goto init_resync;
-		}
-		else if(ret < 0){ debug("need more?"); goto read_frame_bad; }
-	}
+	/* Past this point we know the header is good and we can start reading in the actual frame. */
 
 	/* if filepos is invalid, so is framepos */
 	framepos = fr->rd->tell(fr) - 4;

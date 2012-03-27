@@ -177,9 +177,6 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 JACK_CFLAGS = @JACK_CFLAGS@
 JACK_LDFLAGS = @JACK_LDFLAGS@
 JACK_LIBS = @JACK_LIBS@
-LARGEFILE_BITS = @LARGEFILE_BITS@
-LARGEFILE_SUFFIX = @LARGEFILE_SUFFIX@
-LARGEFILE_SWITCH = @LARGEFILE_SWITCH@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LFS_LOBJ = @LFS_LOBJ@
@@ -192,6 +189,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 LT_LDFLAGS = @LT_LDFLAGS@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MINT_CFLAGS = @MINT_CFLAGS@
 MINT_LDFLAGS = @MINT_LDFLAGS@
 MINT_LIBS = @MINT_LIBS@
@@ -260,6 +258,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
@@ -292,7 +291,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
@@ -326,6 +324,7 @@ libmpg123_la_LDFLAGS = -no-undefined -version-info @LIBMPG123_VERSION@ -export-s
 libmpg123_la_LIBADD = @DECODER_LOBJ@ @LFS_LOBJ@
 libmpg123_la_DEPENDENCIES = @DECODER_LOBJ@ @LFS_LOBJ@
 libmpg123_la_SOURCES = \
+	intsym.h \
 	compat.c \
 	compat.h \
 	parse.c \
@@ -356,7 +355,6 @@ libmpg123_la_SOURCES = \
 	readers.c \
 	tabinit.c \
 	libmpg123.c \
-	aligncheck.h \
 	mpg123lib_intern.h \
 	mangle.h \
 	getcpuflags.h \
@@ -364,6 +362,7 @@ libmpg123_la_SOURCES = \
 	index.c
 
 EXTRA_libmpg123_la_SOURCES = \
+	lfs_alias.c \
 	lfs_wrap.c \
 	icy.c \
 	icy2utf8.c \
@@ -386,6 +385,8 @@ EXTRA_libmpg123_la_SOURCES = \
 	dct64_sse_float.S \
 	dct64_x86_64.S \
 	dct64_x86_64_float.S \
+	dct64_neon.S \
+	dct64_neon_float.S \
 	synth_3dnowext.S \
 	synth_3dnow.S \
 	synth_altivec.c \
@@ -411,6 +412,14 @@ EXTRA_libmpg123_la_SOURCES = \
 	synth_stereo_x86_64_accurate.S \
 	synth_arm.S \
 	synth_arm_accurate.S \
+	synth_neon.S \
+	synth_neon_float.S \
+	synth_neon_s32.S \
+	synth_neon_accurate.S \
+	synth_stereo_neon.S \
+	synth_stereo_neon_float.S \
+	synth_stereo_neon_s32.S \
+	synth_stereo_neon_accurate.S \
 	ntom.c \
 	synth.c \
 	synth_8bit.c \
@@ -512,6 +521,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_i386.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_i486.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_mmx.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_neon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_neon_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_sse.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_sse_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_x86_64.Plo@am__quote@
@@ -530,6 +541,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/layer1.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/layer2.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/layer3.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lfs_alias.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lfs_wrap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmpg123.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntom.Plo@am__quote@
@@ -548,12 +560,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_i586.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_i586_dither.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_mmx.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon_accurate.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon_float.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon_s32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_real.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_s32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_sse.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_sse_accurate.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_sse_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_sse_s32.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon_accurate.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon_float.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon_s32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_sse_accurate.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_sse_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_sse_s32.Plo@am__quote@

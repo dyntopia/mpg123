@@ -16,7 +16,7 @@ static void frame_fixed_reset(mpg123_handle *fr);
 #define NTOM_MUL (32768)
 
 #define aligned_pointer(p, type, alignment) align_the_pointer(p, alignment)
-void *align_the_pointer(void *base, unsigned int alignment)
+static void *align_the_pointer(void *base, unsigned int alignment)
 {
 	/*
 		Work in unsigned integer realm, explicitly.
@@ -33,7 +33,7 @@ void *align_the_pointer(void *base, unsigned int alignment)
 	else     return base;
 }
 
-void frame_default_pars(mpg123_pars *mp)
+static void frame_default_pars(mpg123_pars *mp)
 {
 	mp->outscale = 1.0;
 #ifdef GAPLESS
@@ -313,8 +313,9 @@ int frame_buffers(mpg123_handle *fr)
 #endif
 #endif
 #if defined(OPT_ALTIVEC) || defined(OPT_ARM) 
-		if(decwin_size < (512+32)*4) decwin_size = (512+32)*4;
-		decwin_size += 512*4;
+		/* sizeof(real) >= 4 ... yes, it could be 8, for example.
+		   We got it intialized to at least (512+32)*sizeof(real).*/
+		decwin_size += 512*sizeof(real);
 #endif
 		/* Hm, that's basically realloc() ... */
 		if(fr->rawdecwin != NULL && fr->rawdecwins != decwin_size)
@@ -415,7 +416,7 @@ int frame_buffers_reset(mpg123_handle *fr)
 	return 0;
 }
 
-void frame_icy_reset(mpg123_handle* fr)
+static void frame_icy_reset(mpg123_handle* fr)
 {
 #ifndef NO_ICY
 	if(fr->icy.data != NULL) free(fr->icy.data);
@@ -425,7 +426,7 @@ void frame_icy_reset(mpg123_handle* fr)
 #endif
 }
 
-void frame_free_toc(mpg123_handle *fr)
+static void frame_free_toc(mpg123_handle *fr)
 {
 	if(fr->xing_toc != NULL){ free(fr->xing_toc); fr->xing_toc = NULL; }
 }
@@ -526,7 +527,7 @@ static void frame_fixed_reset(mpg123_handle *fr)
 	fr->freeformat_framesize = -1;
 }
 
-void frame_free_buffers(mpg123_handle *fr)
+static void frame_free_buffers(mpg123_handle *fr)
 {
 	if(fr->rawbuffs != NULL) free(fr->rawbuffs);
 	fr->rawbuffs = NULL;
@@ -613,7 +614,7 @@ int attribute_align_arg mpg123_info(mpg123_handle *mh, struct mpg123_frameinfo *
 		- guess wildly from mean framesize and offset of first frame / beginning of file.
 */
 
-off_t frame_fuzzy_find(mpg123_handle *fr, off_t want_frame, off_t* get_frame)
+static off_t frame_fuzzy_find(mpg123_handle *fr, off_t want_frame, off_t* get_frame)
 {
 	/* Default is to go to the beginning. */
 	off_t ret = fr->audio_start;

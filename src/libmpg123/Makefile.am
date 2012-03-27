@@ -29,6 +29,7 @@ libmpg123_la_LIBADD = @DECODER_LOBJ@ @LFS_LOBJ@
 libmpg123_la_DEPENDENCIES = @DECODER_LOBJ@ @LFS_LOBJ@
 
 libmpg123_la_SOURCES = \
+	intsym.h \
 	compat.c \
 	compat.h \
 	parse.c \
@@ -59,7 +60,6 @@ libmpg123_la_SOURCES = \
 	readers.c \
 	tabinit.c \
 	libmpg123.c \
-	aligncheck.h \
 	mpg123lib_intern.h \
 	mangle.h \
 	getcpuflags.h \
@@ -67,6 +67,7 @@ libmpg123_la_SOURCES = \
 	index.c
 
 EXTRA_libmpg123_la_SOURCES = \
+	lfs_alias.c \
 	lfs_wrap.c \
 	icy.c \
 	icy2utf8.c \
@@ -89,6 +90,8 @@ EXTRA_libmpg123_la_SOURCES = \
 	dct64_sse_float.S \
 	dct64_x86_64.S \
 	dct64_x86_64_float.S \
+	dct64_neon.S \
+	dct64_neon_float.S \
 	synth_3dnowext.S \
 	synth_3dnow.S \
 	synth_altivec.c \
@@ -114,6 +117,14 @@ EXTRA_libmpg123_la_SOURCES = \
 	synth_stereo_x86_64_accurate.S \
 	synth_arm.S \
 	synth_arm_accurate.S \
+	synth_neon.S \
+	synth_neon_float.S \
+	synth_neon_s32.S \
+	synth_neon_accurate.S \
+	synth_stereo_neon.S \
+	synth_stereo_neon_float.S \
+	synth_stereo_neon_s32.S \
+	synth_stereo_neon_accurate.S \
 	ntom.c \
 	synth.c \
 	synth_8bit.c \
