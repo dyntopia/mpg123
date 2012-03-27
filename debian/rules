@@ -13,7 +13,7 @@ ifeq ($(OS),linux)
 WRAPPER_TARGETS += mpg123-alsa
 endif
 
-CONF_COMMON:=--prefix=/usr --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --enable-static --enable-shared --disable-ltdl-install
+CONF_COMMON:=--enable-static --enable-shared
 
 CONF_i486:=--with-cpu=x86_dither
 CONF_arm:=--with-cpu=generic_nofpu
@@ -55,6 +55,8 @@ else
         CFLAGS += -O2
 endif
 
+export CFLAGS
+export LDFLAGS
 
 #export DH_VERBOSE=1
 
@@ -84,14 +86,13 @@ build-stamp: configure mpg123
 	touch build-stamp
 
 configure: configure-stamp
+	dh_testdir
+	dh_auto_configure -- $(CONF_COMMON) $(CONF_$(ARCH))
+
 configure-stamp:
 	dh_testdir
 
 	dh_autoreconf --verbose
-
-	CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
-	  ./configure $(CONF_COMMON) $(CONF_$(ARCH)) || \
-	    { ret=$?; cat config.log; exit $$ret; }
 
 	touch configure-stamp
 
