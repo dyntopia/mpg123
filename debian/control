@@ -17,6 +17,7 @@ Build-Depends:
  libpulse-dev [!hurd-i386],
  pkg-config,
  python-minimal
+Homepage: http://www.mpg123.de/
 Vcs-Git: git://anonscm.debian.org/pkg-multimedia/mpg123.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-multimedia/mpg123.git
 
