@@ -1,7 +1,7 @@
 /*
 	wav.c: write wav files
 
-	copyright ?-2006 by the mpg123 project - free software under the terms of the LGPL 2.1
+	copyright ?-2008 by the mpg123 project - free software under the terms of the LGPL 2.1
 	see COPYING and AUTHORS files in distribution or http://mpg123.org
 	initially written by Samuel Audet
 
@@ -14,7 +14,9 @@
 	It's not a very clean code ... Fix this!
 */
 
-#include "mpg123.h"
+#include "mpg123app.h"
+#include <errno.h>
+#include "debug.h"
 
 #ifdef FLOATOUT
 #define WAVE_FORMAT 3
@@ -169,7 +171,7 @@ static int open_file(char *filename)
 }
 
 
-int au_open(struct audio_info_struct *ai, char *aufilename)
+int au_open(audio_output_t *ao)
 {
 #ifdef FLOATOUT
 	error("AU file support for float values not there yet");
@@ -177,8 +179,12 @@ int au_open(struct audio_info_struct *ai, char *aufilename)
 #else
   flipendian = 0;
 
-  switch(ai->format) {
-    case AUDIO_FORMAT_SIGNED_16:
+	if(ao->format < 0) ao->format = MPG123_ENC_SIGNED_16;
+	if(ao->rate < 0) ao->rate = 44100;
+	if(ao->channels < 0) ao->channels = 2;
+
+  switch(ao->format) {
+    case MPG123_ENC_SIGNED_16:
       {
         int endiantest = testEndian();
         if(endiantest == -1) return -1;
@@ -186,9 +192,9 @@ int au_open(struct audio_info_struct *ai, char *aufilename)
         long2bigendian(3,auhead.encoding,sizeof(auhead.encoding));
       }
       break;
-    case AUDIO_FORMAT_UNSIGNED_8:
-      ai->format = AUDIO_FORMAT_ULAW_8; 
-    case AUDIO_FORMAT_ULAW_8:
+    case MPG123_ENC_UNSIGNED_8:
+      ao->format = MPG123_ENC_ULAW_8; 
+    case MPG123_ENC_ULAW_8:
       long2bigendian(1,auhead.encoding,sizeof(auhead.encoding));
       break;
     default:
@@ -197,10 +203,10 @@ int au_open(struct audio_info_struct *ai, char *aufilename)
   }
 
   long2bigendian(0xffffffff,auhead.datalen,sizeof(auhead.datalen));
-  long2bigendian(ai->rate,auhead.rate,sizeof(auhead.rate));
-  long2bigendian(ai->channels,auhead.channels,sizeof(auhead.channels));
+  long2bigendian(ao->rate,auhead.rate,sizeof(auhead.rate));
+  long2bigendian(ao->channels,auhead.channels,sizeof(auhead.channels));
 
-  if(open_file(aufilename) < 0)
+  if(open_file(ao->device) < 0)
     return -1;
 
   fwrite(&auhead, sizeof(auhead),1,wavfp);
@@ -210,36 +216,40 @@ int au_open(struct audio_info_struct *ai, char *aufilename)
 #endif
 }
 
-int cdr_open(struct audio_info_struct *ai, char *cdrfilename)
+int cdr_open(audio_output_t *ao)
 {
 #ifdef FLOATOUT
 	error("refusing to produce cdr file with float values");
 	return -1;
 #else
-  param.force_stereo = 0;
-  ai->format = AUDIO_FORMAT_SIGNED_16;
-  ai->rate = 44100;
-  ai->channels = 2;
-/*
-  if(ai->format != AUDIO_FORMAT_SIGNED_16 || ai->rate != 44100 || ai->channels != 2) {
+	if(ao->format < 0 && ao->rate < 0 && ao->channels < 0)
+	{
+  /* param.force_stereo = 0; */
+  ao->format = MPG123_ENC_SIGNED_16;
+  ao->rate = 44100;
+  ao->channels = 2;
+	}
+  if(ao->format != MPG123_ENC_SIGNED_16 || ao->rate != 44100 || ao->channels != 2) {
     fprintf(stderr,"Oops .. not forced to 16 bit, 44kHz?, stereo\n");
-    exit(1);
+    return -1;
   }
-*/
+
   flipendian = !testEndian(); /* big end */
   
 
-  if(open_file(cdrfilename) < 0)
+  if(open_file(ao->device) < 0)
     return -1;
 
   return 0;
 #endif
 }
 
-int wav_open(struct audio_info_struct *ai, char *wavfilename)
+int wav_open(audio_output_t *ao)
 {
    int bps;
-   
+
+   if(ao->format < 0) ao->format = MPG123_ENC_SIGNED_16;
+
    flipendian = 0;
 
    /* standard MS PCM, and its format specific is BitsPerSample */
@@ -248,11 +258,11 @@ int wav_open(struct audio_info_struct *ai, char *wavfilename)
    long2littleendian(bps=32,RIFF.WAVE.fmt.BitsPerSample,sizeof(RIFF.WAVE.fmt.BitsPerSample));
    flipendian = testEndian();
 #else
-   if(ai->format == AUDIO_FORMAT_SIGNED_16) {
+   if(ao->format == MPG123_ENC_SIGNED_16) {
       long2littleendian(bps=16,RIFF.WAVE.fmt.BitsPerSample,sizeof(RIFF.WAVE.fmt.BitsPerSample));
       flipendian = testEndian();
    }
-   else if(ai->format == AUDIO_FORMAT_UNSIGNED_8)
+   else if(ao->format == MPG123_ENC_UNSIGNED_8)
       long2littleendian(bps=8,RIFF.WAVE.fmt.BitsPerSample,sizeof(RIFF.WAVE.fmt.BitsPerSample));
    else
    {
@@ -261,21 +271,28 @@ int wav_open(struct audio_info_struct *ai, char *wavfilename)
    }
 #endif
 
-   if(ai->rate < 0) ai->rate = 44100;
+   if(ao->rate < 0) ao->rate = 44100;
+   if(ao->channels < 0) ao->channels = 2;
 
-   long2littleendian(ai->channels,RIFF.WAVE.fmt.Channels,sizeof(RIFF.WAVE.fmt.Channels));
-    long2littleendian(ai->rate,RIFF.WAVE.fmt.SamplesPerSec,sizeof(RIFF.WAVE.fmt.SamplesPerSec));
-   long2littleendian((int)(ai->channels * ai->rate * bps)>>3,
+   long2littleendian(ao->channels,RIFF.WAVE.fmt.Channels,sizeof(RIFF.WAVE.fmt.Channels));
+    long2littleendian(ao->rate,RIFF.WAVE.fmt.SamplesPerSec,sizeof(RIFF.WAVE.fmt.SamplesPerSec));
+   long2littleendian((int)(ao->channels * ao->rate * bps)>>3,
          RIFF.WAVE.fmt.AvgBytesPerSec,sizeof(RIFF.WAVE.fmt.AvgBytesPerSec));
-   long2littleendian((int)(ai->channels * bps)>>3,
+   long2littleendian((int)(ao->channels * bps)>>3,
          RIFF.WAVE.fmt.BlockAlign,sizeof(RIFF.WAVE.fmt.BlockAlign));
 
-   if(open_file(wavfilename) < 0)
+   if(open_file(ao->device) < 0)
      return -1;
 
    long2littleendian(datalen,RIFF.WAVE.data.datalen,sizeof(RIFF.WAVE.data.datalen));
    long2littleendian(datalen+sizeof(RIFF.WAVE),RIFF.WAVElen,sizeof(RIFF.WAVElen));
-   fwrite(&RIFF, sizeof(RIFF),1,wavfp);
+   if(fwrite(&RIFF, sizeof(RIFF),1,wavfp) != 1)
+   {
+			error1("cannot write header: %s", strerror(errno));
+			fclose(wavfp);
+			wavfp = NULL;
+			return -1;
+   }
 
    datalen = 0;
    
@@ -344,7 +361,8 @@ int wav_close(void)
    else {
      warning("Cannot rewind WAV file. File-format isn't fully conform now.");
    }
-
+	fclose(wavfp);
+	wavfp = NULL;
    return 0;
 }
 
@@ -357,13 +375,19 @@ int au_close(void)
      long2bigendian(datalen,auhead.datalen,sizeof(auhead.datalen));
      fwrite(&auhead, sizeof(auhead),1,wavfp); 
    }
+	fclose(wavfp);
+	wavfp = NULL;
 
   return 0;
 }
 
 int cdr_close(void)
 {
-  return 0;
+	if(!wavfp) return 0;
+
+	fclose(wavfp);
+	wavfp = NULL;
+	return 0;
 }
 
 

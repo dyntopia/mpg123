@@ -48,16 +48,27 @@
 #define VOL_DOWN_KEY '-'
 #define VERBOSE_KEY 'v'
 #define RVA_KEY 'r'
-
-/* this counts as "undocumented" and can disappear */
+#define PLAYLIST_KEY 'l'
+#define PREV_KEY 'd'
+#define MPEG_KEY 'm'
+#define TAG_KEY  't'
+#define PITCH_UP_KEY    'c'
+#define PITCH_BUP_KEY   'C'
+#define PITCH_DOWN_KEY  'x'
+#define PITCH_BDOWN_KEY 'X'
+#define PITCH_ZERO_KEY  'w'
+/* This counts as "undocumented" and can disappear */
 #define FRAME_INDEX_KEY 'i'
+/* The normal and big pitch adjustment done on key presses. */
+#define PITCH_VAL 0.001
+#define PITCH_BVAL 0.01
 
 #define PAUSED_STRING	"Paused. \b\b\b\b\b\b\b\b"
 #define STOPPED_STRING	"Stopped.\b\b\b\b\b\b\b\b"
 #define EMPTY_STRING	"        \b\b\b\b\b\b\b\b"
 
 void term_init(void);
-long term_control(struct frame *fr, struct audio_info_struct *ai);
+off_t term_control(mpg123_handle *mh, audio_output_t *ao);
 void term_restore(void);
 
 #endif
