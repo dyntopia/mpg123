@@ -9,7 +9,7 @@ Build-Depends:
  automake,
  autotools-dev,
  debhelper (>> 5),
- libasound2-dev [!kfreebsd-i386 !kfreebsd-amd64 !hurd-i386],
+ libasound2-dev [linux-any],
  libaudio-dev,
  libjack-dev,
  libltdl-dev,
