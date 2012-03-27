@@ -9,6 +9,7 @@ Build-Depends:
  automake,
  autotools-dev,
  debhelper (>= 9),
+ dh-autoreconf,
  libasound2-dev [linux-any],
  libaudio-dev,
  libjack-dev,

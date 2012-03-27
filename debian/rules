@@ -87,19 +87,7 @@ configure: configure-stamp
 configure-stamp:
 	dh_testdir
 
-	if test -f "$(CURDIR)/build/config.sub"; then \
-		mv "$(CURDIR)/build/config.sub" "$(CURDIR)/debian/"; \
-	fi
-	if test -f "$(CURDIR)/build/config.guess"; then \
-		mv "$(CURDIR)/build/config.guess" "$(CURDIR)/debian/"; \
-	fi
-
-	ln -sf /usr/share/misc/config.sub "$(CURDIR)/build/"
-	ln -sf /usr/share/misc/config.guess "$(CURDIR)/build/"
-
-	# One patch touches configure.ac, so we need to regenerate the
-        # configure script.
-	autoreconf --verbose
+	dh_autoreconf --verbose
 
 	CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
 	  ./configure $(CONF_COMMON) $(CONF_$(ARCH)) || \
@@ -115,18 +103,7 @@ clean:
 	-rm -f $(WRAPPER_TARGETS)
 	test ! -f Makefile || $(MAKE) distclean
 
-	if test -L "$(CURDIR)/build/config.sub"; then \
-		rm -f "$(CURDIR)/build/config.sub"; \
-		if test -e "$(CURDIR)/debian/config.sub"; then \
-			mv "$(CURDIR)/debian/config.sub" "$(CURDIR)/build/"; \
-		fi; \
-	fi
-	if test -L "$(CURDIR)/build/config.guess"; then \
-		rm -f "$(CURDIR)/build/config.guess"; \
-		if test -e "$(CURDIR)/debian/config.guess"; then \
-			mv "$(CURDIR)/debian/config.guess" "$(CURDIR)/build/"; \
-		fi; \
-	fi
+	dh_autoreconf_clean
 
 	dh_clean
 
