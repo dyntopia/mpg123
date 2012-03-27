@@ -7,14 +7,14 @@
 /* Define to use proper rounding. */
 #undef ACCURATE_ROUNDING
 
+/* Define if building universal (internal helper macro) */
+#undef AC_APPLE_UNIVERSAL_BUILD
+
 /* Define if .align takes 3 for alignment of 2^3=8 bytes instead of 8. */
 #undef ASMALIGN_EXP
 
 /* Define if __attribute__((aligned(16))) shall be used */
 #undef CCALIGN
-
-/* Define if checking of stack alignment is wanted. */
-#undef CHECK_ALIGN
 
 /* Define if debugging is enabled. */
 #undef DEBUG
@@ -253,9 +253,16 @@
 /* Define if IPV6 support is enabled. */
 #undef IPV6
 
+/* Define this to the size of long type in bits, used for LFS small/native
+   alias functions. */
+#undef LFS_ALIAS_BITS
+
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
 #undef LT_OBJDIR
+
+/* The suffix for module files. */
+#undef MODULE_FILE_SUFFIX
 
 /* Define if network support is enabled. */
 #undef NETWORK
@@ -263,7 +270,7 @@
 /* Define to disable 16 bit integer output. */
 #undef NO_16BIT
 
-/* Define to disable 32 bit integer output. */
+/* Define to disable 32 bit and 24 bit integer output. */
 #undef NO_32BIT
 
 /* Define to disable 8 bit integer output. */
@@ -363,6 +370,18 @@
 /* Define to use Unicode for Windows */
 #undef WANT_WIN32_UNICODE
 
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
+   significant byte first (like Motorola and SPARC, unlike Intel). */
+#if defined AC_APPLE_UNIVERSAL_BUILD
+# if defined __BIG_ENDIAN__
+#  define WORDS_BIGENDIAN 1
+# endif
+#else
+# ifndef WORDS_BIGENDIAN
+#  undef WORDS_BIGENDIAN
+# endif
+#endif
+
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
 
@@ -398,3 +417,6 @@
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 #undef uint32_t
+
+/* Define to `unsigned long' if <sys/types.h> does not define. */
+#undef uintptr_t

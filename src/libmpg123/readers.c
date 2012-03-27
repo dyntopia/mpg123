@@ -30,6 +30,7 @@ static int default_init(mpg123_handle *fr);
 static off_t get_fileinfo(mpg123_handle *);
 static ssize_t posix_read(int fd, void *buf, size_t count){ return read(fd, buf, count); }
 static off_t   posix_lseek(int fd, off_t offset, int whence){ return lseek(fd, offset, whence); }
+static off_t     nix_lseek(int fd, off_t offset, int whence){ return -1; }
 
 static ssize_t plain_fullread(mpg123_handle *fr,unsigned char *buf, ssize_t count);
 
@@ -50,9 +51,6 @@ static ssize_t bc_give(struct bufferchain *bc, unsigned char *out, ssize_t size)
 static ssize_t bc_skip(struct bufferchain *bc, ssize_t count);
 static ssize_t bc_seekback(struct bufferchain *bc, ssize_t count);
 static void bc_forget(struct bufferchain *bc);
-#else
-#define bc_init(a)
-#define bc_reset(a)
 #endif
 
 /* A normal read and a read with timeout. */
@@ -62,7 +60,8 @@ static ssize_t plain_read(mpg123_handle *fr, void *buf, size_t count)
 	if(VERBOSE3) debug2("read %li bytes of %li", (long)ret, (long)count);
 	return ret;
 }
-#if defined (NETWORK) && !defined (WANT_WIN32_SOCKETS)
+
+#ifdef TIMEOUT_READ
 
 /* Wait for data becoming available, allowing soft-broken network connection to die
    This is needed for Shoutcast servers that have forgotten about us while connection was temporarily down. */
@@ -120,7 +119,7 @@ static ssize_t icy_fullread(mpg123_handle *fr, unsigned char *buf, ssize_t count
 			if(fr->icy.next > 0)
 			{
 				cut_pos = fr->icy.next;
-				ret = fr->rdat.fdread(fr,buf,cut_pos);
+				ret = fr->rdat.fdread(fr,buf+cnt,cut_pos);
 				if(ret < 1)
 				{
 					if(ret == 0) break; /* Just EOF. */
@@ -128,7 +127,8 @@ static ssize_t icy_fullread(mpg123_handle *fr, unsigned char *buf, ssize_t count
 
 					return READER_ERROR;
 				}
-				fr->rdat.filepos += ret;
+
+				if(!(fr->rdat.flags & READER_BUFFERED)) fr->rdat.filepos += ret;
 				cnt += ret;
 				fr->icy.next -= ret;
 				if(fr->icy.next > 0)
@@ -238,7 +238,9 @@ static void stream_close(mpg123_handle *fr)
 
 	fr->rdat.filept = 0;
 
+#ifndef NO_FEEDER
 	if(fr->rdat.flags & READER_BUFFERED)  bc_reset(&fr->rdat.buffer);
+#endif
 	if(fr->rdat.flags & READER_HANDLEIO)
 	{
 		if(fr->rdat.cleanup_handle != NULL) fr->rdat.cleanup_handle(fr->rdat.iohandle);
@@ -344,6 +346,7 @@ static off_t stream_skip_bytes(mpg123_handle *fr,off_t len)
 		}
 		return fr->rd->tell(fr);
 	}
+#ifndef NO_FEEDER
 	else if(fr->rdat.flags & READER_BUFFERED)
 	{ /* Perhaps we _can_ go a bit back. */
 		if(fr->rdat.buffer.pos >= -len)
@@ -357,6 +360,7 @@ static off_t stream_skip_bytes(mpg123_handle *fr,off_t len)
 			return READER_ERROR;
 		}
 	}
+#endif
 	else
 	{
 		fr->err = MPG123_NO_SEEK;
@@ -391,8 +395,10 @@ static int generic_read_frame_body(mpg123_handle *fr,unsigned char *buf, int siz
 
 static off_t generic_tell(mpg123_handle *fr)
 {
+#ifndef NO_FEEDER
 	if(fr->rdat.flags & READER_BUFFERED)
 	fr->rdat.filepos = fr->rdat.buffer.fileoff+fr->rdat.buffer.pos;
+#endif
 
 	return fr->rdat.filepos;
 }
@@ -401,13 +407,20 @@ static off_t generic_tell(mpg123_handle *fr)
 static void stream_rewind(mpg123_handle *fr)
 {
 	if(fr->rdat.flags & READER_SEEKABLE)
-	fr->rdat.buffer.fileoff = fr->rdat.filepos = stream_lseek(fr,0,SEEK_SET);
+	{
+		fr->rdat.filepos = stream_lseek(fr,0,SEEK_SET);
+#ifndef NO_FEEDER
+		fr->rdat.buffer.fileoff = fr->rdat.filepos;
+#endif
+	}
+#ifndef NO_FEEDER
 	if(fr->rdat.flags & READER_BUFFERED)
 	{
 		fr->rdat.buffer.pos      = 0;
 		fr->rdat.buffer.firstpos = 0;
 		fr->rdat.filepos = fr->rdat.buffer.fileoff;
 	}
+#endif
 }
 
 /*
@@ -433,6 +446,9 @@ static off_t get_fileinfo(mpg123_handle *fr)
 
 	return len;
 }
+
+/* Let's work in nice 4K blocks, that may be nicely reusable (by malloc(), even). */
+#define BUFFBLOCK 4096
 
 #ifndef NO_FEEDER
 /* Methods for the buffer chain, mainly used for feed reader, but not just that. */
@@ -470,7 +486,8 @@ static int bc_append(struct bufferchain *bc, ssize_t size)
 	newbuf = malloc(sizeof(struct buffy));
 	if(newbuf == NULL) return -2;
 
-	newbuf->data = malloc(size);
+	newbuf->realsize = size > BUFFBLOCK ? size : BUFFBLOCK;
+	newbuf->data = malloc(newbuf->realsize);
 	if(newbuf->data == NULL)
 	{
 		free(newbuf);
@@ -517,11 +534,26 @@ static void bc_drop(struct bufferchain *bc)
 static int bc_add(struct bufferchain *bc, const unsigned char *data, ssize_t size)
 {
 	int ret = 0;
+	ssize_t part = 0;
 	debug2("bc_add: adding %"SSIZE_P" bytes at %"OFF_P, (ssize_p)size, (off_p)(bc->fileoff+bc->size));
 	if(size >=4) debug4("first bytes: %02x %02x %02x %02x", data[0], data[1], data[2], data[3]);
 
-	if((ret = bc_append(bc, size)) == 0)
-	memcpy(bc->last->data, data, size);
+	/* Try to fill up the last buffer block. */
+	if(bc->last != NULL && bc->last->size < bc->last->realsize)
+	{
+		part = bc->last->realsize - bc->last->size;
+		if(part > size) part = size;
+
+		memcpy(bc->last->data+bc->last->size, data, part);
+		bc->last->size += part;
+		size -= part;
+		bc->size += part;
+	}
+
+
+	/* If there is still data left, put it into a new buffer block. */
+	if(size > 0 && (ret = bc_append(bc, size)) == 0)
+	memcpy(bc->last->data, data+part, size);
 
 	return ret;
 }
@@ -700,8 +732,6 @@ off_t feed_set_pos(mpg123_handle *fr, off_t pos)
 
 /* The specific stuff for buffered stream reader. */
 
-/* Let's work in nice 4K blocks, that may be nicely reusable (by malloc(), even). */
-#define BUFFBLOCK 4096
 static ssize_t buffered_fullread(mpg123_handle *fr, unsigned char *out, ssize_t count)
 {
 	struct bufferchain *bc = &fr->rdat.buffer;
@@ -762,17 +792,17 @@ off_t feed_set_pos(mpg123_handle *fr, off_t pos)
  */
 
 #define bugger_off { mh->err = MPG123_NO_READER; return MPG123_ERR; }
-int bad_init(mpg123_handle *mh) bugger_off
-void bad_close(mpg123_handle *mh){}
-ssize_t bad_fullread(mpg123_handle *mh, unsigned char *data, ssize_t count) bugger_off
-int bad_head_read(mpg123_handle *mh, unsigned long *newhead) bugger_off
-int bad_head_shift(mpg123_handle *mh, unsigned long *head) bugger_off
-off_t bad_skip_bytes(mpg123_handle *mh, off_t len) bugger_off
-int bad_read_frame_body(mpg123_handle *mh, unsigned char *data, int size) bugger_off
-int bad_back_bytes(mpg123_handle *mh, off_t bytes) bugger_off
-int bad_seek_frame(mpg123_handle *mh, off_t num) bugger_off
-off_t bad_tell(mpg123_handle *mh) bugger_off
-void bad_rewind(mpg123_handle *mh){}
+static int bad_init(mpg123_handle *mh) bugger_off
+static void bad_close(mpg123_handle *mh){}
+static ssize_t bad_fullread(mpg123_handle *mh, unsigned char *data, ssize_t count) bugger_off
+static int bad_head_read(mpg123_handle *mh, unsigned long *newhead) bugger_off
+static int bad_head_shift(mpg123_handle *mh, unsigned long *head) bugger_off
+static off_t bad_skip_bytes(mpg123_handle *mh, off_t len) bugger_off
+static int bad_read_frame_body(mpg123_handle *mh, unsigned char *data, int size) bugger_off
+static int bad_back_bytes(mpg123_handle *mh, off_t bytes) bugger_off
+static int bad_seek_frame(mpg123_handle *mh, off_t num) bugger_off
+static off_t bad_tell(mpg123_handle *mh) bugger_off
+static void bad_rewind(mpg123_handle *mh){}
 #undef bugger_off
 
 #define READER_STREAM 0
@@ -780,7 +810,7 @@ void bad_rewind(mpg123_handle *mh){}
 #define READER_FEED       2
 #define READER_BUF_STREAM 3
 #define READER_BUF_ICY_STREAM 4
-struct reader readers[] =
+static struct reader readers[] =
 {
 	{ /* READER_STREAM */
 		default_init,
@@ -879,7 +909,7 @@ struct reader readers[] =
 #endif
 };
 
-struct reader bad_reader =
+static struct reader bad_reader =
 {
 	bad_init,
 	bad_close,
@@ -897,7 +927,7 @@ struct reader bad_reader =
 
 static int default_init(mpg123_handle *fr)
 {
-#if (!defined (WIN32) || defined (__CYGWIN__))
+#ifdef TIMEOUT_READ
 	if(fr->p.timeout > 0)
 	{
 		int flags;
@@ -919,8 +949,16 @@ static int default_init(mpg123_handle *fr)
 
 	fr->rdat.read  = fr->rdat.r_read  != NULL ? fr->rdat.r_read  : posix_read;
 	fr->rdat.lseek = fr->rdat.r_lseek != NULL ? fr->rdat.r_lseek : posix_lseek;
+	/* ICY streams of any sort shall not be seekable. */
+	if(fr->p.icy_interval > 0) fr->rdat.lseek = nix_lseek;
+
 	fr->rdat.filelen = get_fileinfo(fr);
 	fr->rdat.filepos = 0;
+	/*
+		Don't enable seeking on ICY streams, just plain normal files.
+		This check is necessary since the client can enforce ICY parsing on files that would otherwise be seekable.
+		It is a task for the future to make the ICY parsing safe with seeks ... or not.
+	*/
 	if(fr->rdat.filelen >= 0)
 	{
 		fr->rdat.flags |= READER_SEEKABLE;
@@ -971,7 +1009,9 @@ void open_bad(mpg123_handle *mh)
 #endif
 	mh->rd = &bad_reader;
 	mh->rdat.flags = 0;
+#ifndef NO_FEEDER
 	bc_init(&mh->rdat.buffer);
+#endif
 }
 
 int open_feed(mpg123_handle *fr)
