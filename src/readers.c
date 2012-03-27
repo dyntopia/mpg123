@@ -103,6 +103,7 @@ static int stream_back_bytes(struct reader *rds, off_t bytes)
 {
   if(stream_lseek(rds,-bytes,SEEK_CUR) < 0)
     return -1;
+	/* you sure you want the buffer to resync here? */
   if(param.usebuffer)
 	  buffer_resync();
   return 0;
@@ -534,8 +535,8 @@ int open_stream(char *bs_filenam,int fd)
       if(filept_opened)
         readers[i].flags |= READER_FD_OPENED;
       if(!readers[i].init) {
-	fprintf(stderr,"Fatal error!\n");
-	exit(1);
+        error("Fatal error!");
+        return -1;
       }
       if(readers[i].init(readers+i) >= 0) {
         rd = &readers[i];

@@ -10,13 +10,22 @@
 
 #include "config.h"
 #include "mpg123.h"
+#include "debug.h"
 
 static unsigned char *conv16to8_buf = NULL;
 unsigned char *conv16to8;
 
 #ifndef USE_MMX
 real decwin[512+32];
+#ifdef USE_ALTIVEC
+static real __attribute__ ((aligned (16))) cos64[16];
+static real __attribute__ ((aligned (16))) cos32[8];
+static real __attribute__ ((aligned (16))) cos16[4];
+static real __attribute__ ((aligned (16))) cos8[2];
+static real __attribute__ ((aligned (16))) cos4[1];
+#else
 static real cos64[16],cos32[8],cos16[4],cos8[2],cos4[1];
+#endif
 
 real *pnts[] = { cos64,cos32,cos16,cos8,cos4 };
 
@@ -91,7 +100,7 @@ void make_decode_tables(long scaleval)
 }
 #endif
 
-void make_conv16to8_table(int mode)
+int make_conv16to8_table(int mode)
 {
   int i;
 
@@ -103,8 +112,8 @@ void make_conv16to8_table(int mode)
   if(!conv16to8_buf) {
     conv16to8_buf = (unsigned char *) malloc(8192);
     if(!conv16to8_buf) {
-      fprintf(stderr,"Can't allocate 16 to 8 converter table!\n");
-      exit(1);
+      error("Can't allocate 16 to 8 converter table!");
+      return -1;
     }
     conv16to8 = conv16to8_buf + 4096;
   }
@@ -141,5 +150,6 @@ void make_conv16to8_table(int mode)
       conv16to8[i] = 0;
     }
   }
+	return 0;
 }
 

@@ -113,6 +113,15 @@ void next_track(void)
 	intflag = TRUE;
 }
 
+void safe_exit(int code)
+{
+#ifdef HAVE_TERMIOS
+	if(param.term_ctrl)
+		term_restore();
+#endif
+	exit(code);
+}
+
 static struct frame fr;
 struct audio_info_struct ai,pre_ai;
 txfermem *buffermem = NULL;
@@ -153,15 +162,13 @@ void init_output(void)
     sigemptyset (&newsigset);
     sigaddset (&newsigset, SIGUSR1);
     sigprocmask (SIG_BLOCK, &newsigset, &oldsigset);
+    #if !defined(WIN32) && !defined(GENERIC)
     catchsignal (SIGCHLD, catch_child);
+	 #endif
     switch ((buffer_pid = fork())) {
       case -1: /* error */
         perror("fork()");
-#ifdef HAVE_TERMIOS
-	if(param.term_ctrl)
-		term_restore();
-#endif
-        exit(1);
+        safe_exit(1);
       case 0: /* child */
         if(rd)
           rd->close(rd); /* child doesn't need the input stream */
@@ -169,7 +176,7 @@ void init_output(void)
         buffer_loop (&ai, &oldsigset);
         xfermem_done_reader (buffermem);
         xfermem_done (buffermem);
-        _exit(0);
+        exit(0);
       default: /* parent */
         xfermem_init_writer (buffermem);
         param.outmode = DECODE_BUFFER;
@@ -180,11 +187,7 @@ void init_output(void)
 	/* + 1024 for NtoM rate converter */
     if (!(pcm_sample = (unsigned char *) malloc(audiobufsize * 2 + 1024))) {
       perror ("malloc()");
-#ifdef HAVE_TERMIOS
-      if(param.term_ctrl)
-      	term_restore();
-#endif
-      exit (1);
+      safe_exit (1);
 #ifndef NOXFERMEM
     }
 #endif
@@ -194,11 +197,7 @@ void init_output(void)
     case DECODE_AUDIO:
       if(audio_open(&ai) < 0) {
         perror("audio");
-#ifdef HAVE_TERMIOS
-	if(param.term_ctrl)
-		term_restore();
-#endif
-        exit(1);
+        safe_exit(1);
       }
       break;
     case DECODE_WAV:
@@ -242,9 +241,9 @@ static void set_output (char *arg)
         case 's': set_output_s(arg); break;
         case 'l': set_output_l(arg); break;
         default:
-            fprintf (stderr, "%s: Unknown argument \"%s\" to option \"%s\".\n",
+            error3("%s: Unknown argument \"%s\" to option \"%s\".\n",
                 prgName, arg, loptarg);
-            exit (1);
+            safe_exit(1);
     }
 }
 
@@ -275,8 +274,8 @@ static void SetOutFile(char *Arg)
   param.outmode=DECODE_FILE;
   OutputDescriptor=open(Arg,O_WRONLY,0);
   if(OutputDescriptor==-1) {
-    fprintf(stderr,"Can't open %s for writing (%s).\n",Arg,strerror(errno));
-    exit(1);
+    error2("Can't open %s for writing (%s).\n",Arg,strerror(errno));
+    safe_exit(1);
   }
 }
 static void SetOutStdout(char *Arg)
@@ -421,11 +420,7 @@ static void reset_audio(void)
 		audio_close (&ai);
 		if (audio_open(&ai) < 0) {
 			perror("audio");
-#ifdef HAVE_TERMIOS
-			if(param.term_ctrl)
-				term_restore();
-#endif
-			exit(1);
+			safe_exit(1);
 		}
 	}
 }
@@ -439,7 +434,7 @@ void prepare_audioinfo(struct frame *fr, struct audio_info_struct *nai)
 {
 	long newrate = freqs[fr->sampling_frequency]>>(param.down_sample);
 	fr->down_sample = param.down_sample;
-	audio_fit_capabilities(nai,fr->stereo,newrate);
+	if(!audio_fit_capabilities(nai,fr->stereo,newrate)) safe_exit(1);
 }
 
 /*
@@ -448,7 +443,7 @@ void prepare_audioinfo(struct frame *fr, struct audio_info_struct *nai)
  *
  * needs a major rewrite .. it's incredible ugly!
  */
-void play_frame(int init,struct frame *fr)
+int play_frame(int init,struct frame *fr)
 {
 	int clip;
 	long newrate;
@@ -500,7 +495,7 @@ void play_frame(int init,struct frame *fr)
 						long n = freqs[fr->sampling_frequency];
                                                 long m = ai.rate;
 
-						synth_ntom_set_step(n,m);
+						if(!synth_ntom_set_step(n,m)) return 0;
 
 						if(n>m) {
 							fr->down_sample_sblimit = SBLIMIT * m;
@@ -551,7 +546,7 @@ void play_frame(int init,struct frame *fr)
 				}
 			}
 			if (intflag)
-				return;
+				return 1;
 		}
 	}
 
@@ -578,12 +573,13 @@ void play_frame(int init,struct frame *fr)
 				break;
 			}
 		if (intflag)
-			return;
+			return 1;
 	}
 #endif
 
 	if(clip > 0 && param.checkrange)
 		fprintf(stderr,"%d samples clipped\n", clip);
+	return 1;
 }
 
 void set_synth_functions(struct frame *fr)
@@ -659,7 +655,11 @@ void set_synth_functions(struct frame *fr)
 #endif
 
 	if(p8) {
-		make_conv16to8_table(ai.format);
+		if(make_conv16to8_table(ai.format) != 0)
+		{
+			/* it's a bit more work to get proper error propagation up */
+			safe_exit(1);
+		}
 	}
 }
 
@@ -683,7 +683,7 @@ int main(int argc, char *argv[])
 
 	if(sizeof(short) != 2) {
 		fprintf(stderr,"Ouch SHORT has size of %d bytes (required: '2')\n",(int)sizeof(short));
-		exit(1);
+		safe_exit(1);
 	}
 	if(sizeof(long) < 4) {
 		fprintf(stderr,"Ouch LONG has size of %d bytes (required: at least 4)\n",(int)sizeof(long));
@@ -714,7 +714,7 @@ int main(int argc, char *argv[])
 		if ((cpuflags & 0x80000000) == 0x80000000) {
 			fprintf(stderr,"3DNow! instructions are supported.\n");
 		}
-		exit(0);
+		safe_exit(0);
 	}
 #endif
 
@@ -737,7 +737,7 @@ int main(int argc, char *argv[])
 
 	if(param.force_rate && param.down_sample) {
 		fprintf(stderr,"Down sampling and fixed rate options not allowed together!\n");
-		exit(1);
+		safe_exit(1);
 	}
 
 	audio_capabilities(&ai);
@@ -814,7 +814,7 @@ int main(int argc, char *argv[])
 		init_id3();
 		ret = control_generic(&fr);
 		exit_id3();
-		exit(ret);
+		safe_exit(ret);
 	}
 #endif
 
@@ -894,7 +894,11 @@ tc_hack:
 			}
 			if(leftFrames > 0)
 			  leftFrames--;
-			play_frame(init,&fr);
+			if(!play_frame(init,&fr))
+			{
+				error("frame playback failed, skipping rest of track");
+				break;
+			}
 			init = 0;
 
 			if(param.verbose) {
@@ -913,7 +917,7 @@ tc_hack:
 				continue;
 			} else {
 				long offset;
-				if((offset=term_control(&fr))) {
+				if((offset=term_control(&fr,&ai))) {
 					if(!rd->back_frame(rd, &fr, -offset)) {
 						debug1("seeked to %lu", fr.num);
 						#ifdef GAPLESS
@@ -944,7 +948,7 @@ tc_hack:
 #ifdef HAVE_TERMIOS
 			if(param.term_ctrl) {
 				long offset;
-				if((offset=term_control(&fr))) {
+				if((offset=term_control(&fr,&ai))) {
 					if((!rd->back_frame(rd, &fr, -offset)) 
 						&& read_frame(&fr))
 					{
@@ -1104,7 +1108,7 @@ static void usage(int err)  /* print syntax & exit */
 	#endif
 	fprintf(o,"   -?    this help                      --version  print name + version\n");
 	fprintf(o,"See the manpage %s(1) or call %s with --longhelp for more parameters and information.\n", prgName,prgName);
-	exit(err);
+	safe_exit(err);
 }
 
 static void want_usage(char* arg)
@@ -1198,7 +1202,7 @@ static void long_usage(int err)
 	fprintf(o,"        --version          give name / version string\n");
 
 	fprintf(o,"\nSee the manpage %s(1) for more information.\n", prgName);
-	exit(err);
+	safe_exit(err);
 }
 
 static void want_long_usage(char* arg)
@@ -1209,5 +1213,5 @@ static void want_long_usage(char* arg)
 static void give_version(char* arg)
 {
 	fprintf(stdout, PACKAGE_NAME" "PACKAGE_VERSION"\n");
-	exit(0);
+	safe_exit(0);
 }

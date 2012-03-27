@@ -69,8 +69,12 @@ typedef unsigned char byte;
 
 #ifdef REAL_IS_FLOAT
 #  define real float
+#  define REAL_SCANF "%f"
+#  define REAL_PRINTF "%f"
 #elif defined(REAL_IS_LONG_DOUBLE)
 #  define real long double
+#  define REAL_SCANF "%Lf"
+#  define REAL_PRINTF "%Lf"
 #elif defined(REAL_IS_FIXED)
 # define real long
 
@@ -83,9 +87,13 @@ typedef unsigned char byte;
 # define DOUBLE_TO_REAL(x)     ((int)((x) * REAL_FACTOR))
 # define REAL_TO_SHORT(x)      ((x) >> REAL_RADIX)
 # define REAL_MUL(x, y)                (((long long)(x) * (long long)(y)) >> REAL_RADIX)
+#  define REAL_SCANF "%ld"
+#  define REAL_PRINTF "%ld"
 
 #else
 #  define real double
+#  define REAL_SCANF "%lf"
+#  define REAL_PRINTF "%f"
 #endif
 
 #ifndef DOUBLE_TO_REAL
@@ -320,7 +328,7 @@ extern void read_frame_init (struct frame* fr);
 extern int read_frame(struct frame *fr);
 /* why extern? */
 void prepare_audioinfo(struct frame *fr, struct audio_info_struct *nai);
-extern void play_frame(int init,struct frame *fr);
+extern int play_frame(int init,struct frame *fr);
 extern int do_layer3(struct frame *fr,int,struct audio_info_struct *);
 extern int do_layer2(struct frame *fr,int,struct audio_info_struct *);
 extern int do_layer1(struct frame *fr,int,struct audio_info_struct *);
@@ -368,7 +376,7 @@ extern int get_songlen(struct frame *fr,int no);
 extern void init_layer3(int);
 extern void init_layer2(void);
 extern void make_decode_tables(long scale);
-extern void make_conv16to8_table(int);
+extern int make_conv16to8_table(int);
 extern void dct64(real *,real *,real *);
 
 #ifdef USE_MMX
@@ -376,7 +384,7 @@ extern void dct64_MMX(short *a,short *b,real *c);
 extern int synth_1to1_MMX(real *, int, short *, short *, int *);
 #endif
 
-extern void synth_ntom_set_step(long,long);
+extern int synth_ntom_set_step(long,long);
 
 extern int control_generic(struct frame *fr);
 

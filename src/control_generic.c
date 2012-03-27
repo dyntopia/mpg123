@@ -51,7 +51,7 @@ void generic_sendstat (struct frame *fr)
 {
 	unsigned long frames_left;
 	double current_seconds, seconds_left;
-	if(!position_info(fr, xfermem_get_usedspace(buffermem), &ai, &frames_left, &current_seconds, &seconds_left))
+	if(!position_info(fr, fr->num, xfermem_get_usedspace(buffermem), &ai, &frames_left, &current_seconds, &seconds_left))
 	generic_sendmsg("F %li %lu %3.2f %3.2f", fr->num, frames_left, current_seconds, seconds_left);
 }
 
@@ -94,7 +94,8 @@ int control_generic (struct frame *fr)
 	/* ThOr */
 	char alive = 1;
 	char silent = 0;
-	
+	unsigned long frame_before = 0;
+
 	/* responses to stderr for frontends needing audio data from stdout */
 	if (param.remote_err)
  		outstream = stderr;
@@ -123,14 +124,22 @@ int control_generic (struct frame *fr)
 					generic_sendmsg("P 0");
 					continue;
 				}
-				play_frame(init,fr);
+				if(!play_frame(init,fr))
+				{
+					generic_sendmsg("E play_frame failed");
+					audio_flush(param.outmode, &ai);
+					rd->close(rd);
+					mode = MODE_STOPPED;
+					generic_sendmsg("P 0");
+				}
 				if (init) {
 					static char tmp[1000];
 					make_remote_header(fr, tmp);
 					generic_sendmsg(tmp);
 					init = 0;
 				}
-				if(silent == 0) generic_sendstat(fr);
+				if(!frame_before && (silent == 0)) generic_sendstat(fr);
+				if(frame_before) --frame_before;
 			}
 		}
 		else {
@@ -275,15 +284,8 @@ int control_generic (struct frame *fr)
 							
 							Also, I' not sure _how_ standard these conversion specifiers and their flags are... I have them from a glibc man page.
 						*/
-						#ifdef REAL_IS_FLOAT
-						if(sscanf(arg, "%f %f %f", &b, &m, &t) == 3){
-						#elif defined(REAL_IS_LONG_DOUBLE)
-						if(sscanf(arg, "%Lf %Lf %Lf", &b, &m, &t) == 3){
-						#elif defined(REAL_IS_FIXED)
-						if(sscanf(arg, "%ld %ld %ld", &b, &m, &t) == 3){
-						#else
-						if(sscanf(arg, "%lf %lf %lf", &b, &m, &t) == 3){
-						#endif
+						if(sscanf(arg, REAL_SCANF" "REAL_SCANF" "REAL_SCANF, &b, &m, &t) == 3)
+						{
 							/* very raw line */
 							if ((t >= 0) && (t <= 3))
 							for(cn=0; cn < 1; ++cn)
@@ -315,18 +317,10 @@ int control_generic (struct frame *fr)
 						int c, v;
 						have_eq_settings = TRUE;
 						/*generic_sendmsg("%s",updown);*/
-						/* ThOr: This must be done in the header alongside the definition of real somehow! */
-						#ifdef REAL_IS_FLOAT
-						if(sscanf(arg, "%i %i %f", &c, &v, &e) == 3){
-						#elif defined(REAL_IS_LONG_DOUBLE)
-						if(sscanf(arg, "%i %i %Lf", &c, &v, &e) == 3){
-						#elif defined(REAL_IS_FIXED)
-						if(sscanf(arg, "%i %i %ld", &c, &v, &e) == 3){
-						#else
-						if(sscanf(arg, "%i %i %lf", &c, &v, &e) == 3){
-						#endif
+						if(sscanf(arg, "%i %i "REAL_SCANF, &c, &v, &e) == 3)
+						{
 							equalizer[c][v] = e;
-							generic_sendmsg("%i : %i : %f", c, v, e);
+							generic_sendmsg("%i : %i : "REAL_PRINTF, c, v, e);
 						}
 						else generic_sendmsg("E invalid arguments for EQ: %s", arg);
 						continue;
@@ -347,10 +341,27 @@ int control_generic (struct frame *fr)
 						/* totally replaced that stuff - it never fully worked
 						   a bit usure about why +pos -> spos+1 earlier... */
 						if (spos[0] == '-' || spos[0] == '+')
-							offset = atol(spos);
+							offset = atol(spos) + frame_before;
 						else
 							offset = atol(spos) - fr->num;
 						
+						/* ah, this offset stuff is twisted - I want absolute numbers */
+						#ifdef GAPLESS
+						if(param.gapless && (fr->lay == 3) && (mode == MODE_PAUSED))
+						{
+							if(fr->num+offset > 0)
+							{
+								--offset;
+								frame_before = 1;
+								if(fr->num+offset > 0)
+								{
+									--offset;
+									++frame_before;
+								}
+							}
+							else frame_before = 0;
+						}
+						#endif
 						if(rd->back_frame(rd, fr, -offset))
 						{
 							generic_sendmsg("E Error while seeking");
@@ -363,16 +374,19 @@ int control_generic (struct frame *fr)
 						{
 							prepare_audioinfo(fr, &pre_ai);
 							layer3_gapless_set_position(fr->num, fr, &pre_ai);
+							layer3_gapless_set_ignore(frame_before, fr, &pre_ai);
 						}
 						#endif
 
-						generic_sendmsg("J %d", fr->num);
+						generic_sendmsg("J %d", fr->num+frame_before);
 						continue;
 					}
 
 					/* LOAD - actually play */
 					if (!strcasecmp(cmd, "L") || !strcasecmp(cmd, "LOAD")) {
-						audio_flush(param.outmode, &ai);
+						#ifdef GAPLESS
+						frame_before = 0;
+						#endif
 						if (mode != MODE_STOPPED) {
 							rd->close(rd);
 							mode = MODE_STOPPED;
@@ -395,7 +409,9 @@ int control_generic (struct frame *fr)
 
 					/* LOADPAUSED */
 					if (!strcasecmp(cmd, "LP") || !strcasecmp(cmd, "LOADPAUSED")) {
-						audio_flush(param.outmode, &ai);
+						#ifdef GAPLESS
+						frame_before = 0;
+						#endif
 						if (mode != MODE_STOPPED) {
 							rd->close(rd);
 							mode = MODE_STOPPED;

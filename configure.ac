@@ -1,4 +1,4 @@
-dnl configure.ac: source for the configure script
+ dnl configure.ac: source for the configure script
 
 dnl copyright by the mpg123 project - free software under the terms of the LGPL 2.1
 dnl see COPYING and AUTHORS files in distribution or http://mpg123.de
@@ -10,7 +10,7 @@ AC_PREREQ(2.57)
 
 dnl ############# Initialisation
 
-AC_INIT([mpg123], [0.60], [mpg123-devel@lists.sourceforge.net])
+AC_INIT([mpg123], [0.61], [mpg123-devel@lists.sourceforge.net])
 
 AC_CONFIG_SRCDIR(src/mpg123.c)
 AC_CONFIG_AUX_DIR(build)
@@ -205,23 +205,33 @@ case $target in
   arm-*-linux*)
     cpu_type="generic_nofpu"
   ;;
-  i386-*-linux*)
+  i386-*-linux*|i386-*-kfreebsd*-gnu)
     cpu_type="i386_fpu"
   ;;
-  i486-*-linux*)
+  i486-*-linux*|i486-*-kfreebsd*-gnu)
     cpu_type="i486"
   ;;
-  i586-*-linux*)
+  i586-*-linux*|i586-*-kfreebsd*-gnu)
     cpu_type="i586"
   ;;
-  i686-*-linux*)
+  i686-*-linux*|i686-*-kfreebsd*-gnu)
     cpu_type="mmx"
   ;;
-  *-*-linux*)
+  *-*-linux*|*-*-kfreebsd*-gnu)
     cpu_type="generic_fpu"
   ;;
   *-apple-darwin*)
-    cpu_type="generic_fpu"
+    AC_MSG_CHECKING([if CPU type supports AltiVec])
+    case `machine` in
+      ppc7400 | ppc7450 | ppc970)
+        AC_MSG_RESULT([yes])
+        cpu_type="altivec"
+      ;;
+      *)
+        AC_MSG_RESULT([no])
+        cpu_type="generic_fpu"
+      ;;
+    esac
   ;;
   i386-*-freebsd*)
     cpu_type="i386_fpu"
@@ -229,9 +239,25 @@ case $target in
   *-*-freebsd*)
     cpu_type="generic_fpu"
   ;;
-  *-sun-solaris*)
+  *-*-solaris*)
     cpu_type="generic_fpu"
     LIBS="$LIBS -lsocket -lnsl"
+  ;;
+# assembler troubles on cygwin...
+  i686-pc-cygwin*)
+    cpu_type="i386"
+  ;;
+  i586-pc-cygwin*)
+    cpu_type="i386"
+  ;;
+  i486-pc-cygwin*)
+    cpu_type="i386"
+  ;;
+  i386-pc-cygwin*)
+    cpu_type="i386"
+  ;;
+  *-pc-cygwin*)
+    cpu_type="generic_fpu"
   ;;
   *)
   	AC_MSG_WARN([Unknown target operating system])
@@ -259,7 +285,7 @@ case $cpu_type in
     CFLAGS="$CFLAGS -DREAL_IS_FIXED"
   ;;
   altivec)
-    CFLAGS="$CFLAGS -maltivec -DREAL_IS_FLOAT"
+    CFLAGS="$CFLAGS -maltivec -faltivec -DREAL_IS_FLOAT -DUSE_ALTIVEC"
   ;;
   i386) 
     CFLAGS="$CFLAGS -march=i386 -DI386_ASSEM -DREAL_IS_FLOAT"
@@ -299,7 +325,7 @@ AC_SUBST( CPU_TYPE_LIB )
 dnl ############## Compiler Optimizations
 
 # None chosen?
-if test "x$with_optimization" == "x"; then
+if test "x$with_optimization" = "x"; then
 	if test "$debugging" = "enabled"; then
 		with_optimization="0"
 	else
@@ -337,7 +363,7 @@ esac
 
 dnl ############## Seektable size
 
-if test "x$with_seektable" == "x"; then
+if test "x$with_seektable" = "x"; then
 	seektable=1000
 else
 	seektable=$with_seektable
@@ -359,11 +385,19 @@ case $target in
   *-*-freebsd*)
     audio_system="oss"
   ;;
+  *-*-kfreebsd*)
+    audio_system="oss"
+  ;;
   *-apple-darwin*)
     audio_system="macosx"
   ;;
-  *-*-sun*)
+  *-*-solaris*)
     audio_system="sun"
+  ;;
+  # esd has been assumed to be the one for cygwin, but plain OSS does it
+  # can even make mpg123 run "natively" with a cygwin.dll
+  *-*-cygwin*)
+    audio_system="oss"
   ;;
   *)
   	audio_system="dummy"
@@ -400,7 +434,7 @@ case $audio_system in
     AC_MSG_WARN( Using dummy audio output. )
   ;;
   esd)
-  	if test "x$HAVE_ESD" != "xyes" ; then
+  	if test "x$HAVE_ESOUND" != "xyes" ; then
   		AC_MSG_ERROR( ESounD is not available for audio output subsystem. )
   	fi
     AUDIO_CFLAGS=$ESOUND_CFLAGS
