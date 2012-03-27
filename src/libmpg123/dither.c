@@ -100,7 +100,6 @@ static void highpass_tpdf_noise(float *table, size_t count)
 	}
 }
 
-#if 0
 void mpg123_noise(float* table, size_t count, enum mpg123_noise_type noisetype)
 {
 	switch(noisetype)
@@ -112,7 +111,6 @@ void mpg123_noise(float* table, size_t count, enum mpg123_noise_type noisetype)
 		break;
 	}
 }
-#endif
 
 /* Generate white noise and shape it with a high pass filter. */
 void dither_table_init(float *dithertable)
