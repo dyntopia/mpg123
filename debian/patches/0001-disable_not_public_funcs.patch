@@ -1,3 +1,6 @@
+Description: Disable function mpg123_noise that is not yet part of
+ libmpg123's official API and should therefore not get exported.
+Author: Daniel Kobras <kobras@debian.org>
 ---
  src/libmpg123/dither.c |    2 ++
  src/libmpg123/dither.h |    2 ++
