@@ -8,7 +8,7 @@ Build-Depends:
  autoconf,
  automake,
  autotools-dev,
- debhelper (>> 5),
+ debhelper (>= 9),
  libasound2-dev [linux-any],
  libaudio-dev,
  libjack-dev,
@@ -54,8 +54,10 @@ Description: MPEG layer 1/2/3 audio player
  and others.
 
 Package: libmpg123-0
+Multi-Arch: same
 Architecture: any
 Section: libs
+Pre-Depends: ${misc:Pre-Depends}
 Depends:
  ${misc:Depends},
  ${shlibs:Depends}
@@ -71,6 +73,7 @@ Description: MPEG layer 1/2/3 audio decoder -- runtime library
  the mpg123 library.
 
 Package: libmpg123-dev
+Multi-Arch: same
 Architecture: any
 Section: libdevel
 Depends:
