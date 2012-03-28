@@ -60,47 +60,22 @@ export LDFLAGS
 
 #export DH_VERBOSE=1
 
+%:
+	dh $@ --with autoreconf
+
 mpg123-%: debian/mpg123-wrapper.in
 	dh_testdir
 	o=`echo $@ | sed -e 's/^mpg123-\([^-]\+\).*/\1/'`; \
 	sed -e "s/@OUTPUT@/$$o/g" < debian/mpg123-wrapper.in > $@
 
-build: build-stamp build-arch build-indep
-	dh_auto_build
-
-build-arch: build-stamp
-build-indep: build-stamp
-build-stamp: configure
-	touch build-stamp
-
-configure: configure-stamp
-	dh_testdir
+override_dh_auto_configure:
 	dh_auto_configure -- $(CONF_COMMON) $(CONF_$(ARCH))
 
-configure-stamp:
-	dh_testdir
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -f $(WRAPPER_TARGETS)
 
-	dh_autoreconf --verbose
-
-	touch configure-stamp
-
-clean:
-	dh_testdir
-	dh_testroot
-
-	-rm -f build-stamp configure-stamp
-	-rm -f $(WRAPPER_TARGETS)
-	test ! -f Makefile || $(MAKE) distclean
-
-	dh_autoreconf_clean
-
-	dh_clean
-
-binary-indep: build
-
-install: build $(WRAPPER_TARGETS)
-	dh_testdir
-
+override_dh_auto_install: $(WRAPPER_TARGETS)
 	dh_auto_install
 
 	find $(CURDIR)/debian -name '*.la' -delete
@@ -114,24 +89,15 @@ install: build $(WRAPPER_TARGETS)
 		        $(CURDIR)/debian/tmp/usr/share/man/man1/$$i.1; \
 	done
 
-	dh_testdir
-	dh_testroot
-	dh_install $(ALL_PKGSTR)
-	dh_installdocs $(LIB_PKGSTR) $(DUMMY_PKGSTR)
-	dh_installdocs $(ARCH_PKGSTR) -A \
-	               README AUTHORS doc/BENCHMARKING doc/CONTACT \
-	               doc/README.gain doc/README.remote doc/THANKS 
-	dh_installexamples $(LIB_PKGSTR)
-	dh_installman $(ARCH_PKGSTR)
-	dh_installchangelogs $(DUMMY_PKGSTR)
+override_dh_installchangelogs:
 	dh_installchangelogs $(ARCH_PKGSTR) NEWS
 	dh_installchangelogs $(LIB_PKGSTR) NEWS.libmpg123
-	dh_installmime $(ARCH_PKGSTR)
-	dh_strip $(ALL_PKGSTR)
-	dh_compress $(ALL_PKGSTR) $(DUMMY_PKGSTR)
-	dh_fixperms $(ALL_PKGSTR) $(DUMMY_PKGSTR)
-	dh_makeshlibs $(LIB_PKGSTR) -V "$(LIB_PKG) (>= 1.7.2)"
-	dh_installdeb $(ALL_PKGSTR)
+	dh_installchangelogs --remaining-packages
+
+override_dh_makeshlibs:
+	dh_makeshlibs $(LIB_PKGSTR) -V "$(LIB_PKG) (>= 1.13.7)"
+
+override_dh_shlibdeps:
 	dh_shlibdeps $(ALL_PKGSTR) -Xdebian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123/ -- \
 		-dSuggests `find debian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123/ -name "output_*.so" -type f` -dDepends
 	for n in alsa nas dummy oss; do \
@@ -144,13 +110,4 @@ install: build $(WRAPPER_TARGETS)
 	  plugin:Recommends \
 	  "alsaplugin:Recommends ossplugin:Recommends dummyplugin:Recommends" \
 	  "ossplugin:Recommends=oss-compat | oss4-base"
-	dh_gencontrol $(ALL_PKGSTR)
-	dh_gencontrol $(DUMMY_PKGSTR) -- -Tdebian/mpg123.substvars
-	dh_md5sums $(ALL_PKGSTR) $(DUMMY_PKGSTR)
-	dh_builddeb $(ALL_PKGSTR) $(DUMMY_PKGSTR)
-
-binary-arch: build install
-
-binary: binary-indep binary-arch
-
-.PHONY: build clean configure install binary binary-arch binary-indep
+	dh_shlibdeps --remaining-packages
