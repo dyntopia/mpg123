@@ -1,8 +1,35 @@
 mpg123 (1.13.7-1) UNRELEASED; urgency=low
 
-  * start new upload
+  * New maintainer (see bug#644851 comment#28).
+    - Thanks to Daniel Kobras <kobras@debian.org> for the great work!
+  * ACK NMUs. (Closes: #631642)
+  * New upstream release. (Closes: #644851)
+  * Switch to 3.0 (quilt) format.
+  * Switch to DH 7 short-form.
+  * Use dh_autoreconf.
+  * Use dpkg-buildflags to get hardening flags.
+  * Add patch to avoid failure when built with hardened flags.
+  * Build with --as-needed.
+  * Convert to Multi-Arch. (Closes: #651014)
+  * Drop the esd output plugin. (Closes: #646390)
+  * Remove all *.la files.
+  * Replace hardcoded list of non-Linux architectures with
+    linux-any. (Closes: #634766)
+  * Remove dummy packages:
+    - mpg123-oss-3dnow
+    - mpg123-oss-i486
+    - alsa dummy
+    - nas dummy
+  * debian/*.{postinst,preinst,prerm}
+    - Use set -e in the body of the script rather than passing -s to
+      the shell.
+  * Remove unnecessary NEWS file.
+  * Add gbp.conf file.
+  * Add watch file.
+  * Add Homepage field.
+  * Bump Standards-Version.
 
- -- Alessio Treglia <alessio@debian.org>  Tue, 27 Mar 2012 11:55:10 +0200
+ -- Alessio Treglia <alessio@debian.org>  Wed, 28 Mar 2012 09:59:31 +0200
 
 mpg123 (1.12.1-3.2) unstable; urgency=low
 
