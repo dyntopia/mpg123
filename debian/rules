@@ -30,6 +30,8 @@ CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
 CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)
 LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
 
+LDFLAGS += -Wl,--as-needed
+
 #export DH_VERBOSE=1
 
 %:
@@ -39,6 +41,9 @@ mpg123-%: debian/mpg123-wrapper.in
 	dh_testdir
 	o=`echo $@ | sed -e 's/^mpg123-\([^-]\+\).*/\1/'`; \
 	sed -e "s/@OUTPUT@/$$o/g" < debian/mpg123-wrapper.in > $@
+
+override_dh_autoreconf:
+	dh_autoreconf --as-needed
 
 override_dh_auto_configure:
 	dh_auto_configure -- $(CONF_COMMON) $(CONF_$(ARCH))
