@@ -25,38 +25,10 @@ LIB_PKGSTR:=-p$(LIB_PKG) -p$(DEV_PKG)
 ARCH_PKGSTR=-pmpg123
 ALL_PKGSTR=$(LIB_PKGSTR) $(ARCH_PKGSTR)
 
-CFLAGS = 
-LDFLAGS =
-
-# Add hardening options. OS and architecture restrictions are stolen from
-# package hardening-wrapper.
-ifeq (,$(findstring noharden,$(DEB_BUILD_OPTIONS)))
-# configure script currently chokes on -Werror
-#       CFLAGS += -Wformat -Werror=format-security
-        CFLAGS += -Wformat
-        LDFLAGS += -Wl,-z,relro
-ifeq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-        CFLAGS += -D_FORTIFY_SOURCE=2
-endif
-ifeq (,$(findstring :$(CPU):,:ia64:alpha:mips:mipsel:hppa:arm:))
-        CFLAGS += -fstack-protector
-endif
-ifneq (,$(findstring :$(OS):,:linux:knetbsd:))
-ifeq (,$(findstring :$(CPU):,:hppa:m68k:arm:mips:mipsel:))
-        CFLAGS += -fPIE
-        LDFLAGS += -pie
-endif
-endif
-endif
-
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-        CFLAGS += -O0
-else
-        CFLAGS += -O2
-endif
-
-export CFLAGS
-export LDFLAGS
+CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
+CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
+CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)
+LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
 
 #export DH_VERBOSE=1
 
