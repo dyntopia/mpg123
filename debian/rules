@@ -2,7 +2,7 @@
 
 PACKAGE:=mpg123
 
-ARCH:=$(shell dpkg-architecture -qDEB_HOST_GNU_CPU)
+ARCH:=$(shell dpkg-architecture -qDEB_HOST_ARCH)
 OS:=$(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 CPU:=$(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
@@ -16,7 +16,13 @@ endif
 CONF_COMMON:=--enable-static=no --enable-shared --enable-lfs-alias
 
 CONF_i486:=--with-cpu=x86_dither
-CONF_arm:=--with-cpu=generic_nofpu
+ifeq ($(ARCH),armel)
+CONF_arm:=--with-cpu=arm_nofpu
+else
+ifeq ($(ARCH),armhf)
+CONF_arm:=--with-cpu=neon
+endif
+endif
 
 SOVERSION:=0
 LIB_PKG:=libmpg123-$(SOVERSION)
@@ -46,7 +52,7 @@ override_dh_autoreconf:
 	dh_autoreconf --as-needed
 
 override_dh_auto_configure:
-	dh_auto_configure -- $(CONF_COMMON) $(CONF_$(ARCH))
+	dh_auto_configure -- $(CONF_COMMON) $(CONF_$(CPU))
 
 override_dh_auto_clean:
 	dh_auto_clean
