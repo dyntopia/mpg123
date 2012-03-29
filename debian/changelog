@@ -1,3 +1,15 @@
+mpg123 (1.13.7-2) experimental; urgency=low
+
+  * Re-organize and refresh symbols. Thanks to Miguel Colon for the report
+    and initial patch. (Closes: #661517)
+  * Introduce new plugins:
+    - JACK
+    - PortAudio
+    - OpenAL
+  * Remove unnecessary build-dependencies.
+
+ -- Alessio Treglia <alessio@debian.org>  Thu, 29 Mar 2012 11:42:59 +0200
+
 mpg123 (1.13.7-1) experimental; urgency=low
 
   * New maintainer (see bug#644851 comment#28).
