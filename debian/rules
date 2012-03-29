@@ -13,7 +13,7 @@ ifeq ($(OS),linux)
 WRAPPER_TARGETS += mpg123-alsa
 endif
 
-CONF_COMMON:=--enable-static --enable-shared
+CONF_COMMON:=--enable-static=no --enable-shared
 
 CONF_i486:=--with-cpu=x86_dither
 CONF_arm:=--with-cpu=generic_nofpu
