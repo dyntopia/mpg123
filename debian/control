@@ -17,7 +17,7 @@ Build-Depends:
  portaudio19-dev,
  python-minimal
 Standards-Version: 3.9.3
-Homepage: http://www.mpg123.de/
+Homepage: http://mpg123.org/
 Vcs-Git: git://anonscm.debian.org/pkg-multimedia/mpg123.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-multimedia/mpg123.git
 
