@@ -1,3 +1,11 @@
+mpg123 (1.13.7-3) experimental; urgency=low
+
+  * Enable LFS aliases, attempt to fix FTBFS on kfreebsd-i386.
+  * Drop static library.
+  * Improve ARM CPUs optimizations.
+
+ -- Alessio Treglia <alessio@debian.org>  Thu, 29 Mar 2012 14:13:02 +0200
+
 mpg123 (1.13.7-2) experimental; urgency=low
 
   * Re-organize and refresh symbols. Thanks to Miguel Colon for the report
