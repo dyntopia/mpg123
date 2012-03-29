@@ -7,7 +7,7 @@ OS:=$(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 CPU:=$(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
-WRAPPER_TARGETS:=mpg123-oss mpg123-nas mpg123-jack
+WRAPPER_TARGETS:=mpg123-oss mpg123-nas mpg123-jack mpg123-openal mpg123-portaudio
 
 ifeq ($(OS),linux)
 WRAPPER_TARGETS += mpg123-alsa
@@ -77,14 +77,14 @@ override_dh_makeshlibs:
 override_dh_shlibdeps:
 	dh_shlibdeps $(ALL_PKGSTR) -Xdebian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123/ -- \
 		-dSuggests `find debian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123/ -name "output_*.so" -type f` -dDepends
-	for n in alsa nas jack dummy oss; do \
+	for n in alsa nas jack dummy openal oss portaudio; do \
 		i="debian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123/output_$$n.so"; \
 		test -e "$$i" || continue; \
-		dh_shlibdeps $(ARCH_PKGSTR) $(DUMMY_PKGSTR) -Xdebian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123 debian/mpg123 -- -p"$$n"plugin -dRecommends "$$i" -dDepends; \
+		dh_shlibdeps $(ARCH_PKGSTR) -Xdebian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123 debian/mpg123 -- -p"$$n"plugin -dRecommends "$$i" -dDepends; \
 	done
 	chmod +x "$(CURDIR)/debian/alt_deps.py"
 	"$(CURDIR)/debian/alt_deps.py" "$(CURDIR)/debian/mpg123.substvars" \
 	  plugin:Recommends \
-	  "alsaplugin:Recommends ossplugin:Recommends dummyplugin:Recommends jackplugin:Recommends" \
+	  "alsaplugin:Recommends ossplugin:Recommends dummyplugin:Recommends jackplugin:Recommends openalplugin:Recommends portaudioplugin:Recommends" \
 	  "ossplugin:Recommends=oss-compat | oss4-base"
 	dh_shlibdeps --remaining-packages
