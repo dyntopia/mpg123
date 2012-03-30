@@ -1,3 +1,21 @@
+mpg123 (1.13.7-4) experimental; urgency=low
+
+  [ Alessio Treglia ]
+  * Refresh packages descriptions. Thanks to Adrian Bunk for the
+    suggestions. (Closes: #666206)
+  * Replace Suggests' contents with a list of supported sound
+    systems (Closes: #666208).
+  * Update Homepage field.
+
+  [ Miguel Colon ]
+  * Update the symbols file to fix FTBFS and other issues.
+    - Move *_64* symbols to the 64bit file.
+    - kfreebsd-i386 (1.13.7) and alpha (1.12.1-3.2) don't have these symbols.
+    - mpg123_decode_frame_32 and mpg123_feedseek_32 not in (<= 1.12.1-3.2).
+  * Fix the failures to open the modules due to the removal of the .la files.
+
+ -- Alessio Treglia <alessio@debian.org>  Fri, 30 Mar 2012 08:49:46 +0200
+
 mpg123 (1.13.7-3) experimental; urgency=low
 
   * Enable LFS aliases, attempt to fix FTBFS on kfreebsd-i386.
