@@ -30,7 +30,12 @@ Recommends:
  ${plugin:Recommends},
  ${shlibs:Recommends}
 Suggests:
- ${shlibs:Suggests}
+ alsa-utils,
+ jackd,
+ nas,
+ oss-compat,
+ oss4-base,
+ pulseaudio
 Provides:
  mp3-decoder,
  mpg123-oss-3dnow
