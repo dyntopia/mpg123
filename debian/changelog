@@ -1,3 +1,12 @@
+mpg123 (1.13.7-5) unstable; urgency=low
+
+  * Upload to unstable.
+  * Add patch to correct some misspellings.
+  * Fix a small mistake in the manpage.
+  * Refresh debian/copyright, update to Debian Copyright Format 1.0.
+
+ -- Alessio Treglia <alessio@debian.org>  Sat, 31 Mar 2012 14:24:58 +0200
+
 mpg123 (1.13.7-4) experimental; urgency=low
 
   [ Alessio Treglia ]
