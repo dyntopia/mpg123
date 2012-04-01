@@ -9,6 +9,11 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 WRAPPER_TARGETS:=mpg123-oss mpg123-nas mpg123-jack mpg123-openal mpg123-portaudio
 
+CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
+CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
+CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)
+LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
+
 ifeq ($(OS),linux)
 WRAPPER_TARGETS += mpg123-alsa
 endif
@@ -22,6 +27,7 @@ CONF_arm:=--with-cpu=arm_nofpu
 else
 ifeq ($(ARCH),armhf)
 CONF_arm:=--with-cpu=neon
+CFLAGS += -mfpu=neon
 endif
 endif
 
@@ -31,11 +37,6 @@ DEV_PKG:=libmpg123-dev
 LIB_PKGSTR:=-p$(LIB_PKG) -p$(DEV_PKG)
 ARCH_PKGSTR=-pmpg123
 ALL_PKGSTR=$(LIB_PKGSTR) $(ARCH_PKGSTR)
-
-CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
-CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
-CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)
-LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
 
 LDFLAGS += -Wl,--as-needed
 
