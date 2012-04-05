@@ -38,6 +38,10 @@ LIB_PKGSTR:=-p$(LIB_PKG) -p$(DEV_PKG)
 ARCH_PKGSTR=-pmpg123
 ALL_PKGSTR=$(LIB_PKGSTR) $(ARCH_PKGSTR)
 
+ifeq ($(ARCH),armhf)
+  CFLAGS += -marm
+endif
+
 LDFLAGS += -Wl,--as-needed
 
 #export DH_VERBOSE=1
