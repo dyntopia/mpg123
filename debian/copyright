@@ -16,7 +16,7 @@ License: LGPL-2.1
 
 Files: debian/*
 Copyright:
- 2012 Miguel Colon <debian.micove@gmail.com>
+ 2012 Miguel A. Colón Vélez <debian.micove@gmail.com>
  2012 Alessio Treglia <alessio@debian.org>
  2002-2010 Daniel Kobras <kobras@debian.org>
  2000-2001 Tommi Virtanen <tv@debian.org>
