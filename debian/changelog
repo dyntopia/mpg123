@@ -1,3 +1,14 @@
+mpg123 (1.13.8-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+    - Fix build for ARM Thumb (incompatible assembly in some macros).
+  * Add myself to the uploaders list.
+  * Update copyright file.
+  * debian/rules:
+    - Remove -marm from the CFLAGS. It's now properly fixed upstream.
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Sat, 14 Apr 2012 01:21:46 -0400
+
 mpg123 (1.13.7-7) unstable; urgency=low
 
   [ Miguel Colon ]
