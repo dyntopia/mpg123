@@ -22,14 +22,6 @@ CONF_COMMON:=--enable-static=no --enable-shared --enable-lfs-alias \
 	--with-module-suffix=.so
 
 CONF_i486:=--with-cpu=x86_dither
-ifeq ($(ARCH),armel)
-CONF_arm:=--with-cpu=arm_nofpu
-else
-ifeq ($(ARCH),armhf)
-CONF_arm:=--with-cpu=neon
-CFLAGS += -mfpu=neon
-endif
-endif
 
 SOVERSION:=0
 LIB_PKG:=libmpg123-$(SOVERSION)
