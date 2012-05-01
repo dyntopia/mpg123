@@ -30,6 +30,9 @@ libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_format_support@Base 1.6.2
  mpg123_framebyframe_decode@Base 1.10.0
  mpg123_framebyframe_next@Base 1.10.0
+ mpg123_framedata@Base 1.14.0
+ mpg123_framepos@Base 1.14.0
+ mpg123_framepos_64@Base 1.14.0
  mpg123_free_string@Base 1.6.2
  mpg123_geteq@Base 1.6.2
  mpg123_getformat@Base 1.6.2
@@ -38,8 +41,8 @@ libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_getstate@Base 1.6.2
  mpg123_getvolume@Base 1.6.2
  mpg123_grow_string@Base 1.6.2
- mpg123_icy@Base 1.6.2
  mpg123_icy2utf8@Base 1.6.2
+ mpg123_icy@Base 1.6.2
  mpg123_id3@Base 1.6.2
  mpg123_index@Base 1.6.2
  mpg123_info@Base 1.6.2
@@ -47,6 +50,7 @@ libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_init_string@Base 1.6.2
  mpg123_length@Base 1.6.2
  mpg123_meta_check@Base 1.6.2
+ mpg123_meta_free@Base 1.14.0
  mpg123_new@Base 1.6.2
  mpg123_new_pars@Base 1.6.2
  mpg123_open@Base 1.6.2
@@ -74,13 +78,14 @@ libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_set_index@Base 1.10.0
  mpg123_set_string@Base 1.6.2
  mpg123_set_substring@Base 1.6.2
+ mpg123_spf@Base 1.14.0
  mpg123_store_utf8@Base 1.9.1
  mpg123_strerror@Base 1.6.2
  mpg123_strlen@Base 1.13.7
  mpg123_supported_decoders@Base 1.6.2
  mpg123_tell@Base 1.6.2
- mpg123_tellframe@Base 1.6.2
  mpg123_tell_stream@Base 1.6.2
+ mpg123_tellframe@Base 1.6.2
  mpg123_timeframe@Base 1.6.2
  mpg123_tpf@Base 1.6.2
  mpg123_volume@Base 1.6.2
