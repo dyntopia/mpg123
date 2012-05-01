@@ -63,8 +63,9 @@ With this switch you can make it bail out on data errors
 The old name still works, but is not advertised or recommened to use (subject to removal in future).
 .TP
 \fB\-\^-resync\-limit \fIbytes\fR
-Set number of bytes to search for valid MPEG data; <0 means search whole stream.
+Set number of bytes to search for valid MPEG data once lost in stream; <0 means search whole stream.
 If you know there are huge chunks of invalid data in your files... here is your hammer.
+Note: Only since version 1.14 this also increases the amount of junk skipped on beginning.
 .TP
 \fB\-p \fIURL \fR| \fBnone\fR, \fB\-\^\-proxy \fIURL \fR| \fBnone
 The specified
@@ -102,7 +103,7 @@ Of the playlist, play specified entry only.
 is the number of entry starting at 1. A value of 0 is the default and means playling the whole list,  a negative value means showing of the list of titles with their numbers...
 .TP
 \fB\-\-loop \fItimes\fR
-for looping track(s) a certain number of times, < 0 means infinite loop (not with --random!).
+for looping track(s) a certain number of times, < 0 means infinite loop (not with \-\-random!).
 .TP
 .BR \-\-keep\-open
 For remote control mode: Keep loaded file open after reaching end.
@@ -227,7 +228,7 @@ Force stereo output
 .TP
 \fB\-r \fIrate\fR, \fB\-\^\-rate \fIrate
 Set sample rate (default: automatic).  You may want to
-change this if you need a constant bitrate independed of
+change this if you need a constant bitrate independent of
 the mpeg stream rate. mpg123 automagically converts the
 rate. You should then combine this with \-\-stereo or \-\-mono.
 .TP

@@ -1,7 +1,7 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define if your architecture wants/needs/can use attribute_align_arg and
-   alignment checks. It's for 32bit x86... */
+   alignment checks. It is for 32bit x86... */
 #undef ABI_ALIGN_FUN
 
 /* Define to use proper rounding. */
@@ -284,7 +284,7 @@
 #undef NO_ERETURN
 
 /* Define to disable error messages. */
-#undef NO_ERROR
+#undef NO_ERRORMSG
 
 /* Define to disable feeder and buffered readers. */
 #undef NO_FEEDER
@@ -364,11 +364,17 @@
 /* Version number of package */
 #undef VERSION
 
+/* Define to use Win32 named pipes */
+#undef WANT_WIN32_FIFO
+
 /* Define to use Win32 sockets */
 #undef WANT_WIN32_SOCKETS
 
 /* Define to use Unicode for Windows */
 #undef WANT_WIN32_UNICODE
+
+/* WinXP and above for ipv6 */
+#undef WINVER
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
@@ -387,6 +393,9 @@
 
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
+
+/* WinXP and above for ipv6 */
+#undef _WIN32_WINNT
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
