@@ -1,3 +1,14 @@
+mpg123 (1.14.0-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+    - Handle out-of-disk in the file writers. (Closes: #67259)
+  * Drop patches which have been merged upstream:
+    - 0002-hardening.patch
+    - 0003-spelling_errors.patch
+    - 0004-hyphen_used_as_minus_sign.patch
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Tue, 01 May 2012 00:23:05 -0400
+
 mpg123 (1.13.8-1) unstable; urgency=low
 
   * New upstream release.
