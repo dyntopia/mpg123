@@ -1,3 +1,11 @@
+mpg123 (1.14.1-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fix subtle bug that could trigger failure to detect a format change on
+      resync when using libmpg123's feeder API.
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Mon, 07 May 2012 23:00:43 -0400
+
 mpg123 (1.14.0-1) unstable; urgency=low
 
   * New upstream release.
