@@ -1,3 +1,10 @@
+mpg123 (1.14.2-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fix writing of WAV to stdout.
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Sat, 12 May 2012 13:30:02 -0400
+
 mpg123 (1.14.1-1) unstable; urgency=low
 
   * New upstream release.
