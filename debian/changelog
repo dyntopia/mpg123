@@ -1,3 +1,14 @@
+mpg123 (1.14.4-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fix regression from 1.14.1 in parsing of bad free format streams.
+      (Closes: #677148)
+    - Fix resync logic to properly work again (used to prematurely end stream
+      on bad headers).
+    - Fix multiple seek regressions.
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Wed, 05 Sep 2012 03:31:20 -0400
+
 mpg123 (1.14.2+svn20120622-1) unstable; urgency=low
 
   * Fresh snapshot from upstream.
