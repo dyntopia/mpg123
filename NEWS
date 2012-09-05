@@ -1,8 +1,11 @@
-1.15.0
+1.14.4
 ---
-- added --continue (also see scripts/conplay)
-- added number row to terminal control keys for 10% jump points (for navigating long tracks)
-- Set xterm title always if asked, disregarding the -q switch (if you want fully quiet, don't specify --title).
+
+Who reworks a parsing and data mangling without really making sure that things still work like before? I hope I won't do so in future. Not again.
+
+- Fix resync logic to properly work again (used to prematurely end stream on bad headers). A regression again, this sucks, but at least we got a regression test for that now.
+- Fix aeon-old regression (since 1.11.0) about short seeks: Bit reservoir was reset also for short seeks that did not break continuity.
+- Another damned regression got fixed: Sample-accurate seek for files without full gapless info.
 
 1.14.3
 ---
@@ -23,6 +26,7 @@
 - libmpg123 API version 36 (see NEWS.libmpg123)
 - Add --ignore-streamlength.
 - But also deal with concatenated (Frankenstein) streams: Not applying gapless cutting once we're over the announced number of frames.
+- Also, gapless cutting is only applied if relevant information is present. Previously, at least the decoder delay has been cut.
 - Add --lyrics for printout of lyrics (from USLT in ID3v2).
 - Added handling of SIGUSR1 and SIGUSER2 to terminal control code, configurable via --ctrlusr1 and --ctrlusr2.
 - Some low-level API added (mpg123_framedata(), mpg123_framepos(), buffering and resampling control).
