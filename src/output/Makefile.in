@@ -74,19 +74,20 @@ host_triplet = @host@
 @HAVE_MODULES_TRUE@@HAVE_OSS_TRUE@am__append_6 = output_oss.la
 @HAVE_MODULES_TRUE@@HAVE_PORTAUDIO_TRUE@am__append_7 = output_portaudio.la
 @HAVE_MODULES_TRUE@@HAVE_PULSE_TRUE@am__append_8 = output_pulse.la
-@HAVE_MODULES_TRUE@@HAVE_SDL_TRUE@am__append_9 = output_sdl.la
-@HAVE_MODULES_TRUE@@HAVE_SNDIO_TRUE@am__append_10 = output_sndio.la
-@HAVE_MODULES_TRUE@@HAVE_SUN_TRUE@am__append_11 = output_sun.la
-@HAVE_MODULES_TRUE@@HAVE_WIN32_TRUE@am__append_12 = output_win32.la
-@HAVE_AIX_TRUE@@HAVE_MODULES_TRUE@am__append_13 = output_aix.la
-@HAVE_ALIB_TRUE@@HAVE_MODULES_TRUE@am__append_14 = output_alib.la
-@HAVE_ARTS_TRUE@@HAVE_MODULES_TRUE@am__append_15 = output_arts.la
-@HAVE_HP_TRUE@@HAVE_MODULES_TRUE@am__append_16 = output_hp.la
-@HAVE_MODULES_TRUE@@HAVE_OS2_TRUE@am__append_17 = output_os2.la
-@HAVE_MODULES_TRUE@@HAVE_SGI_TRUE@am__append_18 = output_sgi.la
-@HAVE_MINT_TRUE@@HAVE_MODULES_TRUE@am__append_19 = output_mint.la
-@HAVE_MODULES_TRUE@@HAVE_OPENAL_TRUE@am__append_20 = output_openal.la
-@HAVE_DUMMY_TRUE@@HAVE_MODULES_TRUE@am__append_21 = output_dummy.la
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@am__append_9 = output_qsa.la
+@HAVE_MODULES_TRUE@@HAVE_SDL_TRUE@am__append_10 = output_sdl.la
+@HAVE_MODULES_TRUE@@HAVE_SNDIO_TRUE@am__append_11 = output_sndio.la
+@HAVE_MODULES_TRUE@@HAVE_SUN_TRUE@am__append_12 = output_sun.la
+@HAVE_MODULES_TRUE@@HAVE_WIN32_TRUE@am__append_13 = output_win32.la
+@HAVE_AIX_TRUE@@HAVE_MODULES_TRUE@am__append_14 = output_aix.la
+@HAVE_ALIB_TRUE@@HAVE_MODULES_TRUE@am__append_15 = output_alib.la
+@HAVE_ARTS_TRUE@@HAVE_MODULES_TRUE@am__append_16 = output_arts.la
+@HAVE_HP_TRUE@@HAVE_MODULES_TRUE@am__append_17 = output_hp.la
+@HAVE_MODULES_TRUE@@HAVE_OS2_TRUE@am__append_18 = output_os2.la
+@HAVE_MODULES_TRUE@@HAVE_SGI_TRUE@am__append_19 = output_sgi.la
+@HAVE_MINT_TRUE@@HAVE_MODULES_TRUE@am__append_20 = output_mint.la
+@HAVE_MODULES_TRUE@@HAVE_OPENAL_TRUE@am__append_21 = output_openal.la
+@HAVE_DUMMY_TRUE@@HAVE_MODULES_TRUE@am__append_22 = output_dummy.la
 subdir = src/output
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(top_srcdir)/build/depcomp
@@ -289,6 +290,16 @@ output_pulse_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(CFLAGS) $(output_pulse_la_LDFLAGS) $(LDFLAGS) -o $@
 @HAVE_MODULES_TRUE@@HAVE_PULSE_TRUE@am_output_pulse_la_rpath = -rpath \
 @HAVE_MODULES_TRUE@@HAVE_PULSE_TRUE@	$(pkglibdir)
+output_qsa_la_DEPENDENCIES =
+am__output_qsa_la_SOURCES_DIST = qsa.c
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@am_output_qsa_la_OBJECTS =  \
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@	output_qsa_la-qsa.lo
+output_qsa_la_OBJECTS = $(am_output_qsa_la_OBJECTS)
+output_qsa_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(output_qsa_la_CFLAGS) \
+	$(CFLAGS) $(output_qsa_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@am_output_qsa_la_rpath = -rpath \
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@	$(pkglibdir)
 output_sdl_la_DEPENDENCIES =
 am__output_sdl_la_SOURCES_DIST = sdl.c
 @HAVE_MODULES_TRUE@@HAVE_SDL_TRUE@am_output_sdl_la_OBJECTS =  \
@@ -360,9 +371,9 @@ SOURCES = $(output_aix_la_SOURCES) $(output_alib_la_SOURCES) \
 	$(output_nas_la_SOURCES) $(output_openal_la_SOURCES) \
 	$(output_os2_la_SOURCES) $(output_oss_la_SOURCES) \
 	$(output_portaudio_la_SOURCES) $(output_pulse_la_SOURCES) \
-	$(output_sdl_la_SOURCES) $(output_sgi_la_SOURCES) \
-	$(output_sndio_la_SOURCES) $(output_sun_la_SOURCES) \
-	$(output_win32_la_SOURCES)
+	$(output_qsa_la_SOURCES) $(output_sdl_la_SOURCES) \
+	$(output_sgi_la_SOURCES) $(output_sndio_la_SOURCES) \
+	$(output_sun_la_SOURCES) $(output_win32_la_SOURCES)
 DIST_SOURCES = $(am__output_aix_la_SOURCES_DIST) \
 	$(am__output_alib_la_SOURCES_DIST) \
 	$(am__output_alsa_la_SOURCES_DIST) \
@@ -379,6 +390,7 @@ DIST_SOURCES = $(am__output_aix_la_SOURCES_DIST) \
 	$(am__output_oss_la_SOURCES_DIST) \
 	$(am__output_portaudio_la_SOURCES_DIST) \
 	$(am__output_pulse_la_SOURCES_DIST) \
+	$(am__output_qsa_la_SOURCES_DIST) \
 	$(am__output_sdl_la_SOURCES_DIST) \
 	$(am__output_sgi_la_SOURCES_DIST) \
 	$(am__output_sndio_la_SOURCES_DIST) \
@@ -516,6 +528,9 @@ PORTAUDIO_LIBS = @PORTAUDIO_LIBS@
 PULSE_CFLAGS = @PULSE_CFLAGS@
 PULSE_LDFLAGS = @PULSE_LDFLAGS@
 PULSE_LIBS = @PULSE_LIBS@
+QSA_CFLAGS = @QSA_CFLAGS@
+QSA_LDFLAGS = @QSA_LDFLAGS@
+QSA_LIBS = @QSA_LIBS@
 RANLIB = @RANLIB@
 SDL_CFLAGS = @SDL_CFLAGS@
 SDL_LDFLAGS = @SDL_LDFLAGS@
@@ -605,7 +620,8 @@ AM_CPPFLAGS = -DBUILDING_OUTPUT_MODULES=1
 @HAVE_MODULES_TRUE@	$(am__append_14) $(am__append_15) \
 @HAVE_MODULES_TRUE@	$(am__append_16) $(am__append_17) \
 @HAVE_MODULES_TRUE@	$(am__append_18) $(am__append_19) \
-@HAVE_MODULES_TRUE@	$(am__append_20) $(am__append_21)
+@HAVE_MODULES_TRUE@	$(am__append_20) $(am__append_21) \
+@HAVE_MODULES_TRUE@	$(am__append_22)
 @HAVE_ALSA_TRUE@@HAVE_MODULES_TRUE@output_alsa_la_SOURCES = alsa.c
 @HAVE_ALSA_TRUE@@HAVE_MODULES_TRUE@output_alsa_la_LDFLAGS = -module -no-undefined -avoid-version -export-dynamic  -export-symbols-regex '^mpg123_' @ALSA_LDFLAGS@
 @HAVE_ALSA_TRUE@@HAVE_MODULES_TRUE@output_alsa_la_CFLAGS = @ALSA_CFLAGS@
@@ -638,6 +654,10 @@ AM_CPPFLAGS = -DBUILDING_OUTPUT_MODULES=1
 @HAVE_MODULES_TRUE@@HAVE_PULSE_TRUE@output_pulse_la_LDFLAGS = -module -no-undefined -avoid-version -export-dynamic  -export-symbols-regex '^mpg123_' @PULSE_LDFLAGS@
 @HAVE_MODULES_TRUE@@HAVE_PULSE_TRUE@output_pulse_la_CFLAGS = @PULSE_CFLAGS@
 @HAVE_MODULES_TRUE@@HAVE_PULSE_TRUE@output_pulse_la_LIBADD = @PULSE_LIBS@ 
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@output_qsa_la_SOURCES = qsa.c
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@output_qsa_la_LDFLAGS = -module -no-undefined -avoid-version -export-dynamic  -export-symbols-regex '^mpg123_' @QSA_LDFLAGS@
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@output_qsa_la_CFLAGS = @QSA_CFLAGS@
+@HAVE_MODULES_TRUE@@HAVE_QSA_TRUE@output_qsa_la_LIBADD = @QSA_LIBS@ 
 @HAVE_MODULES_TRUE@@HAVE_SDL_TRUE@output_sdl_la_SOURCES = sdl.c
 @HAVE_MODULES_TRUE@@HAVE_SDL_TRUE@output_sdl_la_LDFLAGS = -module -no-undefined -avoid-version -export-dynamic  -export-symbols-regex '^mpg123_' @SDL_LDFLAGS@
 @HAVE_MODULES_TRUE@@HAVE_SDL_TRUE@output_sdl_la_CFLAGS = @SDL_CFLAGS@
@@ -793,6 +813,8 @@ output_portaudio.la: $(output_portaudio_la_OBJECTS) $(output_portaudio_la_DEPEND
 	$(output_portaudio_la_LINK) $(am_output_portaudio_la_rpath) $(output_portaudio_la_OBJECTS) $(output_portaudio_la_LIBADD) $(LIBS)
 output_pulse.la: $(output_pulse_la_OBJECTS) $(output_pulse_la_DEPENDENCIES) $(EXTRA_output_pulse_la_DEPENDENCIES) 
 	$(output_pulse_la_LINK) $(am_output_pulse_la_rpath) $(output_pulse_la_OBJECTS) $(output_pulse_la_LIBADD) $(LIBS)
+output_qsa.la: $(output_qsa_la_OBJECTS) $(output_qsa_la_DEPENDENCIES) $(EXTRA_output_qsa_la_DEPENDENCIES) 
+	$(output_qsa_la_LINK) $(am_output_qsa_la_rpath) $(output_qsa_la_OBJECTS) $(output_qsa_la_LIBADD) $(LIBS)
 output_sdl.la: $(output_sdl_la_OBJECTS) $(output_sdl_la_DEPENDENCIES) $(EXTRA_output_sdl_la_DEPENDENCIES) 
 	$(output_sdl_la_LINK) $(am_output_sdl_la_rpath) $(output_sdl_la_OBJECTS) $(output_sdl_la_LIBADD) $(LIBS)
 output_sgi.la: $(output_sgi_la_OBJECTS) $(output_sgi_la_DEPENDENCIES) $(EXTRA_output_sgi_la_DEPENDENCIES) 
@@ -826,6 +848,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/output_oss_la-oss.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/output_portaudio_la-portaudio.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/output_pulse_la-pulse.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/output_qsa_la-qsa.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/output_sdl_la-sdl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/output_sgi_la-sgi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/output_sndio_la-sndio.Plo@am__quote@
@@ -964,6 +987,13 @@ output_pulse_la-pulse.lo: pulse.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='pulse.c' object='output_pulse_la-pulse.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(output_pulse_la_CFLAGS) $(CFLAGS) -c -o output_pulse_la-pulse.lo `test -f 'pulse.c' || echo '$(srcdir)/'`pulse.c
+
+output_qsa_la-qsa.lo: qsa.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(output_qsa_la_CFLAGS) $(CFLAGS) -MT output_qsa_la-qsa.lo -MD -MP -MF $(DEPDIR)/output_qsa_la-qsa.Tpo -c -o output_qsa_la-qsa.lo `test -f 'qsa.c' || echo '$(srcdir)/'`qsa.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/output_qsa_la-qsa.Tpo $(DEPDIR)/output_qsa_la-qsa.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qsa.c' object='output_qsa_la-qsa.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(output_qsa_la_CFLAGS) $(CFLAGS) -c -o output_qsa_la-qsa.lo `test -f 'qsa.c' || echo '$(srcdir)/'`qsa.c
 
 output_sdl_la-sdl.lo: sdl.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(output_sdl_la_CFLAGS) $(CFLAGS) -MT output_sdl_la-sdl.lo -MD -MP -MF $(DEPDIR)/output_sdl_la-sdl.Tpo -c -o output_sdl_la-sdl.lo `test -f 'sdl.c' || echo '$(srcdir)/'`sdl.c

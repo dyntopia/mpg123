@@ -7,12 +7,11 @@ dnl initially written by Nicholas J. Humfrey
 dnl Require autoconf version >= 2.57
 AC_PREREQ(2.57)
 
-
 dnl ############# Initialisation
-AC_INIT([mpg123], [1.14.4], [mpg123-devel@lists.sourceforge.net])
+AC_INIT([mpg123], [1.15.1], [mpg123-devel@lists.sourceforge.net])
 dnl Increment API_VERSION when the API gets changes (new functions).
-API_VERSION=36
-LIB_PATCHLEVEL=6
+API_VERSION=37
+LIB_PATCHLEVEL=1
 dnl Since we want to be backwards compatible, both sides get set to API_VERSION.
 LIBMPG123_VERSION=$API_VERSION:$LIB_PATCHLEVEL:$API_VERSION
 AC_SUBST(LIBMPG123_VERSION)
@@ -496,7 +495,7 @@ case $host in
     newoldwritesample=enabled
   ;;
   x86_64-*-linux*|x86_64-*-kfreebsd*-gnu)
-    cpu_type="x86-64_all"
+    cpu_type="x86-64"
   ;;
   *-*-linux*|*-*-kfreebsd*-gnu)
     cpu_type="generic_fpu"
@@ -506,7 +505,7 @@ case $host in
     case `sysctl -n hw.optional.x86_64` in
       1)
         AC_MSG_RESULT([yes])
-        cpu_type="x86-64_all"
+        cpu_type="x86-64"
       ;;
       *)
         AC_MSG_RESULT([no])
@@ -520,7 +519,7 @@ case $host in
     newoldwritesample=enabled
   ;;
   x86_64-apple-darwin*)
-    cpu_type="x86-64_all"
+    cpu_type="x86-64"
   ;;
   *-apple-darwin*)
     AC_MSG_CHECKING([if CPU type supports AltiVec])
@@ -540,7 +539,7 @@ case $host in
     newoldwritesample=enabled
   ;;
   x86_64-*-dragonfly* | x86_64-*-freebsd* | x86_64-*-midnightbsd* | x86_64-*-mirbsd* | x86_64-*-netbsd* | x86_64-*-openbsd*)
-    cpu_type="x86-64_all"
+    cpu_type="x86-64"
   ;;
   *-*-dragonfly* | *-*-freebsd* | *-*-midnightbsd* | *-*-mirbsd* | *-*-netbsd* | *-*-openbsd*)
     cpu_type="generic_fpu"
@@ -550,7 +549,7 @@ case $host in
     newoldwritesample=enabled
   ;;
   x86_64-*-solaris*)
-    cpu_type=x86-64_all
+    cpu_type=x86-64
   ;;
   *-*-solaris*)
     cpu_type="generic_fpu"
@@ -572,7 +571,7 @@ case $host in
     cpu_type="generic_fpu"
   ;;
   x86_64-pc-cygwin*)
-    cpu_type="x86-64_all"
+    cpu_type="x86-64"
   ;;
   i686-pc-cygwin*)
     cpu_type="x86"
@@ -604,6 +603,10 @@ case $host in
     buffer=disabled
     cpu_type="x86-64"
   ;;
+  i386-*-nto-qnx*)
+    cpu_type="x86"
+    newoldwritesample=enabled
+  ;;
 	i386-*)
 		AC_MSG_WARN([Unknown host operating system])
 		cpu_type="i386"
@@ -634,7 +637,7 @@ case $host in
 	;;
 	x86_64-*)
 		AC_MSG_WARN([Unknown host operating system])
-		cpu_type="x86-64_all"
+		cpu_type="x86-64"
 		buffer=disabled
 		ADD_CPPFLAGS="-DGENERIC $ADD_CPPFLAGS"
 	;;
@@ -801,6 +804,7 @@ AC_ARG_WITH([default-audio], [
   --with-default-audio=oss        Use OSS as default audio output sub-system (/dev/dsp)
   --with-default-audio=portaudio  Use PortAudio as default audio output sub-system
   --with-default-audio=pulse      Use Pulse audio server as default audio output sub-system
+  --with-default-audio=qsa        Use QSA as default audio output sub-system
   --with-default-audio=sdl        Use SDL as default audio output sub-system (Simple DirectMedia Layer)
   --with-default-audio=sgi        Use SGI as default audio output sub-system (IRIX)
   --with-default-audio=sndio      Use OpenBSD's sndio as default audio output sub-system
@@ -839,6 +843,18 @@ AC_DEFINE_UNQUOTED( MODULE_FILE_SUFFIX, "$with_module_suffix", [The suffix for m
 dnl ############## Assembler, compiler properties
 
 # based on posting from John Dalgliesh <johnd@defyne.org> on ffmpeg (LGPL) mailing list
+# extended to use balign if present
+AC_MSG_CHECKING([if .balign is present])
+echo '.balign 4' > conftest.s
+if $CCAS -c -o conftest.o conftest.s 1>/dev/null 2>&1; then
+
+  AC_MSG_RESULT([yes])
+  AC_DEFINE(ASMALIGN_BALIGN, 1, [ Define if .balign is present. ])
+
+else
+
+AC_MSG_RESULT([no])
+
 # find if .align arg is power-of-two or not
 asmalign_exp="unknown"
 if test x"$asmalign_exp" = xunknown; then
@@ -855,6 +871,10 @@ if test x"$asmalign_exp" = xunknown; then
 fi
 if test x"$asmalign_exp" = xyes; then
 	AC_DEFINE(ASMALIGN_EXP, 1, [ Define if .align takes 3 for alignment of 2^3=8 bytes instead of 8. ])
+else
+	AC_DEFINE(ASMALIGN_BYTE, 1, [ Define if .align just takes byte count. ])
+fi
+
 fi
 
 ccalign="unknown"
@@ -1054,7 +1074,10 @@ ADD_CPPFLAGS=""
 ADD_LDFLAGS=""
 LIBS="$LIBS"
 
+# Consider moving that stuff.
 AC_CHECK_HEADER([os2.h], [ADD_CPPFLAGS="$ADD_CPPFLAGS -DOS2"])
+# On OS/2, we need to link to os2term to make terminal control actually work.
+AC_CHECK_LIB([os2term], [tcsetattr], [ADD_LDFLAGS="$ADD_LDFLAGS -los2term"])
 
 # If debugging is enabled then make warnings errors
 if test x"$debugging" = xenabled; then
@@ -1216,11 +1239,11 @@ dnl Not disabling buffer for float mode... check that this is OK now!
     ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_MULTI -DOPT_GENERIC -DOPT_GENERIC_DITHER -DOPT_I386 -DOPT_I586 -DOPT_I586_DITHER -DOPT_MMX -DOPT_3DNOW -DOPT_3DNOWEXT -DOPT_SSE -DREAL_IS_FLOAT"
     more_sources="$s_fpu $s_i386 $s_i586 $s_i586d $s_mmx $s_3dnow $s_3dnowext $s_sse $s_x86multi $s_dither"
   ;;
-  x86-64) 
+  x86-64_alone) 
     ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_X86_64 -DREAL_IS_FLOAT"
     more_sources="$s_fpu $s_x86_64"
   ;;
-  x86-64_all|x86-64_dither)
+  x86-64|x86-64_all|x86-64_dither)
     ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_MULTI -DOPT_X86_64 -DOPT_GENERIC -DOPT_GENERIC_DITHER -DREAL_IS_FLOAT"
     more_sources="$s_fpu $s_x86_64 $s_dither"
   ;;
@@ -1263,11 +1286,27 @@ if test "x$feature_report" = xenabled; then
 	more_sources="$more_sources feature"
 fi
 
+# Return 0 if first arg appears in list of following arguments.
+# Return 1 otherwise.
+word_in_list() {
+  word=$1
+  shift
+  # Avoid naming conflict with the outside!
+  # Is local not POSIX sh?
+  for given_word in "$@"
+  do
+    if test "x$word" == "x$given_word"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 for i in $more_sources
 do
-  # Echo make sure every file is only once in the list.
-  echo "$DECODER_OBJ" | $GREP -v -w "$i\.\$(OBJEXT)" > /dev/null && DECODER_OBJ="$DECODER_OBJ $i.\$(OBJEXT)"
-  echo "$DECODER_LOBJ" | $GREP -v -w "$i\.lo" > /dev/null && DECODER_LOBJ="$DECODER_LOBJ $i.lo"
+  # Make sure every file is only once in the list.
+  word_in_list "$i.\$(OBJEXT)" $DECODER_OBJ || DECODER_OBJ="$DECODER_OBJ $i.\$(OBJEXT)"
+  word_in_list "$i.lo" $DECODER_LOBJ || DECODER_LOBJ="$DECODER_LOBJ $i.lo"
 done
 
 AC_SUBST(DECODER_OBJ)
@@ -1283,6 +1322,14 @@ dnl ############## Output module choice
 
 # The full list of supported modules to check, first come, first serve.
 check_modules="alsa oss coreaudio sndio sun win32 os2 esd jack portaudio pulse sdl nas arts openal dummy"
+# Only check qsa before all else on QNX.
+# It would mask ALSA otherwise.
+case $host in
+  *-nto-qnx*)
+    check_modules="qsa $check_modules"
+  ;;
+esac
+
 # The final list.
 output_modules=
 
@@ -1318,7 +1365,13 @@ do
 				check_failed=yes
 			fi
 		;;
+		# QSA and ALSA are not distinguishable in these tests, need to block
+		# each other and play with test order depending on platform.
 		alsa)
+			if test "x$HAVE_QSA" == xyes; then
+				HAVE_ALSA=no
+			else
+
 			ALSA_LIBS="-lasound"
 			# Check for ALSA
 			AC_CHECK_LIB( [asound], [snd_pcm_open],
@@ -1330,6 +1383,27 @@ do
 			if test "x$HAVE_ALSA" != xyes; then
 				check_failed=yes
 			fi
+
+			fi # HAVE_QSA
+		;;
+		qsa)
+			if test "x$HAVE_ALSA" == xyes; then
+				HAVE_QSA=no
+			else
+
+			QSA_LIBS="-lasound"
+			# Check for QSA
+			AC_CHECK_LIB( [asound], [snd_pcm_open],
+				[ AC_CHECK_HEADER( [sys/asoundlib.h],
+					[ output_modules="$output_modules qsa" HAVE_QSA="yes"],
+					[ AC_MSG_WARN([Found QSA library but NOT header files on your system]) ] )
+				]
+			)
+			if test "x$HAVE_QSA" != xyes; then
+				check_failed=yes
+			fi
+
+			fi # HAVE_ALSA
 		;;
 		jack)
 			PKG_CHECK_MODULES(JACK, jack, output_modules="$output_modules jack" HAVE_JACK="yes", HAVE_JACK="no" check_failed=yes)
@@ -1566,6 +1640,10 @@ AC_SUBST(ALSA_LIBS)
 AC_SUBST(ALSA_LDFLAGS)
 AC_SUBST(ALSA_CFLAGS)
 AM_CONDITIONAL( [HAVE_ALSA], [test "x$HAVE_ALSA" = xyes] )
+AC_SUBST(QSA_LIBS)
+AC_SUBST(QSA_LDFLAGS)
+AC_SUBST(QSA_CFLAGS)
+AM_CONDITIONAL( [HAVE_QSA], [test "x$HAVE_QSA" = xyes] )
 AC_SUBST(OSS_LIBS)
 AC_SUBST(OSS_LDFLAGS)
 AC_SUBST(OSS_CFLAGS)
@@ -1687,6 +1765,11 @@ then
 			OUTPUT_LIBS="$ALSA_LIBS"
 			OUTPUT_LDFLAGS="$ALSA_LDFLAGS"
 			OUTPUT_CFLAGS="$ALSA_CFLAGS"
+		;;
+		qsa)
+			OUTPUT_LIBS="$QSA_LIBS"
+			OUTPUT_LDFLAGS="$QSA_LDFLAGS"
+			OUTPUT_CFLAGS="$QSA_CFLAGS"
 		;;
 		coreaudio)
 			OUTPUT_LIBS="$COREAUDIO_LIBS"
@@ -2024,6 +2107,15 @@ fi
 
 fi #END OF WIN32 CHECKS
 
+#### Check mingw.org for EOVERFLOW
+AC_MSG_CHECKING([if we have EOVERFLOW macro])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+#include <errno.h>
+int i = (EOVERFLOW) + 0;
+])],[eoverflow_present=yes],[eoverflow_present=no])
+AC_MSG_RESULT([$eoverflow_present])
+AS_IF([test "x$eoverflow_present" = "xyes"],[],[AC_DEFINE([EOVERFLOW],[EFBIG],[Use EFBIG as substitude for EOVERFLOW, mingw.org may lack the latter])])
+
 #### Use Win32 support codes
 AM_CONDITIONAL([WIN32_CODES], [ test "x$win32_specific_codes" = xenabled ])
 
@@ -2120,15 +2212,6 @@ else
 fi
 echo "  LFS alias symbols ....... $lfs_alias ($LFS_ALIAS_BITS)"
 
-echo "  Alignment checks ........ $aligncheck"
-if test x"$aligncheck" = xenabled; then
-	if test x"$ccalign" != xyes; then
-		echo "   (without effect since special alignment is not employed)"
-	fi
-	if test x"$GCC" = xyes; then
-		echo "   (note that newer gcc 4.x versions do not use/need the align check)"
-	fi
-fi
 echo -n "
   Core libmpg123 features:
   Integer conversion ...... $integers

@@ -51,8 +51,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = mpg123$(EXEEXT)
-EXTRA_PROGRAMS = tests/seek_accuracy$(EXEEXT) \
-	tests/seek_whence$(EXEEXT) tests/noise$(EXEEXT) \
+EXTRA_PROGRAMS = tests/seek_whence$(EXEEXT) tests/noise$(EXEEXT) \
 	tests/text$(EXEEXT) tests/plain_id3$(EXEEXT)
 @WIN32_CODES_TRUE@am__append_1 = \
 @WIN32_CODES_TRUE@	win32_support.c \
@@ -102,9 +101,6 @@ tests_noise_LDADD = $(LDADD)
 am__dirstamp = $(am__leading_dot)dirstamp
 am_tests_plain_id3_OBJECTS = plain_id3.$(OBJEXT) compat.$(OBJEXT)
 tests_plain_id3_OBJECTS = $(am_tests_plain_id3_OBJECTS)
-am_tests_seek_accuracy_OBJECTS = seek_accuracy.$(OBJEXT) \
-	compat.$(OBJEXT)
-tests_seek_accuracy_OBJECTS = $(am_tests_seek_accuracy_OBJECTS)
 am_tests_seek_whence_OBJECTS = seek_whence.$(OBJEXT) compat.$(OBJEXT)
 tests_seek_whence_OBJECTS = $(am_tests_seek_whence_OBJECTS)
 am_tests_text_OBJECTS = text.$(OBJEXT) compat.$(OBJEXT)
@@ -123,11 +119,11 @@ LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(mpg123_SOURCES) $(tests_noise_SOURCES) \
-	$(tests_plain_id3_SOURCES) $(tests_seek_accuracy_SOURCES) \
-	$(tests_seek_whence_SOURCES) $(tests_text_SOURCES)
+	$(tests_plain_id3_SOURCES) $(tests_seek_whence_SOURCES) \
+	$(tests_text_SOURCES)
 DIST_SOURCES = $(am__mpg123_SOURCES_DIST) $(tests_noise_SOURCES) \
-	$(tests_plain_id3_SOURCES) $(tests_seek_accuracy_SOURCES) \
-	$(tests_seek_whence_SOURCES) $(tests_text_SOURCES)
+	$(tests_plain_id3_SOURCES) $(tests_seek_whence_SOURCES) \
+	$(tests_text_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -298,6 +294,9 @@ PORTAUDIO_LIBS = @PORTAUDIO_LIBS@
 PULSE_CFLAGS = @PULSE_CFLAGS@
 PULSE_LDFLAGS = @PULSE_LDFLAGS@
 PULSE_LIBS = @PULSE_LIBS@
+QSA_CFLAGS = @QSA_CFLAGS@
+QSA_LDFLAGS = @QSA_LDFLAGS@
+QSA_LIBS = @QSA_LIBS@
 RANLIB = @RANLIB@
 SDL_CFLAGS = @SDL_CFLAGS@
 SDL_LDFLAGS = @SDL_LDFLAGS@
@@ -388,13 +387,6 @@ mpg123_SOURCES = audio.c audio.h buffer.c buffer.h common.c common.h \
 	metaprint.c metaprint.h local.h local.c playlist.c playlist.h \
 	streamdump.h streamdump.c term.c term.h wav.c win32_support.h \
 	wavhead.h xfermem.c xfermem.h $(am__append_1)
-tests_seek_accuracy_SOURCES = \
-tests/seek_accuracy.c \
-libmpg123/compat.h \
-libmpg123/compat.c
-
-tests_seek_accuracy_DEPENDENCIES = libmpg123/libmpg123.la
-tests_seek_accuracy_LDADD = libmpg123/libmpg123.la
 tests_seek_whence_SOURCES = \
 tests/seek_whence.c \
 libmpg123/compat.h \
@@ -532,9 +524,6 @@ tests/noise$(EXEEXT): $(tests_noise_OBJECTS) $(tests_noise_DEPENDENCIES) $(EXTRA
 tests/plain_id3$(EXEEXT): $(tests_plain_id3_OBJECTS) $(tests_plain_id3_DEPENDENCIES) $(EXTRA_tests_plain_id3_DEPENDENCIES) tests/$(am__dirstamp)
 	@rm -f tests/plain_id3$(EXEEXT)
 	$(LINK) $(tests_plain_id3_OBJECTS) $(tests_plain_id3_LDADD) $(LIBS)
-tests/seek_accuracy$(EXEEXT): $(tests_seek_accuracy_OBJECTS) $(tests_seek_accuracy_DEPENDENCIES) $(EXTRA_tests_seek_accuracy_DEPENDENCIES) tests/$(am__dirstamp)
-	@rm -f tests/seek_accuracy$(EXEEXT)
-	$(LINK) $(tests_seek_accuracy_OBJECTS) $(tests_seek_accuracy_LDADD) $(LIBS)
 tests/seek_whence$(EXEEXT): $(tests_seek_whence_OBJECTS) $(tests_seek_whence_DEPENDENCIES) $(EXTRA_tests_seek_whence_DEPENDENCIES) tests/$(am__dirstamp)
 	@rm -f tests/seek_whence$(EXEEXT)
 	$(LINK) $(tests_seek_whence_OBJECTS) $(tests_seek_whence_LDADD) $(LIBS)
@@ -565,7 +554,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plain_id3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/playlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resolver.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/seek_accuracy.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/seek_whence.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/streamdump.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/term.Po@am__quote@
@@ -651,20 +639,6 @@ plain_id3.obj: tests/plain_id3.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tests/plain_id3.c' object='plain_id3.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o plain_id3.obj `if test -f 'tests/plain_id3.c'; then $(CYGPATH_W) 'tests/plain_id3.c'; else $(CYGPATH_W) '$(srcdir)/tests/plain_id3.c'; fi`
-
-seek_accuracy.o: tests/seek_accuracy.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT seek_accuracy.o -MD -MP -MF $(DEPDIR)/seek_accuracy.Tpo -c -o seek_accuracy.o `test -f 'tests/seek_accuracy.c' || echo '$(srcdir)/'`tests/seek_accuracy.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/seek_accuracy.Tpo $(DEPDIR)/seek_accuracy.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tests/seek_accuracy.c' object='seek_accuracy.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o seek_accuracy.o `test -f 'tests/seek_accuracy.c' || echo '$(srcdir)/'`tests/seek_accuracy.c
-
-seek_accuracy.obj: tests/seek_accuracy.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT seek_accuracy.obj -MD -MP -MF $(DEPDIR)/seek_accuracy.Tpo -c -o seek_accuracy.obj `if test -f 'tests/seek_accuracy.c'; then $(CYGPATH_W) 'tests/seek_accuracy.c'; else $(CYGPATH_W) '$(srcdir)/tests/seek_accuracy.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/seek_accuracy.Tpo $(DEPDIR)/seek_accuracy.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tests/seek_accuracy.c' object='seek_accuracy.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o seek_accuracy.obj `if test -f 'tests/seek_accuracy.c'; then $(CYGPATH_W) 'tests/seek_accuracy.c'; else $(CYGPATH_W) '$(srcdir)/tests/seek_accuracy.c'; fi`
 
 seek_whence.o: tests/seek_whence.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT seek_whence.o -MD -MP -MF $(DEPDIR)/seek_whence.Tpo -c -o seek_whence.o `test -f 'tests/seek_whence.c' || echo '$(srcdir)/'`tests/seek_whence.c

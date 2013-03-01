@@ -10,6 +10,12 @@
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
 
+/* Define if .balign is present. */
+#undef ASMALIGN_BALIGN
+
+/* Define if .align just takes byte count. */
+#undef ASMALIGN_BYTE
+
 /* Define if .align takes 3 for alignment of 2^3=8 bytes instead of 8. */
 #undef ASMALIGN_EXP
 
@@ -24,6 +30,9 @@
 
 /* Define if building with dynamcally linked libmpg123 */
 #undef DYNAMIC_BUILD
+
+/* Use EFBIG as substitude for EOVERFLOW, mingw.org may lack the latter */
+#undef EOVERFLOW
 
 /* Define if FIFO support is enabled. */
 #undef FIFO
