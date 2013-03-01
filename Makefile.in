@@ -293,6 +293,9 @@ PORTAUDIO_LIBS = @PORTAUDIO_LIBS@
 PULSE_CFLAGS = @PULSE_CFLAGS@
 PULSE_LDFLAGS = @PULSE_LDFLAGS@
 PULSE_LIBS = @PULSE_LIBS@
+QSA_CFLAGS = @QSA_CFLAGS@
+QSA_LDFLAGS = @QSA_LDFLAGS@
+QSA_LIBS = @QSA_LIBS@
 RANLIB = @RANLIB@
 SDL_CFLAGS = @SDL_CFLAGS@
 SDL_LDFLAGS = @SDL_LDFLAGS@
@@ -457,7 +460,8 @@ EXTRA_DIST = \
 	ports/Xcode/mpg123.h \
 	ports/Xcode/mpg123.xcodeproj/project.pbxproj \
 	scripts/benchmark-cpu.pl \
-	scripts/tag_lyrics.py
+	scripts/tag_lyrics.py \
+	scripts/conplay
 
 all: all-recursive
 
