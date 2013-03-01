@@ -1,6 +1,7 @@
 libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_add_string@Base 1.6.2
  mpg123_add_substring@Base 1.6.2
+ mpg123_chomp_string@Base 1.15.1
  mpg123_clip@Base 1.6.2
  mpg123_close@Base 1.6.2
  mpg123_copy_string@Base 1.6.2
