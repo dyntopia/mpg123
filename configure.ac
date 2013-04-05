@@ -8,7 +8,7 @@ dnl Require autoconf version >= 2.57
 AC_PREREQ(2.57)
 
 dnl ############# Initialisation
-AC_INIT([mpg123], [1.15.1], [mpg123-devel@lists.sourceforge.net])
+AC_INIT([mpg123], [1.15.3], [mpg123-devel@lists.sourceforge.net])
 dnl Increment API_VERSION when the API gets changes (new functions).
 API_VERSION=37
 LIB_PATCHLEVEL=1
@@ -1295,7 +1295,7 @@ word_in_list() {
   # Is local not POSIX sh?
   for given_word in "$@"
   do
-    if test "x$word" == "x$given_word"; then
+    if test "x$word" = "x$given_word"; then
       return 0
     fi
   done
@@ -1368,7 +1368,7 @@ do
 		# QSA and ALSA are not distinguishable in these tests, need to block
 		# each other and play with test order depending on platform.
 		alsa)
-			if test "x$HAVE_QSA" == xyes; then
+			if test "x$HAVE_QSA" = xyes; then
 				HAVE_ALSA=no
 			else
 
@@ -1387,7 +1387,7 @@ do
 			fi # HAVE_QSA
 		;;
 		qsa)
-			if test "x$HAVE_ALSA" == xyes; then
+			if test "x$HAVE_ALSA" = xyes; then
 				HAVE_QSA=no
 			else
 
