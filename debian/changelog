@@ -1,5 +1,6 @@
 mpg123 (1.15.3-1) unstable; urgency=low
 
+  * Upload to unstable.
   * New upstream release.
     - Build fix with older shells (== in configure).
     - Fix WAV writing. AGAIN.
