@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Debian Multimedia Maintainers <pkg-multimedia-maintainers@lists.alioth.debian.org>
 Uploaders:
  Alessio Treglia <alessio@debian.org>,
+ Reinhard Tartler <siretart@tauware.de>,
  Miguel A. Colón Vélez <debian.micove@gmail.com>
 Build-Depends:
  debhelper (>= 9),
