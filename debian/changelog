@@ -1,3 +1,9 @@
+mpg123 (1.15.3-2) UNRELEASED; urgency=low
+
+  * Provide 64 bit wrapper functions on kfreebsd
+
+ -- Reinhard Tartler <siretart@fischer.debian.org>  Sat, 31 Aug 2013 07:53:25 +0000
+
 mpg123 (1.15.3-1) unstable; urgency=low
 
   * Upload to unstable.
