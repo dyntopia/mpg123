@@ -7,18 +7,23 @@
 AM_CPPFLAGS = -DPKGLIBDIR="\"$(pkglibdir)\""
 mpg123_LDADD = $(LIBLTDL) libmpg123/libmpg123.la @MODULE_OBJ@ @OUTPUT_OBJ@ @OUTPUT_LIBS@
 mpg123_LDFLAGS = @EXEC_LT_LDFLAGS@ @OUTPUT_LDFLAGS@
-# Just mpg123_INCLUDES has no effect on build! Trying that before reverting to AM_CPPFLAGS.
-INCLUDES = $(LTDLINCL) -I$(top_builddir)/src/libmpg123 -I$(top_srcdir)/src/libmpg123
+AM_CPPFLAGS += $(LTDLINCL) -I$(top_builddir)/src/libmpg123 -I$(top_srcdir)/src/libmpg123
 # libltdl is not mentioned here... it's not that trivial
 mpg123_DEPENDENCIES = @OUTPUT_OBJ@ @MODULE_OBJ@ libmpg123/libmpg123.la
 
 SUBDIRS = output libmpg123
-EXTRA_DIST = legacy_module.c module.c sfifo.c sfifo.h
+EXTRA_DIST = legacy_module.c module.c sfifo.c sfifo.h mpg123-with-modules
 
 
 CLEANFILES = *.a
 
-bin_PROGRAMS = mpg123
+bin_PROGRAMS = mpg123 mpg123-id3dump mpg123-strip
+
+mpg123_id3dump_DEPENDENCIES = libmpg123/libmpg123.la
+mpg123_id3dump_LDADD = libmpg123/libmpg123.la
+
+mpg123_strip_DEPENDENCIES = libmpg123/libmpg123.la
+mpg123_strip_LDADD = libmpg123/libmpg123.la
 
 EXTRA_PROGRAMS = tests/seek_whence tests/noise tests/text tests/plain_id3
 
@@ -60,10 +65,25 @@ mpg123_SOURCES = \
 	xfermem.c \
 	xfermem.h
 
+mpg123_id3dump_SOURCES = mpg123-id3dump.c \
+	getlopt.c \
+	getlopt.h \
+	libmpg123/compat.c \
+	libmpg123/compat.h
+
+mpg123_strip_SOURCES = mpg123-strip.c \
+	getlopt.c \
+	getlopt.h \
+	libmpg123/compat.c \
+	libmpg123/compat.h
+
 if WIN32_CODES
 mpg123_SOURCES += \
 	win32_support.c \
 	win32_net.c
+
+mpg123_id3dump_SOURCES += \
+	win32_support.c
 endif
 
 # That is not nice... but it is how I manage to get the dependency on output/alsa.o without error about .deps/output/alsa.Tpo .
