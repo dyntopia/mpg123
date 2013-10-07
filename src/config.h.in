@@ -262,8 +262,8 @@
 /* Define if IPV6 support is enabled. */
 #undef IPV6
 
-/* Define this to the size of long type in bits, used for LFS small/native
-   alias functions. */
+/* Define this to the size of native offset type in bits, used for LFS alias
+   functions. */
 #undef LFS_ALIAS_BITS
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
@@ -370,6 +370,12 @@
 /* Define if modules are enabled */
 #undef USE_MODULES
 
+/* Define for new Huffman decoding scheme. */
+#undef USE_NEW_HUFFTABLE
+
+/* Define to use yasm for assemble AVX sources. */
+#undef USE_YASM_FOR_AVX
+
 /* Version number of package */
 #undef VERSION
 
@@ -425,6 +431,9 @@
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef int32_t
+
+/* Define to the native offset type (long or actually off_t). */
+#undef lfs_alias_t
 
 /* Define to `long int' if <sys/types.h> does not define. */
 #undef off_t
