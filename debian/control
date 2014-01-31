@@ -39,7 +39,6 @@ Suggests:
  oss4-base,
  pulseaudio
 Provides:
- mp3-decoder,
  mpg123-oss-3dnow
 Replaces:
  mpg123-alsa,
