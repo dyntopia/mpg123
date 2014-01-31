@@ -88,6 +88,7 @@ enum frame_state_flags
 {
 	 FRAME_ACCURATE      = 0x1  /**<     0001 Positions are considered accurate. */
 	,FRAME_FRANKENSTEIN  = 0x2  /**<     0010 This stream is concatenated. */
+	,FRAME_FRESH_DECODER = 0x4  /**<     0100 Decoder is fleshly initialized. */
 };
 
 /* There is a lot to condense here... many ints can be merged as flags; though the main space is still consumed by buffers. */
@@ -193,6 +194,7 @@ struct mpg123_handle_struct
 	int down_sample;
 	int header_change;
 	int lay;
+	long spf; /* cached count of samples per frame */
 	int (*do_layer)(mpg123_handle *);
 	int error_protection;
 	int bitrate_index;
@@ -370,7 +372,6 @@ MPEG 2.5
 1152
 576
 */
-#define spf(fr) ((fr)->lay == 1 ? 384 : ((fr)->lay==2 ? 1152 : ((fr)->lsf || (fr)->mpeg25 ? 576 : 1152)))
 
 #ifdef GAPLESS
 /* well, I take that one for granted... at least layer3 */
