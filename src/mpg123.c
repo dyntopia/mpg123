@@ -658,10 +658,13 @@ int play_frame(void)
 {
 	unsigned char *audio;
 	int mc;
+	long new_header = 0;
 	size_t bytes;
 	debug("play_frame");
 	/* The first call will not decode anything but return MPG123_NEW_FORMAT! */
 	mc = mpg123_decode_frame(mh, &framenum, &audio, &bytes);
+	mpg123_getstate(mh, MPG123_FRESH_DECODER, &new_header, NULL);
+
 	/* Play what is there to play (starting with second decode_frame call!) */
 	if(bytes)
 	{
@@ -702,14 +705,15 @@ int play_frame(void)
 			mpg123_getformat(mh, &rate, &channels, &format);
 			if(param.verbose > 2) fprintf(stderr, "\nNote: New output format %liHz %ich, format %i\n", rate, channels, format);
 
-			if(!param.quiet)
-			{
-				fprintf(stderr, "\n");
-				if(param.verbose) print_header(mh);
-				else print_header_compact(mh);
-			}
+			new_header = 1;
 			reset_audio(rate, channels, format);
 		}
+	}
+	if(new_header && !param.quiet)
+	{
+		fprintf(stderr, "\n");
+		if(param.verbose) print_header(mh);
+		else print_header_compact(mh);
 	}
 	return 1;
 }
@@ -1007,7 +1011,8 @@ int main(int sys_argc, char ** sys_argv)
 	}
 #endif
 
-#ifdef HAVE_WINDOWS_H
+/* make sure not Cygwin, it doesn't need it */
+#if defined(WIN32) && defined(HAVE_WINDOWS_H)
 	/* argument "3" is equivalent to realtime priority class */
 	win32_set_priority( param.realtime ? 3 : param.w32_priority);
 #endif
@@ -1201,7 +1206,7 @@ int main(int sys_argc, char ** sys_argv)
 	}
 	else if(param.verbose) fprintf(stderr, "\n");
 
-	mpg123_close(mh);
+	close_track();
 
 	if (intflag)
 	{
@@ -1280,7 +1285,11 @@ static void usage(int err)  /* print syntax & exit */
 	#endif
 	fprintf(o,"   -z    shuffle play (with wildcards)  -Z    random play\n");
 	fprintf(o,"   -u a  HTTP authentication string     -E f  Equalizer, data from file\n");
+#ifdef HAVE_TERMIOS
 	fprintf(o,"   -C    enable control keys            --no-gapless  not skip junk/padding in mp3s\n");
+#else
+	fprintf(o,"                                        --no-gapless  not skip junk/padding in mp3s\n");
+#endif
 	fprintf(o,"   -?    this help                      --version  print name + version\n");
 	fprintf(o,"See the manpage %s(1) or call %s with --longhelp for more parameters and information.\n", prgName,prgName);
 	safe_exit(err);
