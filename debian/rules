@@ -22,6 +22,7 @@ CONF_COMMON:=--enable-static=no --enable-shared --enable-lfs-alias \
 	--with-module-suffix=.so
 
 CONF_i486:=--with-cpu=x86_dither
+CONF_arm:=--with-cpu=generic_fpu
 
 SOVERSION:=0
 LIB_PKG:=libmpg123-$(SOVERSION)
