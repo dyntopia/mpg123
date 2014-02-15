@@ -1,6 +1,6 @@
 mpg123 (1.18.0-1) unstable; urgency=low
 
-  * New upstream release.
+  * New upstream release, Closes: #737243
     - libmpg123 version 39
     - Big version increase for clear distinction regarding the 1.14.x regression
       fixes in libmpg123.
@@ -32,7 +32,10 @@ mpg123 (1.18.0-1) unstable; urgency=low
   * Bump Standards-Version.
     - Remove mp3-decoder from the Provides list.
 
- -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Fri, 31 Jan 2014 13:52:08 -0500
+  [ Riku Voipio ]
+  * switch arm to use generic_fpu, Closes: #738981, LP: #1072696
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Sat, 15 Feb 2014 13:42:35 +0000
 
 mpg123 (1.16.0-1) unstable; urgency=low
 
