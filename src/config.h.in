@@ -322,6 +322,9 @@
 /* Define to disable string functions. */
 #undef NO_STRING
 
+/* Define for post-processed 32 bit formats. */
+#undef NO_SYNTH32
+
 /* Define to disable warning messages. */
 #undef NO_WARNING
 
@@ -431,6 +434,9 @@
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef int32_t
+
+/* Define to `long long' if <sys/types.h> does not define. */
+#undef int64_t
 
 /* Define to the native offset type (long or actually off_t). */
 #undef lfs_alias_t

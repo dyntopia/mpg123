@@ -8,10 +8,10 @@ dnl Require autoconf version >= 2.57
 AC_PREREQ(2.57)
 
 dnl ############# Initialisation
-AC_INIT([mpg123], [1.18.0], [mpg123-devel@lists.sourceforge.net])
+AC_INIT([mpg123], [1.19.0], [mpg123-devel@lists.sourceforge.net])
 dnl Increment API_VERSION when the API gets changes (new functions).
-API_VERSION=39
-LIB_PATCHLEVEL=0
+API_VERSION=40
+LIB_PATCHLEVEL=1
 dnl Since we want to be backwards compatible, both sides get set to API_VERSION.
 LIBMPG123_VERSION=$API_VERSION:$LIB_PATCHLEVEL:$API_VERSION
 AC_SUBST(LIBMPG123_VERSION)
@@ -447,12 +447,12 @@ AC_ARG_ENABLE(real,
               ], [])
 
 AC_ARG_WITH([cpu], [
-  --with-cpu=generic[_fpu]      Use generic processor code with floating point arithmetic
+  --with-cpu=generic[[_fpu]]      Use generic processor code with floating point arithmetic
   --with-cpu=generic_float      Plain alias to generic_fpu now... float output is a normal runtime option!
-  --with-cpu=generic_nofpu      Use generic processor code with fixed point arithmetic (p.ex. ARM, experimental)
+  --with-cpu=generic_nofpu      Use generic processor code with fixed point arithmetic (p.ex. ARM)
   --with-cpu=generic_dither     Use generic processor code with floating point arithmetic and dithering for 1to1 16bit decoding.
-  --with-cpu=i386[_fpu]         Use code optimized for i386 processors with floating point arithmetic
-  --with-cpu=i386_nofpu         Use code optimized for i386 processors with fixed point arithmetic (experimental)
+  --with-cpu=i386[[_fpu]]         Use code optimized for i386 processors with floating point arithmetic
+  --with-cpu=i386_nofpu         Use code optimized for i386 processors with fixed point arithmetic
   --with-cpu=i486         Use code optimized for i486 processors (only usable alone!)
   --with-cpu=i586         Use code optimized for i586 processors
   --with-cpu=i586_dither  Use code optimized for i586 processors with dithering (noise shaping), adds 256K to binary size
@@ -470,9 +470,10 @@ AC_ARG_WITH([cpu], [
   --with-cpu=x86          Pack all x86 opts into one binary (excluding i486, including dither)
   --with-cpu=x86-64       Use code optimized for x86-64 processors (AMD64 and Intel64, including AVX and dithered generic)
   --with-cpu=altivec      Use code optimized for Altivec processors (PowerPC G4 and G5)
-  --with-cpu=ppc_nofpu    Use code optimized for PowerPC processors with fixed point arithmetic (experimental)
+  --with-cpu=ppc_nofpu    Use code optimized for PowerPC processors with fixed point arithmetic
   --with-cpu=neon         Use code optimized for ARM NEON SIMD engine (Cortex-A series)
-  --with-cpu=arm_nofpu    Use code optimized for ARM processors with fixed point arithmetic (experimental)
+  --with-cpu=arm_fpu      Pack neon and generic[[_dither]] decoders, for ARM processors with FPU and/or NEON
+  --with-cpu=arm_nofpu    Use code optimized for ARM processors with fixed point arithmetic
 ])
 
 
@@ -492,9 +493,15 @@ fi
 
 newoldwritesample=disabled
 case $host in
+  arm*-*-linux*-*eabihf)
+    cpu_type="arm_fpu"
+  ;;
   arm*-*-linux*)
     # check that... perhaps we are better off on arm with kernel math emulation
     cpu_type="arm_nofpu"
+  ;;
+  armv7*-apple-darwin*)
+    cpu_type="arm_fpu"
   ;;
   i386-*-linux*|i386-*-kfreebsd*-gnu)
     cpu_type="i386_fpu"
@@ -697,25 +704,16 @@ if test "x$with_cpu" != "x"; then
 	cpu_type=$with_cpu
 fi
 
-if test "x$cpu_type" = "xgeneric_nofpu"; then
-  real=disabled
-  int32=disabled
-fi
-
-if test "x$cpu_type" = "xi386_nofpu"; then
-  real=disabled
-  int32=disabled
-fi
-
-if test "x$cpu_type" = "xppc_nofpu"; then
-  real=disabled
-  int32=disabled
-fi
-
-if test "x$cpu_type" = "xarm_nofpu"; then
-  real=disabled
-  int32=disabled
-fi
+# Flag for 32 bit synth output or post-processing.
+case "$cpu_type" in
+*_nofpu)
+  synth32=false
+  AC_DEFINE(NO_SYNTH32, 1, [ Define for post-processed 32 bit formats. ])
+;;
+*)
+  synth32=true
+;;
+esac
 
 if test "x$int16" = "xdisabled"; then
   AC_DEFINE(NO_16BIT, 1, [ Define to disable 16 bit integer output. ])
@@ -738,13 +736,17 @@ fi
 if test "x$int32" = "xdisabled"; then
   AC_DEFINE(NO_32BIT, 1, [ Define to disable 32 bit and 24 bit integer output. ])
 else
-  s_fpu="$s_fpu synth_s32"
+  if $synth32; then
+    s_fpu="$s_fpu synth_s32"
+  fi
 fi
 
 if test "x$real" = "xdisabled"; then
   AC_DEFINE(NO_REAL, 1, [ Define to disable real output. ])
 else
-  s_fpu="$s_fpu synth_real"
+  if $synth32; then
+    s_fpu="$s_fpu synth_real"
+  fi
 fi
 
 
@@ -990,6 +992,7 @@ AC_CHECK_TYPE(uintptr_t, unsigned long)
 AC_CHECK_TYPE(ssize_t, long)
 AC_CHECK_TYPE(off_t,  long int)
 AC_CHECK_TYPE(int32_t, int)
+AC_CHECK_TYPE(int64_t, long long)
 AC_CHECK_TYPE(uint32_t, unsigned int)
 AC_CHECK_TYPE(int16_t, short)
 AC_CHECK_TYPE(uint16_t, unsigned short)
@@ -1198,6 +1201,7 @@ s_x86multi="getcpuflags"
 s_x86_64_multi="getcpuflags_x86_64"
 s_dither="dither"
 s_neon="dct64_neon dct64_neon_float synth_neon_float synth_neon_s32 synth_stereo_neon_float synth_stereo_neon_s32"
+s_arm_multi="getcpuflags_arm check_neon"
 
 # choose optimized 16bit decoder for SSE, quality or fast
 # note: supporting deactivation of output formats for these decoders would need more logic here
@@ -1269,6 +1273,10 @@ dnl Not disabling buffer for float mode... check that this is OK now!
   neon)
     ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_NEON -DREAL_IS_FLOAT"
     more_sources="$s_neon $s_fpu"
+  ;;
+  arm_fpu)
+    ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_MULTI -DOPT_GENERIC -DOPT_GENERIC_DITHER -DOPT_NEON -DREAL_IS_FLOAT"
+    more_sources="$s_neon $s_fpu $s_dither $s_arm_multi"
   ;;
   i386) 
     ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_I386 -DREAL_IS_FLOAT"

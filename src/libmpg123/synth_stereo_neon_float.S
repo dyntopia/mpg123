@@ -18,8 +18,16 @@
 	return value: number of clipped samples (0)
 */
 
+	.code 32
+#ifndef __APPLE__
+	.fpu neon
+#endif
+
 	.text
 	.globl ASM_NAME(synth_1to1_real_s_neon_asm)
+#ifdef __ELF__
+	.type ASM_NAME(synth_1to1_real_s_neon_asm), %function
+#endif
 	ALIGN4
 ASM_NAME(synth_1to1_real_s_neon_asm):
 	push		{r4-r6, lr}
@@ -218,3 +226,5 @@ ASM_NAME(synth_1to1_real_s_neon_asm):
 
 	vpop		{q4-q7}
 	pop			{r4-r6, pc}
+
+NONEXEC_STACK
