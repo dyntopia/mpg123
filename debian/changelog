@@ -1,3 +1,10 @@
+mpg123 (1.19.0-1) UNRELEASED; urgency=low
+
+  * Imported Upstream version 1.19.0
+  * debian/copyright:
+
+ -- Alessio Treglia <alessio@debian.org>  Fri, 04 Apr 2014 17:27:30 +0100
+
 mpg123 (1.18.0-1) unstable; urgency=low
 
   * New upstream release, Closes: #737243
