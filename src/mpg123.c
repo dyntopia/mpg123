@@ -141,6 +141,7 @@ static int filept = -1;
 
 static int network_sockets_used = 0; /* Win32 socket open/close Support */
 
+char *fullprogname = NULL; /* Copy of argv[0]. */
 char *binpath; /* Path to myself. */
 
 /* File-global storage of command line arguments.
@@ -175,7 +176,7 @@ void next_track(void)
 void prev_track(void)
 {
 	if(pl.pos > 2) pl.pos -= 2;
-	else pl.pos = 0;
+	else pl.pos = skip_tracks = 0;
 
 	next_track();
 }
@@ -205,6 +206,7 @@ void safe_exit(int code)
 #endif
 	/* It's ugly... but let's just fix this still-reachable memory chunk of static char*. */
 	split_dir_file("", &dummy, &dammy);
+	if(fullprogname) free(fullprogname);
 	exit(code);
 }
 
@@ -810,17 +812,23 @@ int main(int sys_argc, char ** sys_argv)
 	win32_net_init();
 #endif
 
+	if(!(fullprogname = strdup(argv[0])))
+	{
+		error("OOM"); /* Out Of Memory. Don't waste bytes on that error. */
+		safe_exit(1);
+	}
 	/* Extract binary and path, take stuff before/after last / or \ . */
-	if((prgName = strrchr(argv[0], '/')) || (prgName = strrchr(argv[0], '\\')))
+	if(  (prgName = strrchr(fullprogname, '/')) 
+	  || (prgName = strrchr(fullprogname, '\\')))
 	{
 		/* There is some explicit path. */
 		prgName[0] = 0; /* End byte for path. */
 		prgName++;
-		binpath = argv[0];
+		binpath = fullprogname;
 	}
 	else
 	{
-		prgName = argv[0]; /* No path separators there. */
+		prgName = fullprogname; /* No path separators there. */
 		binpath = NULL; /* No path at all. */
 	}
 
@@ -1070,10 +1078,13 @@ int main(int sys_argc, char ** sys_argv)
 #ifdef HAVE_TERMIOS
 			/* We need the opportunity to cancel in case of --loop -1 . */
 			if(param.term_ctrl) term_control(mh, ao);
+			else
 #endif
 			/* No wait for a second interrupt before we started playing. */
 			if(intflag) break;
 
+			/* We already interrupted this cycle, start fresh with the next one. */
+			intflag = FALSE;
 			continue;
 		}
 
