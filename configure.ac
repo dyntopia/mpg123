@@ -8,10 +8,10 @@ dnl Require autoconf version >= 2.57
 AC_PREREQ(2.57)
 
 dnl ############# Initialisation
-AC_INIT([mpg123], [1.19.0], [mpg123-devel@lists.sourceforge.net])
+AC_INIT([mpg123], [1.20.0], [mpg123-devel@lists.sourceforge.net])
 dnl Increment API_VERSION when the API gets changes (new functions).
 API_VERSION=40
-LIB_PATCHLEVEL=1
+LIB_PATCHLEVEL=3
 dnl Since we want to be backwards compatible, both sides get set to API_VERSION.
 LIBMPG123_VERSION=$API_VERSION:$LIB_PATCHLEVEL:$API_VERSION
 AC_SUBST(LIBMPG123_VERSION)
@@ -474,6 +474,8 @@ AC_ARG_WITH([cpu], [
   --with-cpu=neon         Use code optimized for ARM NEON SIMD engine (Cortex-A series)
   --with-cpu=arm_fpu      Pack neon and generic[[_dither]] decoders, for ARM processors with FPU and/or NEON
   --with-cpu=arm_nofpu    Use code optimized for ARM processors with fixed point arithmetic
+  --with-cpu=neon64       Use code optimized for AArch64 NEON SIMD engine
+  --with-cpu=aarch64      Pack neon64 and generic[[_dither]] decoders, for 64bit ARM processors
 ])
 
 
@@ -493,7 +495,13 @@ fi
 
 newoldwritesample=disabled
 case $host in
-  arm*-*-linux*-*eabihf)
+  aarch64-*-linux*|arm64-*-linux*)
+    cpu_type="aarch64"
+  ;;
+  aarch64-apple-darwin*|arm64-apple-darwin*)
+    cpu_type="aarch64"
+  ;;
+  arm*-*-linux*-*eabihf|armv7hl*-*-linux*)
     cpu_type="arm_fpu"
   ;;
   arm*-*-linux*)
@@ -1192,15 +1200,16 @@ if test "x$layer3" = "xenabled"; then
   s_3dnowext_vintage="$s_3dnowext_vintage dct36_3dnowext"
 fi
 s_mmx="$s_i386 dct64_mmx tabinit_mmx synth_mmx"
-s_sse_vintage="$s_i386 tabinit_mmx dct64_sse dct64_sse_float synth_sse_float synth_stereo_sse_float synth_sse_s32 synth_stereo_sse_s32 "
+s_sse_vintage="$s_i386 tabinit_mmx dct64_sse_float synth_sse_float synth_stereo_sse_float synth_sse_s32 synth_stereo_sse_s32 "
 s_sse="$s_sse_vintage dct36_sse"
-s_x86_64="dct36_x86_64 dct64_x86_64 dct64_x86_64_float synth_x86_64_float synth_x86_64_s32 synth_stereo_x86_64_float synth_stereo_x86_64_s32"
+s_x86_64="dct36_x86_64 dct64_x86_64_float synth_x86_64_float synth_x86_64_s32 synth_stereo_x86_64_float synth_stereo_x86_64_s32"
 s_x86_64_mono_synths="synth_x86_64_float synth_x86_64_s32"
-s_x86_64_avx="dct36_avx dct64_avx dct64_avx_float synth_stereo_avx_float synth_stereo_avx_s32"
+s_x86_64_avx="dct36_avx dct64_avx_float synth_stereo_avx_float synth_stereo_avx_s32"
 s_x86multi="getcpuflags"
 s_x86_64_multi="getcpuflags_x86_64"
 s_dither="dither"
-s_neon="dct64_neon dct64_neon_float synth_neon_float synth_neon_s32 synth_stereo_neon_float synth_stereo_neon_s32"
+s_neon="dct36_neon dct64_neon_float synth_neon_float synth_neon_s32 synth_stereo_neon_float synth_stereo_neon_s32"
+s_neon64="dct36_neon64 dct64_neon64_float synth_neon64_float synth_neon64_s32 synth_stereo_neon64_float synth_stereo_neon64_s32"
 s_arm_multi="getcpuflags_arm check_neon"
 
 # choose optimized 16bit decoder for SSE, quality or fast
@@ -1213,14 +1222,16 @@ if test "x$integers" = "xquality"; then
   s_x86_64_avx="$s_x86_64_avx synth_stereo_avx_accurate"
   s_arm="synth_arm_accurate"
   s_neon="$s_neon synth_neon_accurate synth_stereo_neon_accurate"
+  s_neon64="$s_neon64 synth_neon64_accurate synth_stereo_neon64_accurate"
 else
-  s_sse="$s_sse synth_sse" # no stereo
-  s_sse_vintage="$s_sse_vintage synth_sse" # no stereo
-  s_x86_64="$s_x86_64 synth_x86_64 synth_stereo_x86_64"
+  s_sse="$s_sse dct64_sse synth_sse" # no stereo
+  s_sse_vintage="$s_sse_vintage dct64_sse synth_sse" # no stereo
+  s_x86_64="$s_x86_64 synth_x86_64 dct64_x86_64 synth_stereo_x86_64"
   s_x86_64_mono_synths="$s_x86_64_mono_synths synth_x86_64"
-  s_x86_64_avx="$s_x86_64_avx synth_stereo_avx"
+  s_x86_64_avx="$s_x86_64_avx dct64_avx synth_stereo_avx"
   s_arm="synth_arm"
-  s_neon="$s_neon synth_neon synth_stereo_neon"
+  s_neon="$s_neon dct64_neon synth_neon synth_stereo_neon"
+  s_neon64="$s_neon64 dct64_neon64 synth_neon64 synth_stereo_neon64"
 fi
 
 dnl CPU specific compiler flags and sources
@@ -1277,6 +1288,14 @@ dnl Not disabling buffer for float mode... check that this is OK now!
   arm_fpu)
     ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_MULTI -DOPT_GENERIC -DOPT_GENERIC_DITHER -DOPT_NEON -DREAL_IS_FLOAT"
     more_sources="$s_neon $s_fpu $s_dither $s_arm_multi"
+  ;;
+  neon64)
+    ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_NEON64 -DREAL_IS_FLOAT"
+    more_sources="$s_neon64 $s_fpu"
+  ;;
+  aarch64)
+    ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_MULTI -DOPT_GENERIC -DOPT_GENERIC_DITHER -DOPT_NEON64 -DREAL_IS_FLOAT"
+    more_sources="$s_neon64 $s_fpu $s_dither $s_arm_multi"
   ;;
   i386) 
     ADD_CPPFLAGS="$ADD_CPPFLAGS -DOPT_I386 -DREAL_IS_FLOAT"

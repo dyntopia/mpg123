@@ -497,6 +497,8 @@ EXTRA_libmpg123_la_SOURCES = \
 	dct36_sse.S \
 	dct36_x86_64.S \
 	dct36_avx.S \
+	dct36_neon.S \
+	dct36_neon64.S \
 	dct64_3dnowext.S \
 	dct64_3dnow.S \
 	dct64_altivec.c \
@@ -509,6 +511,8 @@ EXTRA_libmpg123_la_SOURCES = \
 	dct64_x86_64_float.S \
 	dct64_neon.S \
 	dct64_neon_float.S \
+	dct64_neon64.S \
+	dct64_neon64_float.S \
 	dct64_avx.S \
 	dct64_avx_float.S \
 	synth_3dnowext.S \
@@ -544,6 +548,14 @@ EXTRA_libmpg123_la_SOURCES = \
 	synth_stereo_neon_float.S \
 	synth_stereo_neon_s32.S \
 	synth_stereo_neon_accurate.S \
+	synth_neon64.S \
+	synth_neon64_float.S \
+	synth_neon64_s32.S \
+	synth_neon64_accurate.S \
+	synth_stereo_neon64.S \
+	synth_stereo_neon64_float.S \
+	synth_stereo_neon64_s32.S \
+	synth_stereo_neon64_accurate.S \
 	synth_stereo_avx.S \
 	synth_stereo_avx_float.S \
 	synth_stereo_avx_s32.S \
@@ -668,6 +680,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct36_3dnow.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct36_3dnowext.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct36_avx.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct36_neon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct36_neon64.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct36_sse.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct36_x86_64.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64.Plo@am__quote@
@@ -680,6 +694,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_i486.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_mmx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_neon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_neon64.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_neon64_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_neon_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_sse.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dct64_sse_float.Plo@am__quote@
@@ -721,6 +737,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_i586_dither.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_mmx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon64.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon64_accurate.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon64_float.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon64_s32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon_accurate.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_neon_s32.Plo@am__quote@
@@ -735,6 +755,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_avx_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_avx_s32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon64.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon64_accurate.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon64_float.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon64_s32.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon_accurate.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon_float.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synth_stereo_neon_s32.Plo@am__quote@

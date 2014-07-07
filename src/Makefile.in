@@ -78,7 +78,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = mpg123$(EXEEXT) mpg123-id3dump$(EXEEXT) \
+bin_PROGRAMS = mpg123$(EXEEXT) out123$(EXEEXT) mpg123-id3dump$(EXEEXT) \
 	mpg123-strip$(EXEEXT)
 EXTRA_PROGRAMS = tests/seek_whence$(EXEEXT) tests/noise$(EXEEXT) \
 	tests/text$(EXEEXT) tests/plain_id3$(EXEEXT)
@@ -87,6 +87,9 @@ EXTRA_PROGRAMS = tests/seek_whence$(EXEEXT) tests/noise$(EXEEXT) \
 @WIN32_CODES_TRUE@	win32_net.c
 
 @WIN32_CODES_TRUE@am__append_2 = \
+@WIN32_CODES_TRUE@	win32_support.c
+
+@WIN32_CODES_TRUE@am__append_3 = \
 @WIN32_CODES_TRUE@	win32_support.c
 
 subdir = src
@@ -139,6 +142,17 @@ mpg123_id3dump_OBJECTS = $(am_mpg123_id3dump_OBJECTS)
 am_mpg123_strip_OBJECTS = mpg123-strip.$(OBJEXT) getlopt.$(OBJEXT) \
 	compat.$(OBJEXT)
 mpg123_strip_OBJECTS = $(am_mpg123_strip_OBJECTS)
+am__out123_SOURCES_DIST = audio.c audio.h buffer.c buffer.h sysutil.c \
+	sysutil.h common.h libmpg123/compat.c libmpg123/compat.h \
+	getlopt.c getlopt.h module.h out123.c mpg123app.h wav.c \
+	win32_support.h wavhead.h xfermem.c xfermem.h win32_support.c
+am_out123_OBJECTS = audio.$(OBJEXT) buffer.$(OBJEXT) sysutil.$(OBJEXT) \
+	compat.$(OBJEXT) getlopt.$(OBJEXT) out123.$(OBJEXT) \
+	wav.$(OBJEXT) xfermem.$(OBJEXT) $(am__objects_2)
+out123_OBJECTS = $(am_out123_OBJECTS)
+out123_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(out123_LDFLAGS) $(LDFLAGS) -o $@
 am_tests_noise_OBJECTS = noise.$(OBJEXT) compat.$(OBJEXT) \
 	dither.$(OBJEXT)
 tests_noise_OBJECTS = $(am_tests_noise_OBJECTS)
@@ -185,13 +199,14 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(mpg123_SOURCES) $(mpg123_id3dump_SOURCES) \
-	$(mpg123_strip_SOURCES) $(tests_noise_SOURCES) \
-	$(tests_plain_id3_SOURCES) $(tests_seek_whence_SOURCES) \
-	$(tests_text_SOURCES)
-DIST_SOURCES = $(am__mpg123_SOURCES_DIST) \
-	$(am__mpg123_id3dump_SOURCES_DIST) $(mpg123_strip_SOURCES) \
+	$(mpg123_strip_SOURCES) $(out123_SOURCES) \
 	$(tests_noise_SOURCES) $(tests_plain_id3_SOURCES) \
 	$(tests_seek_whence_SOURCES) $(tests_text_SOURCES)
+DIST_SOURCES = $(am__mpg123_SOURCES_DIST) \
+	$(am__mpg123_id3dump_SOURCES_DIST) $(mpg123_strip_SOURCES) \
+	$(am__out123_SOURCES_DIST) $(tests_noise_SOURCES) \
+	$(tests_plain_id3_SOURCES) $(tests_seek_whence_SOURCES) \
+	$(tests_text_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -474,10 +489,16 @@ AM_CPPFLAGS = -DPKGLIBDIR="\"$(pkglibdir)\"" $(LTDLINCL) \
 	-I$(top_builddir)/src/libmpg123 -I$(top_srcdir)/src/libmpg123
 mpg123_LDADD = $(LIBLTDL) libmpg123/libmpg123.la @MODULE_OBJ@ @OUTPUT_OBJ@ @OUTPUT_LIBS@
 mpg123_LDFLAGS = @EXEC_LT_LDFLAGS@ @OUTPUT_LDFLAGS@
+
+# The dependency on libmpg123 could/should vanish. Or not.
+# Does it matter much?
+out123_LDADD = $(LIBLTDL) libmpg123/libmpg123.la @MODULE_OBJ@ @OUTPUT_OBJ@ @OUTPUT_LIBS@
+out123_LDFLAGS = @EXEC_LT_LDFLAGS@ @OUTPUT_LDFLAGS@
 # libltdl is not mentioned here... it's not that trivial
 mpg123_DEPENDENCIES = @OUTPUT_OBJ@ @MODULE_OBJ@ libmpg123/libmpg123.la
+out123_DEPENDENCIES = @OUTPUT_OBJ@ @MODULE_OBJ@ libmpg123/libmpg123.la
 SUBDIRS = output libmpg123
-EXTRA_DIST = legacy_module.c module.c sfifo.c sfifo.h mpg123-with-modules
+EXTRA_DIST = legacy_module.c module.c sfifo.c sfifo.h mpg123-with-modules out123-with-modules
 CLEANFILES = *.a
 mpg123_id3dump_DEPENDENCIES = libmpg123/libmpg123.la
 mpg123_id3dump_LDADD = libmpg123/libmpg123.la
@@ -490,8 +511,14 @@ mpg123_SOURCES = audio.c audio.h buffer.c buffer.h common.c common.h \
 	metaprint.c metaprint.h local.h local.c playlist.c playlist.h \
 	streamdump.h streamdump.c term.c term.h wav.c win32_support.h \
 	wavhead.h xfermem.c xfermem.h $(am__append_1)
+
+# Replace common.h by sysutil.h!
+out123_SOURCES = audio.c audio.h buffer.c buffer.h sysutil.c sysutil.h \
+	common.h libmpg123/compat.c libmpg123/compat.h getlopt.c \
+	getlopt.h module.h out123.c mpg123app.h wav.c win32_support.h \
+	wavhead.h xfermem.c xfermem.h $(am__append_2)
 mpg123_id3dump_SOURCES = mpg123-id3dump.c getlopt.c getlopt.h \
-	libmpg123/compat.c libmpg123/compat.h $(am__append_2)
+	libmpg123/compat.c libmpg123/compat.h $(am__append_3)
 mpg123_strip_SOURCES = mpg123-strip.c \
 	getlopt.c \
 	getlopt.h \
@@ -638,6 +665,10 @@ mpg123-id3dump$(EXEEXT): $(mpg123_id3dump_OBJECTS) $(mpg123_id3dump_DEPENDENCIES
 mpg123-strip$(EXEEXT): $(mpg123_strip_OBJECTS) $(mpg123_strip_DEPENDENCIES) $(EXTRA_mpg123_strip_DEPENDENCIES) 
 	@rm -f mpg123-strip$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(mpg123_strip_OBJECTS) $(mpg123_strip_LDADD) $(LIBS)
+
+out123$(EXEEXT): $(out123_OBJECTS) $(out123_DEPENDENCIES) $(EXTRA_out123_DEPENDENCIES) 
+	@rm -f out123$(EXEEXT)
+	$(AM_V_CCLD)$(out123_LINK) $(out123_OBJECTS) $(out123_LDADD) $(LIBS)
 tests/$(am__dirstamp):
 	@$(MKDIR_P) tests
 	@: > tests/$(am__dirstamp)
@@ -680,11 +711,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mpg123-strip.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mpg123.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/noise.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/out123.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plain_id3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/playlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resolver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/seek_whence.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/streamdump.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sysutil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/term.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/text.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wav.Po@am__quote@

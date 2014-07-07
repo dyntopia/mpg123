@@ -7,17 +7,24 @@
 AM_CPPFLAGS = -DPKGLIBDIR="\"$(pkglibdir)\""
 mpg123_LDADD = $(LIBLTDL) libmpg123/libmpg123.la @MODULE_OBJ@ @OUTPUT_OBJ@ @OUTPUT_LIBS@
 mpg123_LDFLAGS = @EXEC_LT_LDFLAGS@ @OUTPUT_LDFLAGS@
+
+# The dependency on libmpg123 could/should vanish. Or not.
+# Does it matter much?
+out123_LDADD = $(LIBLTDL) libmpg123/libmpg123.la @MODULE_OBJ@ @OUTPUT_OBJ@ @OUTPUT_LIBS@
+out123_LDFLAGS = @EXEC_LT_LDFLAGS@ @OUTPUT_LDFLAGS@
+
 AM_CPPFLAGS += $(LTDLINCL) -I$(top_builddir)/src/libmpg123 -I$(top_srcdir)/src/libmpg123
 # libltdl is not mentioned here... it's not that trivial
 mpg123_DEPENDENCIES = @OUTPUT_OBJ@ @MODULE_OBJ@ libmpg123/libmpg123.la
+out123_DEPENDENCIES = @OUTPUT_OBJ@ @MODULE_OBJ@ libmpg123/libmpg123.la
 
 SUBDIRS = output libmpg123
-EXTRA_DIST = legacy_module.c module.c sfifo.c sfifo.h mpg123-with-modules
+EXTRA_DIST = legacy_module.c module.c sfifo.c sfifo.h mpg123-with-modules out123-with-modules
 
 
 CLEANFILES = *.a
 
-bin_PROGRAMS = mpg123 mpg123-id3dump mpg123-strip
+bin_PROGRAMS = mpg123 out123 mpg123-id3dump mpg123-strip
 
 mpg123_id3dump_DEPENDENCIES = libmpg123/libmpg123.la
 mpg123_id3dump_LDADD = libmpg123/libmpg123.la
@@ -65,6 +72,28 @@ mpg123_SOURCES = \
 	xfermem.c \
 	xfermem.h
 
+# Replace common.h by sysutil.h!
+out123_SOURCES = \
+	audio.c \
+	audio.h \
+	buffer.c \
+	buffer.h \
+	sysutil.c \
+	sysutil.h \
+	common.h \
+	libmpg123/compat.c \
+	libmpg123/compat.h \
+	getlopt.c \
+	getlopt.h \
+	module.h \
+	out123.c \
+	mpg123app.h \
+	wav.c \
+	win32_support.h \
+	wavhead.h \
+	xfermem.c \
+	xfermem.h
+
 mpg123_id3dump_SOURCES = mpg123-id3dump.c \
 	getlopt.c \
 	getlopt.h \
@@ -81,6 +110,9 @@ if WIN32_CODES
 mpg123_SOURCES += \
 	win32_support.c \
 	win32_net.c
+
+out123_SOURCES+= \
+	win32_support.c
 
 mpg123_id3dump_SOURCES += \
 	win32_support.c
