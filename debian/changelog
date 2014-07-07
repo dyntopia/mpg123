@@ -1,11 +1,13 @@
-mpg123 (1.19.0-1) UNRELEASED; urgency=low
+mpg123 (1.20.0-1) unstable; urgency=low
 
   * New upstream release.
+  * Fix FTBFS on ppc64el. Thanks to Fernando Seiti Furusato for
+    the patch. (Closes: #751136)
   * debian/copyright:
     - Update copyright holders information.
     - copyright-1 format compliance fixes.
 
- -- Alessio Treglia <alessio@debian.org>  Fri, 04 Apr 2014 17:28:32 +0100
+ -- Alessio Treglia <alessio@debian.org>  Mon, 07 Jul 2014 15:55:17 +0100
 
 mpg123 (1.18.0-1) unstable; urgency=low
 
