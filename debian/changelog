@@ -1,3 +1,16 @@
+mpg123 (1.20.1-2) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Alessio Treglia ]
+  * Update symbols file to prevent FTBFS on arm64.
+    Thanks to Will Newton for pointing this out. (Closes: #758227)
+
+  [ Sebastian Ramacher ]
+  * debian/control: Remove ${shlibs:Depends} from libmpg123-dev's Depends.
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Sun, 31 Aug 2014 11:51:27 +0200
+
 mpg123 (1.20.1-1) unstable; urgency=medium
 
   * New upstream release.
