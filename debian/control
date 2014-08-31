@@ -74,8 +74,7 @@ Architecture: any
 Section: libdevel
 Depends:
  libmpg123-0 (= ${binary:Version}),
- ${misc:Depends},
- ${shlibs:Depends}
+ ${misc:Depends}
 Description: MPEG layer 1/2/3 audio decoder (development files)
  mpg123 is a real time MPEG 1.0/2.0/2.5 audio player/decoder for layers
  1, 2 and 3 (MPEG 1.0 layer 3 also known as MP3).
