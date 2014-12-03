@@ -1,3 +1,14 @@
+mpg123 (1.20.1-3) UNRELEASED; urgency=medium
+
+  * Check if DEB_HOST_ARCH_CPU is i386 instead of i486. (Closes: 751800)
+    - In i386/hurd-i386/kfreebsd-i386 don't default to only building the
+      "broken" decoder.
+  * Override lintian error libmpg123-0: shlib-with-non-pic-code in i386.
+    - Previous fix reintroduces all decoders and skips the "bad" one. The
+      faster decoders use optimizations with non-pic code.
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Tue, 02 Dec 2014 22:07:39 -0500
+
 mpg123 (1.20.1-2) unstable; urgency=medium
 
   * Team upload.
