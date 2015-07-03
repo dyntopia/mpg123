@@ -1,2 +1,2 @@
 version=3
-http://sf.net/mpg123/mpg123-(.*)\.tar.bz2
+opts=pgpsigurlmangle=s/$/.sig/ http://sf.net/mpg123/mpg123-(.*)\.tar.bz2
