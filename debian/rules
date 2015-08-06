@@ -1,19 +1,19 @@
 #!/usr/bin/make -f
 
-PACKAGE:=mpg123
+#export DH_VERBOSE=1
 
 ARCH:=$(shell dpkg-architecture -qDEB_HOST_ARCH)
 OS:=$(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 CPU:=$(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
-WRAPPER_TARGETS:=mpg123-oss mpg123-nas mpg123-jack mpg123-openal mpg123-portaudio
-
 CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
 CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
 CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)
 LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
+LDFLAGS += -Wl,--as-needed
 
+WRAPPER_TARGETS:=mpg123-oss mpg123-nas mpg123-jack mpg123-openal mpg123-portaudio
 ifeq ($(OS),linux)
 WRAPPER_TARGETS += mpg123-alsa
 endif
@@ -23,17 +23,6 @@ CONF_COMMON:=--enable-static=no --enable-shared --enable-lfs-alias \
 
 CONF_i386:=--with-cpu=x86_dither
 CONF_arm:=--with-cpu=generic_fpu
-
-SOVERSION:=0
-LIB_PKG:=libmpg123-$(SOVERSION)
-DEV_PKG:=libmpg123-dev
-LIB_PKGSTR:=-p$(LIB_PKG) -p$(DEV_PKG)
-ARCH_PKGSTR=-pmpg123
-ALL_PKGSTR=$(LIB_PKGSTR) $(ARCH_PKGSTR)
-
-LDFLAGS += -Wl,--as-needed
-
-#export DH_VERBOSE=1
 
 %:
 	dh $@ --with autoreconf
@@ -68,7 +57,7 @@ override_dh_auto_install: $(WRAPPER_TARGETS)
 	done
 
 override_dh_installchangelogs:
-	dh_installchangelogs $(ARCH_PKGSTR) NEWS
-	dh_installchangelogs $(LIB_PKGSTR) NEWS.libmpg123
+	dh_installchangelogs -pmpg123 NEWS
+	dh_installchangelogs -plibmpg123-0 -plibmpg123-dev NEWS.libmpg123
 	dh_installchangelogs --remaining-packages
 
