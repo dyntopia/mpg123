@@ -1,3 +1,15 @@
+mpg123 (1.22.3-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Fix UTF-16 surrogate detection because that used to falsely detect
+      characters above 0xDFFF as surrogates. (Closes: 786718)
+  * Update the Suggests so that they can be satisfied in all architectures.
+  * Introduce a wrapper for the pulse plugin.
+  * Simplify the rules file by removing the dh_shlibdeps and dh_makeshlibs
+    overrides.
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Thu, 06 Aug 2015 19:13:48 -0400
+
 mpg123 (1.22.2-1) unstable; urgency=medium
 
   * New upstream release.
