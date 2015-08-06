@@ -75,17 +75,3 @@ override_dh_installchangelogs:
 override_dh_makeshlibs:
 	dh_makeshlibs $(LIB_PKGSTR) -V "$(LIB_PKG) (>= 1.15.1)"
 
-override_dh_shlibdeps:
-	dh_shlibdeps $(ALL_PKGSTR) -Xdebian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123/ -- \
-		-dSuggests `find debian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123/ -name "output_*.so" -type f` -dDepends
-	for n in alsa nas jack dummy openal oss portaudio; do \
-		i="debian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123/output_$$n.so"; \
-		test -e "$$i" || continue; \
-		dh_shlibdeps $(ARCH_PKGSTR) -Xdebian/mpg123/usr/lib/$(DEB_HOST_MULTIARCH)/mpg123 debian/mpg123 -- -p"$$n"plugin -dRecommends "$$i" -dDepends; \
-	done
-	chmod +x "$(CURDIR)/debian/alt_deps.py"
-	"$(CURDIR)/debian/alt_deps.py" "$(CURDIR)/debian/mpg123.substvars" \
-	  plugin:Recommends \
-	  "alsaplugin:Recommends ossplugin:Recommends dummyplugin:Recommends jackplugin:Recommends openalplugin:Recommends portaudioplugin:Recommends" \
-	  "ossplugin:Recommends=oss-compat | oss4-base"
-	dh_shlibdeps --remaining-packages

@@ -27,14 +27,11 @@ Architecture: any
 Depends:
  ${misc:Depends},
  ${shlibs:Depends}
-Recommends:
- ${plugin:Recommends},
- ${shlibs:Recommends}
 Suggests:
  alsa-utils [linux-any],
  jackd,
  nas,
- oss-compat,
+ oss-compat [linux-any],
  oss4-base [linux-any],
  pulseaudio
 Provides:
