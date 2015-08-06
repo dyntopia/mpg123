@@ -15,7 +15,10 @@ LDFLAGS += -Wl,--as-needed
 
 WRAPPER_TARGETS:=mpg123-oss mpg123-nas mpg123-jack mpg123-openal mpg123-portaudio
 ifeq ($(OS),linux)
-WRAPPER_TARGETS += mpg123-alsa
+	WRAPPER_TARGETS += mpg123-alsa
+endif
+ifneq ($(OS),hurd)
+	WRAPPER_TARGETS += mpg123-pulse
 endif
 
 CONF_COMMON:=--enable-static=no --enable-shared --enable-lfs-alias \
