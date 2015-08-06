@@ -72,6 +72,3 @@ override_dh_installchangelogs:
 	dh_installchangelogs $(LIB_PKGSTR) NEWS.libmpg123
 	dh_installchangelogs --remaining-packages
 
-override_dh_makeshlibs:
-	dh_makeshlibs $(LIB_PKGSTR) -V "$(LIB_PKG) (>= 1.15.1)"
-
