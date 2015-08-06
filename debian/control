@@ -31,11 +31,11 @@ Recommends:
  ${plugin:Recommends},
  ${shlibs:Recommends}
 Suggests:
- alsa-utils,
+ alsa-utils [linux-any],
  jackd,
  nas,
  oss-compat,
- oss4-base,
+ oss4-base [linux-any],
  pulseaudio
 Provides:
  mpg123-oss-3dnow
@@ -57,7 +57,8 @@ Package: libmpg123-0
 Multi-Arch: same
 Architecture: any
 Section: libs
-Pre-Depends: ${misc:Pre-Depends}
+Pre-Depends:
+ ${misc:Pre-Depends}
 Depends:
  ${misc:Depends},
  ${shlibs:Depends}
