@@ -24,9 +24,6 @@ CONF_COMMON:=--enable-static=no --enable-shared --enable-lfs-alias \
 CONF_i386:=--with-cpu=x86_dither
 CONF_arm:=--with-cpu=generic_fpu
 
-%:
-	dh $@ --with autoreconf
-
 mpg123-%: debian/mpg123-wrapper.in
 	dh_testdir
 	o=`echo $@ | sed -e 's/^mpg123-\([^-]\+\).*/\1/'`; \
@@ -45,7 +42,6 @@ override_dh_auto_clean:
 override_dh_auto_install: $(WRAPPER_TARGETS)
 	dh_auto_install
 
-	find $(CURDIR)/debian -name '*.la' -delete
 	mv $(CURDIR)/debian/tmp/usr/bin/mpg123 \
 	   $(CURDIR)/debian/tmp/usr/bin/mpg123.bin
 	mv $(CURDIR)/debian/tmp/usr/share/man/man1/mpg123.1 \
@@ -61,3 +57,5 @@ override_dh_installchangelogs:
 	dh_installchangelogs -plibmpg123-0 -plibmpg123-dev NEWS.libmpg123
 	dh_installchangelogs --remaining-packages
 
+%:
+	dh $@ --with autoreconf
