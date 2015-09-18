@@ -1,3 +1,11 @@
+mpg123 (1.22.4-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Fix regression introduced with a bugfix in 1.14.1 to make free format
+      streams work again.
+
+ -- Miguel A. Colón Vélez <debian.micove@gmail.com>  Fri, 18 Sep 2015 03:42:40 -0400
+
 mpg123 (1.22.3-1) unstable; urgency=medium
 
   * New upstream release.
