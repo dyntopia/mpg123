@@ -12,27 +12,6 @@
 
 #include "debug.h"
 
-#if (!defined(WIN32) || defined (__CYGWIN__)) && defined(HAVE_SIGNAL_H)
-void (*catchsignal(int signum, void(*handler)()))()
-{
-  struct sigaction new_sa;
-  struct sigaction old_sa;
-
-#ifdef DONT_CATCH_SIGNALS
-  fprintf (stderr, "Not catching any signals.\n");
-  return ((void (*)()) -1);
-#endif
-
-  new_sa.sa_handler = handler;
-  sigemptyset(&new_sa.sa_mask);
-  new_sa.sa_flags = 0;
-  if (sigaction(signum, &new_sa, &old_sa) == -1)
-    return ((void (*)()) -1);
-  return (old_sa.sa_handler);
-}
-#endif
-
-
 #if 0
 /* removed the strndup for better portability */
 /*
@@ -50,6 +29,13 @@ char *strndup (const char *src, int num)
 	return (strncpy(dst, src, num));
 }
 #endif
+
+
+size_t dir_length(const char *path)
+{
+	char * slashpos = strrchr(path, '/');
+	return (slashpos ? slashpos-path : 0);
+}
 
 /*
  *   Split "path" into directory and filename components.
@@ -69,7 +55,7 @@ int split_dir_file (const char *path, char **dname, char **fname)
 
 	if ((slashpos = strrchr(path, '/'))) {
 		*fname = slashpos + 1;
-		*dname = strdup(path); /* , 1 + slashpos - path); */
+		*dname = compat_strdup(path); /* , 1 + slashpos - path); */
 		if(!(*dname)) {
 			perror("failed to allocate memory for dir name");
 			return 0;

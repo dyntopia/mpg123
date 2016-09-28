@@ -10,6 +10,9 @@
 	I begin with the outsourcing of IPv4 stuff, then make the stuff generic.
 */
 
+/* Newer glibc is strict about this: getaddrinfo() stuff needs POSIX2K. */
+#define _POSIX_C_SOURCE 200112L
+
 #include "mpg123app.h"
 
 #ifdef NETWORK

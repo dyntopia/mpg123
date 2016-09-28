@@ -190,9 +190,6 @@
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
 
-/* Define to 1 if you have the `strdup' function. */
-#undef HAVE_STRDUP
-
 /* Define to 1 if you have the `strerror' function. */
 #undef HAVE_STRERROR
 
@@ -219,6 +216,9 @@
 
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #undef HAVE_SYS_RESOURCE_H
+
+/* Define to 1 if you have the <sys/select.h> header file. */
+#undef HAVE_SYS_SELECT_H
 
 /* Define to 1 if you have the <sys/signal.h> header file. */
 #undef HAVE_SYS_SIGNAL_H
@@ -286,6 +286,9 @@
 
 /* Define to disable downsampled decoding. */
 #undef NO_DOWNSAMPLE
+
+/* Define to disable equalizer. */
+#undef NO_EQUALIZER
 
 /* Define to disable error messages in combination with a return value (the
    return is left intact). */
