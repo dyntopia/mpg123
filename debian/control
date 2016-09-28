@@ -19,8 +19,8 @@ Build-Depends:
  python-minimal
 Standards-Version: 3.9.6
 Homepage: http://mpg123.org/
-Vcs-Git: git://anonscm.debian.org/pkg-multimedia/mpg123.git
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-multimedia/mpg123.git
+Vcs-Git: https://anonscm.debian.org/cgit/pkg-multimedia/mpg123.git
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-multimedia/mpg123.git
 
 Package: mpg123
 Architecture: any
