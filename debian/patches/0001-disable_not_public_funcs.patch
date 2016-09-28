@@ -6,9 +6,9 @@ Author: Daniel Kobras <kobras@debian.org>
  src/libmpg123/dither.h |    2 ++
  2 files changed, 4 insertions(+)
 
---- mpg123.orig/src/libmpg123/dither.h
-+++ mpg123/src/libmpg123/dither.h
-@@ -17,7 +17,9 @@ enum mpg123_noise_type
+--- a/src/libmpg123/dither.h
++++ b/src/libmpg123/dither.h
+@@ -17,7 +17,9 @@
  	,mpg123_highpass_tpdf_noise
  };
  
@@ -18,9 +18,9 @@ Author: Daniel Kobras <kobras@debian.org>
  void dither_table_init(float *dithertable);
  
  #endif
---- mpg123.orig/src/libmpg123/dither.c
-+++ mpg123/src/libmpg123/dither.c
-@@ -100,6 +100,7 @@ static void highpass_tpdf_noise(float *t
+--- a/src/libmpg123/dither_impl.h
++++ b/src/libmpg123/dither_impl.h
+@@ -100,6 +100,7 @@
  	}
  }
  
@@ -28,7 +28,7 @@ Author: Daniel Kobras <kobras@debian.org>
  void mpg123_noise(float* table, size_t count, enum mpg123_noise_type noisetype)
  {
  	switch(noisetype)
-@@ -111,6 +112,7 @@ void mpg123_noise(float* table, size_t c
+@@ -111,6 +112,7 @@
  		break;
  	}
  }
