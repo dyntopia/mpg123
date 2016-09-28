@@ -73,7 +73,7 @@ Section: libs
 Depends:
  ${misc:Depends},
  ${shlibs:Depends}
-Description: MPEG layer 1/2/3 audio decoder (shared library)
+Description: MPEG layer 1/2/3 audio decoder (libout123 shared library)
  mpg123 is a real time MPEG 1.0/2.0/2.5 audio player/decoder for layers
  1, 2 and 3 (MPEG 1.0 layer 3 also known as MP3).
  .
