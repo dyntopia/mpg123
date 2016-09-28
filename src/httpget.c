@@ -36,6 +36,8 @@
 #include "true.h"
 #endif
 
+#include <ctype.h>
+
 #include "debug.h"
 
 void httpdata_init(struct httpdata *e)
@@ -80,7 +82,15 @@ static const char* mime_file[] =
 	NULL
 };
 static const char* mime_m3u[] = { "audio/mpegurl", "audio/mpeg-url", "audio/x-mpegurl", NULL };
-static const char* mime_pls[]	= { "audio/x-scpls", "audio/scpls", "application/pls", "application/x-scpls", NULL };
+static const char* mime_pls[]	=
+{
+	"audio/x-scpls"
+,	"audio/scpls"
+,	"application/pls"
+,	"application/x-scpls"
+,	"application/pls+xml"
+,	NULL
+};
 static const char** mimes[] = { mime_file, mime_m3u, mime_pls, NULL };
 
 int debunk_mime(const char* mime)
@@ -93,12 +103,16 @@ int debunk_mime(const char* mime)
 	aux = strchr(mime, ';');
 	if(aux != NULL)
 	{
-		fprintf(stderr, "Warning: additional info in content-type ignored (%s)\n", aux+1);
-		/* Just compare up to before the ";". */
+		if(!param.quiet)
+			fprintf(stderr, "Warning: additional info in content-type ignored (%s)\n", aux+1);
+		/* Just compare up to before the ";" */
 		len = aux-mime;
 	}
 	/* Else, compare the whole string -- including the end. */
 	else len = strlen(mime)+1;
+
+	/* Skip trailing whitespace, to ne nice to strange folks. */
+	while(len && isspace(mime[len-1])) --len;
 
 	for(i=0; mimes[i]    != NULL; ++i)
 	for(j=0; mimes[i][j] != NULL; ++j)
@@ -667,7 +681,15 @@ int http_open(char* url, struct httpdata *hd)
 				}
 			}
 		} while(response.p[0] != '\r' && response.p[0] != '\n');
-		if (relocate) { close(sock); sock = -1; }
+		if(relocate)
+		{
+			close(sock);
+			sock = -1;
+			/* Forget content type, might just relate to a displayed error page,
+			   not the resource being redirected to. */
+			mpg123_free_string(&hd->content_type);
+			mpg123_init_string(&hd->content_type);
+		}
 	} while(relocate && got_location && purl.fill && numrelocs++ < HTTP_MAX_RELOCATIONS);
 	if(relocate)
 	{
@@ -699,6 +721,8 @@ exit: /* The end as well as the exception handling point... */
 /* stub */
 int http_open (char* url, struct httpdata *hd)
 {
+	if(!param.quiet)
+		error("HTTP support not built in.");
 	return -1;
 }
 #endif

@@ -8,14 +8,25 @@ dnl Require autoconf version >= 2.57
 AC_PREREQ(2.57)
 
 dnl ############# Initialisation
-AC_INIT([mpg123], [1.22.4], [mpg123-devel@lists.sourceforge.net])
+AC_INIT([mpg123], [1.23.8], [maintainer@mpg123.org])
 dnl Increment API_VERSION when the API gets changes (new functions).
-API_VERSION=41
-LIB_PATCHLEVEL=2
+
+dnl libmpg123
+API_VERSION=42
+LIB_PATCHLEVEL=3
+
+dnl libout123
+OUTAPI_VERSION=1
+OUTLIB_PATCHLEVEL=4
+
 dnl Since we want to be backwards compatible, both sides get set to API_VERSION.
 LIBMPG123_VERSION=$API_VERSION:$LIB_PATCHLEVEL:$API_VERSION
+LIBOUT123_VERSION=$OUTAPI_VERSION:$OUTLIB_PATCHLEVEL:$OUTAPI_VERSION
 AC_SUBST(LIBMPG123_VERSION)
 AC_SUBST(API_VERSION)
+AC_SUBST(LIBOUT123_VERSION)
+AC_SUBST(OUTAPI_VERSION)
+
 
 AC_CONFIG_SRCDIR(src/mpg123.c)
 AC_CONFIG_AUX_DIR(build)
@@ -24,7 +35,9 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 
 dnl Version 1.7 of automake is recommended
-AM_INIT_AUTOMAKE(1.7)
+dnl Not sure what minimal version does not choke on sub directories.
+dnl Testing with 1.14.
+AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_HEADERS([src/config.h])
 
 
@@ -77,8 +90,11 @@ fi
 
 AM_PROG_AS
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
+AC_CHECK_LIBM
+AC_SUBST(LIBM)
 dnl "Checking for egrep is broken after removal of libltdl stuff... checks use $EGREP, so searching it here."
 AC_PROG_EGREP
 AC_C_CONST
@@ -164,17 +180,8 @@ dnl Configure libtool
 AC_LIBTOOL_WIN32_DLL
 AM_PROG_LIBTOOL
 
-if test x"$modules" = xdisabled
-then
-	echo "Modules still disabled..."
-	MODULE_OBJ="legacy_module.\$(OBJEXT)"
-else
-	MODULE_OBJ="module.\$(OBJEXT)"
-fi
-
 AM_CONDITIONAL( [HAVE_MODULES], [test "x$modules" = xenabled] )
 
-AC_SUBST(MODULE_OBJ)
 AC_SUBST(LT_LDFLAGS)
 AC_SUBST(EXEC_LT_LDFLAGS)
 
@@ -194,12 +201,11 @@ AC_ARG_ENABLE(debug,
 )
 
 AC_ARG_ENABLE(nagging,
-              [  --enable-nagging=[no/yes] turn on GCC's pedantic nagging with error on warnings, also enables debugging ],
+              [  --enable-nagging=[no/yes] turn on GCC's pedantic nagging with error on warnings, does not include --enable-debug anymore ],
               [
                 if test "x$enableval" = xyes
                 then
                   nagging="enabled"
-                  debugging="enabled"
                else
                   nagging="disabled"
                 fi
@@ -446,6 +452,16 @@ AC_ARG_ENABLE(real,
                 fi
               ], [])
 
+equalizer=enabled
+AC_ARG_ENABLE(equalizer,
+              [  --disable-equalizer=[no/yes] no equalizer support ],
+              [
+                if test "x$enableval" = xno; then
+                  equalizer="disabled"
+                fi
+              ], [])
+
+			  
 AC_ARG_WITH([cpu], [
   --with-cpu=generic[[_fpu]]      Use generic processor code with floating point arithmetic
   --with-cpu=generic_float      Plain alias to generic_fpu now... float output is a normal runtime option!
@@ -478,21 +494,33 @@ AC_ARG_WITH([cpu], [
   --with-cpu=aarch64      Pack neon64 and generic[[_dither]] decoders, for 64bit ARM processors
 ])
 
+use_yasm=auto
+AC_ARG_ENABLE(yasm,
+              [  --enable-yasm=[no/yes] enforce yasm instad of default assembler for some optimizations (AVX, currently) ],
+              [
+                if test "x$enableval" = xyes; then
+                  use_yasm="enabled"
+                else
+                  use_yasm="disabled"
+                fi
+              ], [])
 
-# opt-in for IEEE754 floating point action
-# We want to make sure not to apply hacks relying on IEEE754 storage format on platforms where we did not make sure that this actually is valid.
-# It _should_ be fine for about all computers still out there, but we play safe.
-ieee=no
-case $host in
-  i?86-*|x86_64-*|powerpc*|sparc*)
-    ieee=yes
-  ;;
-esac
-if test "x$ieee" = xyes; then
+AC_ARG_ENABLE(ieeefloat,
+  [  --enable-ieeefloat=[yes/no] use special hackery relying on IEEE 754 floating point storage format (to accurately round to 16 bit integer at bit more efficiently in generic decoder, enabled by default, disable in case you have a very special computer) ],
+  [
+    if test "x$enableval" = xyes; then
+      ieee=enabled
+    else
+      ieee=disabled
+    fi
+  ], [ ieee=enabled ])
+
+if test "x$ieee" = xenabled; then
   echo "We assume IEEE754 floating point format."
   AC_DEFINE(IEEE_FLOAT,   1, [ Define to indicate that float storage follows IEEE754. ])
 fi
 
+sys_cppflags=
 newoldwritesample=disabled
 case $host in
   aarch64-*-linux*|arm64-*-linux*)
@@ -567,11 +595,11 @@ case $host in
       ;;
     esac
   ;;
-  i?86-*-dragonfly* | i?86-*-freebsd* | i?86-*-midnightbsd* | i?86-*-mirbsd* | i?86-*-netbsd* | i?86-*-openbsd*)
+  i?86-*-dragonfly* | i?86-*-freebsd* | i?86-*-midnightbsd* | i?86-*-mirbsd* | i?86-*-netbsd* | i?86-*-openbsd* | i?86-*-haiku*)
     cpu_type="x86"
     newoldwritesample=enabled
   ;;
-  x86_64-*-dragonfly* | x86_64-*-freebsd* | x86_64-*-midnightbsd* | x86_64-*-mirbsd* | x86_64-*-netbsd* | x86_64-*-openbsd*)
+  x86_64-*-dragonfly* | x86_64-*-freebsd* | x86_64-*-midnightbsd* | x86_64-*-mirbsd* | x86_64-*-netbsd* | x86_64-*-openbsd* | x86_64-*-haiku*)
     cpu_type="x86-64"
   ;;
   *-*-dragonfly* | *-*-freebsd* | *-*-midnightbsd* | *-*-mirbsd* | *-*-netbsd* | *-*-openbsd*)
@@ -640,45 +668,52 @@ case $host in
     cpu_type="x86"
     newoldwritesample=enabled
   ;;
+  *-ibm-aix*)
+    AC_MSG_WARN([AIX system detected. You might want to --disable-largefile when trouble about conflicting types for lseek64 and friends occurs.])
+    # Altivec instead? It is developed for MacOS ...
+    cpu_type=generic_fpu
+    # no struct winsize without _ALL_SOURCE
+    sys_cppflags=-D_ALL_SOURCE
+  ;;
 	i386-*)
 		AC_MSG_WARN([Unknown host operating system])
 		cpu_type="i386"
 		buffer=disabled
-		ADD_CPPFLAGS="-DGENERIC $ADD_CPPFLAGS"
+		sys_cppflags=-DGENERIC
     newoldwritesample=enabled
 	;;
 	i486-*)
 		AC_MSG_WARN([Unknown host operating system])
 		cpu_type="i486"
 		buffer=disabled
-		ADD_CPPFLAGS="-DGENERIC $ADD_CPPFLAGS"
+		sys_cppflags=-DGENERIC
     newoldwritesample=enabled
 	;;
 	i586-*)
 		AC_MSG_WARN([Unknown host operating system])
 		cpu_type="x86"
 		buffer=disabled
-		ADD_CPPFLAGS="-DGENERIC $ADD_CPPFLAGS"
+		sys_cppflags=-DGENERIC
     newoldwritesample=enabled
 	;;
 	i686-*)
 		AC_MSG_WARN([Unknown host operating system])
 		cpu_type="x86"
 		buffer=disabled
-		ADD_CPPFLAGS="-DGENERIC $ADD_CPPFLAGS"
+		sys_cppflags=-DGENERIC
     newoldwritesample=enabled
 	;;
 	x86_64-*)
 		AC_MSG_WARN([Unknown host operating system])
 		cpu_type="x86-64"
 		buffer=disabled
-		ADD_CPPFLAGS="-DGENERIC $ADD_CPPFLAGS"
+		sys_cppflags=-DGENERIC
 	;;
   *)
   	AC_MSG_WARN([Unknown host operating system])
     cpu_type="generic_fpu"
     buffer=disabled
-    ADD_CPPFLAGS="-DGENERIC $ADD_CPPFLAGS"
+    sys_cppflags=-DGENERIC
   ;;
 esac
 
@@ -757,7 +792,9 @@ else
   fi
 fi
 
-
+if test "x$equalizer" = "xdisabled"; then
+  AC_DEFINE(NO_EQUALIZER, 1, [ Define to disable equalizer. ])
+fi
 
 layer1=enabled
 AC_ARG_ENABLE(layer1,
@@ -937,7 +974,15 @@ if test x"$avx_support" = xunknown; then
 	rm -f conftest.o conftest.s
 fi
 
-if test x"$avx_support" = xno; then
+check_yasm=no
+if test x"$avx_support" = xno || test x"$use_yasm" = xenabled; then
+  check_yasm=yes
+fi
+if test x"$use_yasm" = xdisabled; then
+  check_yasm=no
+fi
+
+if test x"$check_yasm" = xyes; then
 	AC_CHECK_PROGS(YASM,[yasm],no)
 	if test x"$YASM" != xno; then
 		AC_MSG_CHECKING([if $YASM supports GAS syntax and AVX instructions])
@@ -951,6 +996,10 @@ if test x"$avx_support" = xno; then
 			AC_MSG_RESULT([no])
 		fi
 		rm -f conftest.o conftest.s
+	else
+		if test x"$use_yasm" = xenabled; then
+			AC_MSG_ERROR([Yasm enforced but not found!])
+		fi
 	fi
 else
 	YASM="no"
@@ -969,7 +1018,7 @@ dnl ############## Really basic headers, needed for other checks.
 
 AC_HEADER_STDC
 dnl Is it too paranoid to specifically check for stdint.h and limits.h?
-AC_CHECK_HEADERS([stdio.h stdlib.h string.h unistd.h sched.h sys/ioctl.h sys/types.h stdint.h limits.h inttypes.h sys/time.h sys/wait.h sys/resource.h sys/signal.h signal.h])
+AC_CHECK_HEADERS([stdio.h stdlib.h string.h unistd.h sched.h sys/ioctl.h sys/types.h stdint.h limits.h inttypes.h sys/time.h sys/wait.h sys/resource.h sys/signal.h signal.h sys/select.h])
 
 dnl ############## Types
 
@@ -1057,6 +1106,8 @@ else
   AC_MSG_RESULT([no])
 fi
 
+# Again, prepend path for non-recursive make.
+LFS_LOBJ=`for i in $LFS_LOBJ; do printf ' src/libmpg123/%s' $i; done`
 AC_SUBST(LFS_LOBJ)
 
 
@@ -1083,8 +1134,6 @@ AC_CHECK_FUNCS( strerror )
 
 AC_CHECK_FUNCS( setlocale nl_langinfo )
 
-AC_CHECK_FUNCS( strdup )
-
 AC_CHECK_FUNCS( atoll )
 
 AC_CHECK_FUNCS( mkfifo, [ have_mkfifo=yes ], [ have_mkfifo=no ] )
@@ -1108,7 +1157,7 @@ else
 fi
 
 dnl trying to get that socket lib settled in one line
-AC_SEARCH_LIBS(gethostbyname, nsl socket) 
+AC_SEARCH_LIBS(gethostbyname, nsl socket network) 
 dnl OK, two lines... Solaris needs -lnsl -lsocket
 AC_SEARCH_LIBS(socket, socket) 
 
@@ -1157,7 +1206,7 @@ dnl ############## Choose compiler flags and CPU
 
 # do not assume gcc here, so no flags by default
 ADD_CFLAGS=""
-ADD_CPPFLAGS=""
+ADD_CPPFLAGS="$sys_cppflags"
 ADD_LDFLAGS=""
 LIBS="$LIBS"
 
@@ -1172,9 +1221,12 @@ if test x"$debugging" = xenabled; then
 	# gcc specific...
 	if test x"$GCC" = xyes; then
 		ADD_CFLAGS="$ADD_CFLAGS -Wall -fno-strict-aliasing"
-		if test x"$nagging" = xenabled; then
-			ADD_CFLAGS="$ADD_CFLAGS -Werror -pedantic -DPLAIN_C89"
-		fi
+	fi
+fi
+# gcc specific...
+if test x"$GCC" = xyes; then
+	if test x"$nagging" = xenabled; then
+		ADD_CFLAGS="$ADD_CFLAGS -Werror -std=c89 -pedantic -DPLAIN_C89"
 	fi
 fi
 
@@ -1472,6 +1524,12 @@ do
   word_in_list "$i.lo" $DECODER_LOBJ || DECODER_LOBJ="$DECODER_LOBJ $i.lo"
 done
 
+# Another preprocessing step: Append prefix for non-recursive make.
+# Just because $(addprefix ...) is a GNU extension.
+
+DECODER_OBJ=`for i in $DECODER_OBJ; do printf ' src/libmpg123/%s' $i; done`
+DECODER_LOBJ=`for i in $DECODER_LOBJ; do printf ' src/libmpg123/%s' $i; done`
+
 AC_SUBST(DECODER_OBJ)
 AC_SUBST(DECODER_LOBJ)
 
@@ -1582,7 +1640,17 @@ do
 			fi # HAVE_ALSA
 		;;
 		jack)
-			PKG_CHECK_MODULES(JACK, jack, output_modules="$output_modules jack" HAVE_JACK="yes", HAVE_JACK="no" check_failed=yes)
+			# JACK module uses semaphores, hence -lpthread.
+			AC_CHECK_LIB( [pthread], [sem_post],
+				[ PKG_CHECK_MODULES(JACK, jack,
+					[
+						output_modules="$output_modules jack"
+						HAVE_JACK="yes"
+						JACK_LIBS="$JACK_LIBS -lpthread"
+					], [ HAVE_JACK="no" check_failed=yes ] )
+				],
+				[ HAVE_JACK=no check_failed=yes ]
+			)
 		;;
 		pulse)
 			PKG_CHECK_MODULES(PULSE, libpulse-simple, output_modules="$output_modules pulse" HAVE_PULSE="yes", HAVE_PULSE="no" check_failed=yes)
@@ -1954,171 +2022,60 @@ fi
 # That's (beginning of) the list for mpg123's internal default.
 default_output_modules=$default_output_module
 
-OUTPUT_OBJ=
-OUTPUT_MOD=
-OUTPUT_CFLAGS=
-OUTPUT_LIBS=
-OUTPUT_LDFLAGS=
-
 # Setup the static build.
-if test "x$modules" = xdisabled
-then
-	echo "Preparing static output $default_output_module"
-	OUTPUT_MOD="$default_output_module"
-	OUTPUT_OBJ="output/$default_output_module.\$(OBJEXT)"
-	OUTPUT_CFLAGS=
-	OUTPUT_LIBS=
-	# That feels stupid... what about hashed arrays?
-	case $OUTPUT_MOD in
-	# Here's a script for that tedious list, perhaps to be outsourced together with the one in src/output/Makefile.am
-#for i in tinyalsa alsa qsa coreaudio esd jack nas oss portaudio pulse sdl sndio sun win32 win32_wasapi aix alib arts hp os2 sgi mint openal
+# The conditionals always need to be defined by configure, even if
+# HAVE_MODULES is FALSE!
+# Here's a script for that tedious list, perhaps to be outsourced together with the one in #src/output/Makefile.am
+#for i in dummy tinyalsa alsa qsa coreaudio esd jack nas oss portaudio pulse sdl sndio sun win32 win32_wasapi aix alib arts hp os2 sgi mint openal
 #do echo $i; done |
 #perl -ne 'chomp; $big = uc($_); print <<EOT;
-#		$_)
-#			OUTPUT_LIBS="\$${big}_LIBS"
-#			OUTPUT_LDFLAGS="\$${big}_LDFLAGS"
-#			OUTPUT_CFLAGS="\$${big}_CFLAGS"
-#		;;
+#AM_CONDITIONAL([BUILD_${big}], [ test "$_" = \$default_output_module ])
 #EOT
 #'
-		tinyalsa)
-			OUTPUT_LIBS="$TINYALSA_LIBS"
-			OUTPUT_LDFLAGS="$TINYALSA_LDFLAGS"
-			OUTPUT_CFLAGS="$TINYALSA_CFLAGS"
-		;;
-		alsa)
-			OUTPUT_LIBS="$ALSA_LIBS"
-			OUTPUT_LDFLAGS="$ALSA_LDFLAGS"
-			OUTPUT_CFLAGS="$ALSA_CFLAGS"
-		;;
-		qsa)
-			OUTPUT_LIBS="$QSA_LIBS"
-			OUTPUT_LDFLAGS="$QSA_LDFLAGS"
-			OUTPUT_CFLAGS="$QSA_CFLAGS"
-		;;
-		coreaudio)
-			OUTPUT_LIBS="$COREAUDIO_LIBS"
-			OUTPUT_LDFLAGS="$COREAUDIO_LDFLAGS"
-			OUTPUT_CFLAGS="$COREAUDIO_CFLAGS"
-		;;
-		esd)
-			OUTPUT_LIBS="$ESD_LIBS"
-			OUTPUT_LDFLAGS="$ESD_LDFLAGS"
-			OUTPUT_CFLAGS="$ESD_CFLAGS"
-		;;
-		jack)
-			OUTPUT_LIBS="$JACK_LIBS"
-			OUTPUT_LDFLAGS="$JACK_LDFLAGS"
-			OUTPUT_CFLAGS="$JACK_CFLAGS"
-		;;
-		nas)
-			OUTPUT_LIBS="$NAS_LIBS"
-			OUTPUT_LDFLAGS="$NAS_LDFLAGS"
-			OUTPUT_CFLAGS="$NAS_CFLAGS"
-		;;
-		oss)
-			OUTPUT_LIBS="$OSS_LIBS"
-			OUTPUT_LDFLAGS="$OSS_LDFLAGS"
-			OUTPUT_CFLAGS="$OSS_CFLAGS"
-		;;
-		portaudio)
-			OUTPUT_LIBS="$PORTAUDIO_LIBS"
-			OUTPUT_LDFLAGS="$PORTAUDIO_LDFLAGS"
-			OUTPUT_CFLAGS="$PORTAUDIO_CFLAGS"
-		;;
-		pulse)
-			OUTPUT_LIBS="$PULSE_LIBS"
-			OUTPUT_LDFLAGS="$PULSE_LDFLAGS"
-			OUTPUT_CFLAGS="$PULSE_CFLAGS"
-		;;
-		sdl)
-			OUTPUT_LIBS="$SDL_LIBS"
-			OUTPUT_LDFLAGS="$SDL_LDFLAGS"
-			OUTPUT_CFLAGS="$SDL_CFLAGS"
-		;;
-		sndio)
-			OUTPUT_LIBS="$SNDIO_LIBS"
-			OUTPUT_LDFLAGS="$SNDIO_LDFLAGS"
-			OUTPUT_CFLAGS="$SNDIO_CFLAGS"
-		;;
-		sun)
-			OUTPUT_LIBS="$SUN_LIBS"
-			OUTPUT_LDFLAGS="$SUN_LDFLAGS"
-			OUTPUT_CFLAGS="$SUN_CFLAGS"
-		;;
-		win32)
-			OUTPUT_LIBS="$WIN32_LIBS"
-			OUTPUT_LDFLAGS="$WIN32_LDFLAGS"
-			OUTPUT_CFLAGS="$WIN32_CFLAGS"
-		;;
-		win32_wasapi)
-			OUTPUT_LIBS="$WIN32_WASAPI_LIBS"
-			OUTPUT_LDFLAGS="$WIN32_WASAPI_LDFLAGS"
-			OUTPUT_CFLAGS="$WIN32_WASAPI_CFLAGS"
-		;;
-		aix)
-			OUTPUT_LIBS="$AIX_LIBS"
-			OUTPUT_LDFLAGS="$AIX_LDFLAGS"
-			OUTPUT_CFLAGS="$AIX_CFLAGS"
-		;;
-		alib)
-			OUTPUT_LIBS="$ALIB_LIBS"
-			OUTPUT_LDFLAGS="$ALIB_LDFLAGS"
-			OUTPUT_CFLAGS="$ALIB_CFLAGS"
-		;;
-		arts)
-			OUTPUT_LIBS="$ARTS_LIBS"
-			OUTPUT_LDFLAGS="$ARTS_LDFLAGS"
-			OUTPUT_CFLAGS="$ARTS_CFLAGS"
-		;;
-		hp)
-			OUTPUT_LIBS="$HP_LIBS"
-			OUTPUT_LDFLAGS="$HP_LDFLAGS"
-			OUTPUT_CFLAGS="$HP_CFLAGS"
-		;;
-		os2)
-			OUTPUT_LIBS="$OS2_LIBS"
-			OUTPUT_LDFLAGS="$OS2_LDFLAGS"
-			OUTPUT_CFLAGS="$OS2_CFLAGS"
-		;;
-		sgi)
-			OUTPUT_LIBS="$SGI_LIBS"
-			OUTPUT_LDFLAGS="$SGI_LDFLAGS"
-			OUTPUT_CFLAGS="$SGI_CFLAGS"
-		;;
-		mint)
-			OUTPUT_LIBS="$MINT_LIBS"
-			OUTPUT_LDFLAGS="$MINT_LDFLAGS"
-			OUTPUT_CFLAGS="$MINT_CFLAGS"
-		;;
-		openal)
-			OUTPUT_LIBS="$OPENAL_LIBS"
-			OUTPUT_LDFLAGS="$OPENAL_LDFLAGS"
-			OUTPUT_CFLAGS="$OPENAL_CFLAGS"
-		;;
-	esac
-else
-	# Now make a comma-separated list again... eliminating the possible duplicate and dummy.
-	for i in $output_modules
-	do
-		if test $i != $default_output_module && test $i != dummy; then
-			default_output_modules=$default_output_modules,$i
-		fi
-	done
+
+AM_CONDITIONAL([BUILD_DUMMY], [ test "dummy" = $default_output_module ])
+AM_CONDITIONAL([BUILD_TINYALSA], [ test "tinyalsa" = $default_output_module ])
+AM_CONDITIONAL([BUILD_ALSA], [ test "alsa" = $default_output_module ])
+AM_CONDITIONAL([BUILD_QSA], [ test "qsa" = $default_output_module ])
+AM_CONDITIONAL([BUILD_COREAUDIO], [ test "coreaudio" = $default_output_module ])
+AM_CONDITIONAL([BUILD_ESD], [ test "esd" = $default_output_module ])
+AM_CONDITIONAL([BUILD_JACK], [ test "jack" = $default_output_module ])
+AM_CONDITIONAL([BUILD_NAS], [ test "nas" = $default_output_module ])
+AM_CONDITIONAL([BUILD_OSS], [ test "oss" = $default_output_module ])
+AM_CONDITIONAL([BUILD_PORTAUDIO], [ test "portaudio" = $default_output_module ])
+AM_CONDITIONAL([BUILD_PULSE], [ test "pulse" = $default_output_module ])
+AM_CONDITIONAL([BUILD_SDL], [ test "sdl" = $default_output_module ])
+AM_CONDITIONAL([BUILD_SNDIO], [ test "sndio" = $default_output_module ])
+AM_CONDITIONAL([BUILD_SUN], [ test "sun" = $default_output_module ])
+AM_CONDITIONAL([BUILD_WIN32], [ test "win32" = $default_output_module ])
+AM_CONDITIONAL([BUILD_WIN32_WASAPI], [ test "win32_wasapi" = $default_output_module ])
+AM_CONDITIONAL([BUILD_AIX], [ test "aix" = $default_output_module ])
+AM_CONDITIONAL([BUILD_ALIB], [ test "alib" = $default_output_module ])
+AM_CONDITIONAL([BUILD_ARTS], [ test "arts" = $default_output_module ])
+AM_CONDITIONAL([BUILD_HP], [ test "hp" = $default_output_module ])
+AM_CONDITIONAL([BUILD_OS2], [ test "os2" = $default_output_module ])
+AM_CONDITIONAL([BUILD_SGI], [ test "sgi" = $default_output_module ])
+AM_CONDITIONAL([BUILD_MINT], [ test "mint" = $default_output_module ])
+AM_CONDITIONAL([BUILD_OPENAL], [ test "openal" = $default_output_module ])
+
+if test "x$modules" = xenabled
+then
+
+  # Now make a comma-separated list again... eliminating the possible duplicate and dummy.
+  for i in $output_modules
+  do
+    if test $i != $default_output_module && test $i != dummy; then
+      default_output_modules=$default_output_modules,$i
+    fi
+  done
 fi
 
 AC_DEFINE_UNQUOTED( DEFAULT_OUTPUT_MODULE, "$default_output_modules", [The default audio output module(s) to use] )
 
-
-AC_SUBST(OUTPUT_OBJ)
-AC_SUBST(OUTPUT_MOD)
-AC_SUBST(OUTPUT_CFLAGS)
-AC_SUBST(OUTPUT_LIBS)
-AC_SUBST(OUTPUT_LDFLAGS)
-
 dnl ############## Compiler Optimizations
 
 CFLAGS="$ADD_CFLAGS $CFLAGS"
+AM_CONDITIONAL([BUILD_BUFFER], [ test x"$buffer" = xenabled ])
 if test x"$buffer" = xdisabled; then
 	ADD_CPPFLAGS="$ADD_CPPFLAGS -DNOXFERMEM"
 fi
@@ -2398,22 +2355,13 @@ fi
 
 dnl ############## Final Output
 
-# Do that here to prevent the above tests usign -lltdl...
-LIBMPG123_LIBS=$LIBS
-AC_SUBST(LIBMPG123_LIBS)
-if test "x$modules" = xenabled; then
-  LIBS="-lltdl $LIBS"
-fi
-
 AC_CONFIG_FILES([
 	Makefile
 	libmpg123.pc
+	libout123.pc
 	mpg123.spec
-	doc/Makefile
-	src/Makefile
-	src/output/Makefile
-	src/libmpg123/Makefile
 	src/libmpg123/mpg123.h
+	src/libout123/out123.h
 ])
 
 AC_OUTPUT
@@ -2444,8 +2392,13 @@ else
 fi
 echo "  LFS alias symbols ....... $lfs_alias ($LFS_ALIAS_BITS)"
 echo "  LFS alias type .......... $lfs_alias_type"
+if test x"$use_yasm_for_avx" = xyes; then
+  echo "  Use yasm (for AVX only) . enabled"
+else
+  echo "  Use yasm (for AVX only) . disabled"
+fi
 
-echo -n "
+echo "
   Core libmpg123 features:
   Layer I ................. $layer1
   Layer II ................ $layer2
@@ -2464,13 +2417,14 @@ echo -n "
   16 bit integer .......... $int16
   32/24 bit integer ....... $int32
   real (32 bit float) ..... $real
+  Equalizer ............... $equalizer
   Optimization detail:
   Integer conversion ...... $integers
+  IEEE 754 hackery ........ $ieee
   New/old WRITE_SAMPLE .... $newoldwritesample
   new Huffman scheme ...... $newhuff
 
-Note: Disabling core features is not commonly done and some combinations might not build/work. If you encounter such a case, help yourself (and provide a patch) or just poke the maintainers.
-"
+Note: Disabling core features is not commonly done and some combinations might not build/work. If you encounter such a case, help yourself (and provide a patch) or just poke the maintainers."
 # just an empty line
 echo
 
@@ -2488,9 +2442,10 @@ if test x"$with_optimization" = x0; then
 	echo "No optimization flags chosen, make sure you have something basic in your CFLAGS at least...
 "
 fi
-if test x"$debugging" = xenabled; then
-	echo "CFLAGS='$CFLAGS'"
-	echo "LIBS='$LIBS'"
-else
-    echo "Next type 'make' and then 'make install'."
-fi
+
+echo
+echo "  CPPFLAGS='$CPPFLAGS'"
+echo "  CFLAGS='$CFLAGS'"
+echo "  LIBS='$LIBS'"
+echo
+echo "Next type 'make' and then 'make install'."
