@@ -57,7 +57,7 @@ override_dh_auto_install: $(WRAPPER_TARGETS)
 
 override_dh_installchangelogs:
 	dh_installchangelogs -pmpg123 NEWS
-	dh_installchangelogs -plibmpg123-0 -plibmpg123-dev NEWS.libmpg123
+	dh_installchangelogs -plibmpg123-dev NEWS.libmpg123
 	dh_installchangelogs --remaining-packages
 
 %:
