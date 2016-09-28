@@ -66,12 +66,26 @@ Description: MPEG layer 1/2/3 audio decoder (shared library)
  This package contains the C libraries needed to run executables that use
  the mpg123 library.
 
+Package: libout123-0
+Multi-Arch: same
+Architecture: any
+Section: libs
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends}
+Description: MPEG layer 1/2/3 audio decoder (shared library)
+ mpg123 is a real time MPEG 1.0/2.0/2.5 audio player/decoder for layers
+ 1, 2 and 3 (MPEG 1.0 layer 3 also known as MP3).
+ .
+ This package contains the shared out123 library.
+
 Package: libmpg123-dev
 Multi-Arch: same
 Architecture: any
 Section: libdevel
 Depends:
  libmpg123-0 (= ${binary:Version}),
+ libout123-0 (= ${binary:Version}),
  ${misc:Depends}
 Description: MPEG layer 1/2/3 audio decoder (development files)
  mpg123 is a real time MPEG 1.0/2.0/2.5 audio player/decoder for layers
