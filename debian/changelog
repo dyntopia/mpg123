@@ -1,8 +1,17 @@
-mpg123 (1.23.8-1) UNRELEASED; urgency=medium
+mpg123 (1.23.8-1) unstable; urgency=high
 
+  * Team upload.
   * New upstream release.
+    - Fixes DoS with crafted ID3v2 tags. (Closes: #838960)
+  * debian/{control,libout123*}: Add new libout123-0 package.
+  * debian/libmpg123-0.symbols*: Add new symbols.
+  * debian/patches: Refreshed.
+  * debian/control:
+    - Update Vcs-*.
+    - Bump Standards Version
+  * debian/copyright: Update copyright years.
 
- -- Sebastian Ramacher <sramacher@debian.org>  Wed, 28 Sep 2016 18:44:36 +0200
+ -- Sebastian Ramacher <sramacher@debian.org>  Wed, 28 Sep 2016 19:19:03 +0200
 
 mpg123 (1.22.4-1) unstable; urgency=medium
 
