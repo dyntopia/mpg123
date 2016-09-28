@@ -1,6 +1,7 @@
  mpg123_decode_frame_32@Base 1.13.7
  mpg123_feedseek_32@Base 1.13.7
  mpg123_framebyframe_decode_32@Base 1.13.7
+ mpg123_framelength_32@Base 1.23.8
  mpg123_framepos_32@Base 1.14.0
  mpg123_index_32@Base 1.13.7
  mpg123_length_32@Base 1.13.7

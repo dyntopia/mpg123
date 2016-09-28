@@ -32,6 +32,7 @@ libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_framebyframe_decode@Base 1.10.0
  mpg123_framebyframe_next@Base 1.10.0
  mpg123_framedata@Base 1.14.0
+ mpg123_framelength@Base 1.23.8
  mpg123_framepos@Base 1.14.0
  mpg123_framepos_64@Base 1.14.0
  mpg123_free_string@Base 1.6.2
