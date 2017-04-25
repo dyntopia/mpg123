@@ -2,16 +2,13 @@
 
 #export DH_VERBOSE=1
 
-ARCH:=$(shell dpkg-architecture -qDEB_HOST_ARCH)
-OS:=$(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
-CPU:=$(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
-DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+include /usr/share/dpkg/architecture.mk
 
-CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
-CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
-CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)
-LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
-LDFLAGS += -Wl,--as-needed
+ARCH:=$(DEB_HOST_ARCH)
+OS:=$(DEB_HOST_ARCH_OS)
+CPU:=$(DEB_HOST_ARCH_CPU)
+
+export DEB_LDFLAGS_MAINT_APPEND=-Wl,--as-needed
 
 WRAPPER_TARGETS:=mpg123-oss mpg123-nas mpg123-jack mpg123-openal mpg123-portaudio
 ifeq ($(OS),linux)
