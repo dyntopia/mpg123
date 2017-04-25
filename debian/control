@@ -6,7 +6,7 @@ Uploaders:
  Reinhard Tartler <siretart@tauware.de>,
  Miguel A. Colón Vélez <debian.micove@gmail.com>
 Build-Depends:
- debhelper (>= 9),
+ debhelper (>= 10),
  dh-autoreconf,
  libasound2-dev [linux-any],
  libaudio-dev,

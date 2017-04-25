@@ -61,4 +61,4 @@ override_dh_installchangelogs:
 	dh_installchangelogs --remaining-packages
 
 %:
-	dh $@ --with autoreconf
+	dh $@
