@@ -7,7 +7,6 @@ Uploaders:
  Miguel A. Colón Vélez <debian.micove@gmail.com>
 Build-Depends:
  debhelper (>= 10),
- dh-autoreconf,
  libasound2-dev [linux-any],
  libaudio-dev,
  libjack-dev,
