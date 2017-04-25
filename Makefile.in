@@ -196,16 +196,15 @@ EXTRA_PROGRAMS = src/libmpg123/testcpu$(EXEEXT) \
 @HAVE_MODULES_FALSE@  src/libout123/modules/libdefaultmodule.la
 
 @HAVE_MODULES_TRUE@am__append_28 = src/libout123/module.c
-@HAVE_MODULES_TRUE@am__append_29 = -lltdl
-@HAVE_MODULES_FALSE@am__append_30 = src/libout123/legacy_module.c
-@WIN32_CODES_TRUE@am__append_31 = \
+@HAVE_MODULES_FALSE@am__append_29 = src/libout123/legacy_module.c
+@WIN32_CODES_TRUE@am__append_30 = \
 @WIN32_CODES_TRUE@  src/win32_support.c \
 @WIN32_CODES_TRUE@  src/win32_net.c
 
-@WIN32_CODES_TRUE@am__append_32 = \
+@WIN32_CODES_TRUE@am__append_31 = \
 @WIN32_CODES_TRUE@  src/win32_support.c
 
-@WIN32_CODES_TRUE@am__append_33 = \
+@WIN32_CODES_TRUE@am__append_32 = \
 @WIN32_CODES_TRUE@  src/win32_support.c
 
 subdir = .
@@ -294,9 +293,8 @@ am_src_libout123_libmodule_la_OBJECTS = $(am__objects_1) \
 	$(am__objects_2)
 src_libout123_libmodule_la_OBJECTS =  \
 	$(am_src_libout123_libmodule_la_OBJECTS)
-am__DEPENDENCIES_1 =
 src_libout123_libout123_la_DEPENDENCIES = src/libout123/libmodule.la \
-	src/compat/libcompat.la $(am__append_27) $(am__DEPENDENCIES_1)
+	src/compat/libcompat.la $(am__append_27)
 am__src_libout123_libout123_la_SOURCES_DIST =  \
 	src/libout123/libout123.c src/libout123/stringlists.h \
 	src/libout123/stringlists.c src/libout123/out123_int.h \
@@ -708,6 +706,7 @@ am_src_mpg123_OBJECTS = src/audio.$(OBJEXT) src/common.$(OBJEXT) \
 	src/playlist.$(OBJEXT) src/streamdump.$(OBJEXT) \
 	src/term.$(OBJEXT) $(am__objects_4)
 src_mpg123_OBJECTS = $(am_src_mpg123_OBJECTS)
+am__DEPENDENCIES_1 =
 src_mpg123_DEPENDENCIES = src/compat/libcompat.la \
 	src/libmpg123/libmpg123.la src/libout123/libout123.la \
 	$(am__DEPENDENCIES_1)
@@ -727,11 +726,12 @@ am_src_mpg123_strip_OBJECTS = src/mpg123-strip.$(OBJEXT) \
 src_mpg123_strip_OBJECTS = $(am_src_mpg123_strip_OBJECTS)
 src_mpg123_strip_DEPENDENCIES = src/compat/libcompat.la \
 	src/libmpg123/libmpg123.la
-am__src_out123_SOURCES_DIST = src/sysutil.c src/sysutil.h src/common.h \
-	src/getlopt.c src/getlopt.h src/out123.c src/mpg123app.h \
-	src/win32_support.h src/win32_support.c
-am_src_out123_OBJECTS = src/sysutil.$(OBJEXT) src/getlopt.$(OBJEXT) \
-	src/out123.$(OBJEXT) $(am__objects_5)
+am__src_out123_SOURCES_DIST = src/sysutil.c src/sysutil.h src/waves.c \
+	src/waves.h src/common.h src/getlopt.c src/getlopt.h \
+	src/out123.c src/mpg123app.h src/win32_support.h \
+	src/win32_support.c
+am_src_out123_OBJECTS = src/sysutil.$(OBJEXT) src/waves.$(OBJEXT) \
+	src/getlopt.$(OBJEXT) src/out123.$(OBJEXT) $(am__objects_5)
 src_out123_OBJECTS = $(am_src_out123_OBJECTS)
 src_out123_DEPENDENCIES = src/compat/libcompat.la \
 	src/libout123/libout123.la
@@ -1132,6 +1132,8 @@ localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
+output_modules = @output_modules@
+output_modules_la = @output_modules_la@
 pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
@@ -1164,16 +1166,9 @@ EXTRA_DIST = src/libmpg123/mpg123.h.in src/libout123/out123.h.in \
 	doc/examples/feedseek.c doc/examples/dump_seekindex.c \
 	doc/examples/extract_frames.c doc/examples/Makefile \
 	mpg123.spec makedll.sh windows-builds.sh equalize.dat \
-	NEWS.libmpg123 ports/MSVC++/mpg123.h ports/MSVC++/config.h \
-	ports/MSVC++/msvc.c ports/MSVC++/examples/scan.c \
-	ports/MSVC++/examples/feedseek.c \
-	ports/MSVC++/2005/libmpg123/libmpg123.vcproj \
-	ports/MSVC++/2008/mpg123.sln \
-	ports/MSVC++/2008/feedseek/feedseek.vcproj \
-	ports/MSVC++/2008/mpglib/mpglib.vcproj \
-	ports/MSVC++/2008/libmpg123/libmpg123.vcproj \
-	ports/MSVC++/2008/scan/scan.vcproj \
-	ports/MSVC++/2008/dump_seekindex/dump_seekindex.vcproj \
+	NEWS.libmpg123 NEWS.libout123 ports/MSVC++/mpg123.h \
+	ports/MSVC++/config.h ports/MSVC++/msvc.c \
+	ports/MSVC++/examples/scan.c ports/MSVC++/examples/feedseek.c \
 	ports/MSVC++/2008clr/2008clr.sln \
 	ports/MSVC++/2008clr/mpg123clr/advanced.cpp \
 	ports/MSVC++/2008clr/mpg123clr/advanced.h \
@@ -1208,14 +1203,23 @@ EXTRA_DIST = src/libmpg123/mpg123.h.in src/libout123/out123.h.in \
 	ports/MSVC++/2008clr/examples/scanclr/scanclr.csproj \
 	ports/MSVC++/2008clr/examples/scanclr/Program.cs \
 	ports/MSVC++/2008clr/examples/scanclr/Properties/AssemblyInfo.cs \
-	ports/MSVC++/2010/mpg123.sln \
-	ports/MSVC++/2010/dump_seekindex/dump_seekindex.vcxproj \
-	ports/MSVC++/2010/dump_seekindex/dump_seekindex.vcxproj.filters \
-	ports/MSVC++/2010/feedseek/feedseek.vcxproj \
-	ports/MSVC++/2010/feedseek/feedseek.vcxproj.filters \
-	ports/MSVC++/2010/libmpg123/libmpg123.vcxproj \
-	ports/MSVC++/2010/scan/scan.vcxproj \
-	ports/MSVC++/2010/scan/scan.vcxproj.filters \
+	ports/MSVC++/2015/win32/feedseek \
+	ports/MSVC++/2015/win32/feedseek/feedseek.vcxproj.filters \
+	ports/MSVC++/2015/win32/feedseek/feedseek.vcxproj \
+	ports/MSVC++/2015/win32/libmpg123 \
+	ports/MSVC++/2015/win32/libmpg123/libmpg123.vcxproj \
+	ports/MSVC++/2015/win32/libmpg123/libmpg123.vcxproj.filters \
+	ports/MSVC++/2015/win32/mpg123.sln \
+	ports/MSVC++/2015/win32/dump_seekindex \
+	ports/MSVC++/2015/win32/dump_seekindex/dump_seekindex.vcxproj \
+	ports/MSVC++/2015/win32/dump_seekindex/dump_seekindex.vcxproj.filters \
+	ports/MSVC++/2015/win32/scan \
+	ports/MSVC++/2015/win32/scan/scan.vcxproj.filters \
+	ports/MSVC++/2015/win32/scan/scan.vcxproj \
+	ports/MSVC++/2015/uwp/libmpg123 \
+	ports/MSVC++/2015/uwp/libmpg123/libmpg123.vcxproj \
+	ports/MSVC++/2015/uwp/libmpg123/libmpg123.vcxproj.filters \
+	ports/MSVC++/2015/uwp/libmpg123.sln \
 	ports/MSVC++/CMP3Stream/libMPG123/libMPG123.vcproj \
 	ports/MSVC++/CMP3Stream/libMPG123/PLACE_LIBMPG123_SOURCES_HERE \
 	ports/MSVC++/CMP3Stream/README \
@@ -2111,9 +2115,9 @@ src_libout123_libout123_la_LDFLAGS = \
   -no-undefined -version-info @LIBOUT123_VERSION@ -export-symbols-regex '^out123_'
 
 src_libout123_libout123_la_LIBADD = src/libout123/libmodule.la \
-	src/compat/libcompat.la $(am__append_27) $(am__append_29)
+	src/compat/libcompat.la $(am__append_27)
 src_libout123_libmodule_la_SOURCES = src/libout123/module.h \
-	$(am__append_28) $(am__append_30)
+	$(am__append_28) $(am__append_29)
 src_mpg123_LDADD = \
   src/compat/libcompat.la \
   src/libmpg123/libmpg123.la \
@@ -2143,14 +2147,15 @@ src_mpg123_SOURCES = src/audio.c src/audio.h src/common.c src/common.h \
 	src/genre.c src/mpg123.c src/mpg123app.h src/metaprint.c \
 	src/metaprint.h src/local.h src/local.c src/playlist.c \
 	src/playlist.h src/streamdump.h src/streamdump.c src/term.c \
-	src/term.h src/win32_support.h $(am__append_31)
+	src/term.h src/win32_support.h $(am__append_30)
 
 # Replace common.h by sysutil.h!
-src_out123_SOURCES = src/sysutil.c src/sysutil.h src/common.h \
-	src/getlopt.c src/getlopt.h src/out123.c src/mpg123app.h \
-	src/win32_support.h $(am__append_32)
+src_out123_SOURCES = src/sysutil.c src/sysutil.h src/waves.c \
+	src/waves.h src/common.h src/getlopt.c src/getlopt.h \
+	src/out123.c src/mpg123app.h src/win32_support.h \
+	$(am__append_31)
 src_mpg123_id3dump_SOURCES = src/mpg123-id3dump.c src/getlopt.c \
-	src/getlopt.h $(am__append_33)
+	src/getlopt.h $(am__append_32)
 src_mpg123_strip_SOURCES = \
   src/mpg123-strip.c \
   src/getlopt.c \
@@ -2926,6 +2931,7 @@ src/mpg123-strip.$(OBJEXT): src/$(am__dirstamp) \
 src/mpg123-strip$(EXEEXT): $(src_mpg123_strip_OBJECTS) $(src_mpg123_strip_DEPENDENCIES) $(EXTRA_src_mpg123_strip_DEPENDENCIES) src/$(am__dirstamp)
 	@rm -f src/mpg123-strip$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(src_mpg123_strip_OBJECTS) $(src_mpg123_strip_LDADD) $(LIBS)
+src/waves.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/out123.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 
@@ -2997,6 +3003,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/streamdump.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/sysutil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/term.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/waves.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/win32_net.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/win32_support.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/compat/$(DEPDIR)/compat.Plo@am__quote@
@@ -3941,6 +3948,8 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+@HAVE_MODULES_FALSE@install-exec-hook:
+@HAVE_MODULES_FALSE@uninstall-hook:
 clean: clean-am
 
 clean-am: clean-binPROGRAMS clean-generic clean-libLTLIBRARIES \
@@ -3975,7 +3984,8 @@ install-dvi-am:
 
 install-exec-am: install-binPROGRAMS install-libLTLIBRARIES \
 	install-pkglibLTLIBRARIES
-
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
 install-html: install-html-am
 
 install-html-am:
@@ -4020,10 +4030,11 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 	uninstall-libLTLIBRARIES uninstall-man \
 	uninstall-nodist_includeHEADERS uninstall-pkgconfigDATA \
 	uninstall-pkglibLTLIBRARIES
-
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
 uninstall-man: uninstall-man1
 
-.MAKE: install-am install-strip
+.MAKE: install-am install-exec-am install-strip uninstall-am
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--refresh check check-am clean \
 	clean-binPROGRAMS clean-cscope clean-generic \
@@ -4036,7 +4047,7 @@ uninstall-man: uninstall-man1
 	distdir distuninstallcheck dvi dvi-am html html-am info \
 	info-am install install-am install-binPROGRAMS install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am \
+	install-exec-am install-exec-hook install-html install-html-am \
 	install-includeHEADERS install-info install-info-am \
 	install-libLTLIBRARIES install-man install-man1 \
 	install-nodist_includeHEADERS install-pdf install-pdf-am \
@@ -4045,10 +4056,10 @@ uninstall-man: uninstall-man1
 	installdirs maintainer-clean maintainer-clean-generic \
 	mostlyclean mostlyclean-compile mostlyclean-generic \
 	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-am uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-includeHEADERS \
-	uninstall-libLTLIBRARIES uninstall-man uninstall-man1 \
-	uninstall-nodist_includeHEADERS uninstall-pkgconfigDATA \
-	uninstall-pkglibLTLIBRARIES
+	uninstall-am uninstall-binPROGRAMS uninstall-hook \
+	uninstall-includeHEADERS uninstall-libLTLIBRARIES \
+	uninstall-man uninstall-man1 uninstall-nodist_includeHEADERS \
+	uninstall-pkgconfigDATA uninstall-pkglibLTLIBRARIES
 
 .PRECIOUS: Makefile
 
@@ -4060,6 +4071,13 @@ uninstall-man: uninstall-man1
 @USE_YASM_FOR_AVX_TRUE@	@echo "# Generated by ltmain.sh (GNU libtool)" >$@
 @USE_YASM_FOR_AVX_TRUE@	@echo "pic_object='`basename $<`'" >>$@
 @USE_YASM_FOR_AVX_TRUE@	@echo "non_pic_object='`basename $<`'" >>$@
+
+# Get rid of .la files, at least _after_ install.
+@HAVE_MODULES_TRUE@install-exec-hook:
+@HAVE_MODULES_TRUE@	cd $(DESTDIR)$(pkglibdir) && $(RM) @output_modules_la@
+# The above breaks uninstall of module .so files?
+@HAVE_MODULES_TRUE@uninstall-hook:
+@HAVE_MODULES_TRUE@	for m in @output_modules_la@; do eval $$(grep dlname= src/libout123/modules/$$m) && $(RM) $(DESTDIR)$(pkglibdir)/$$dlname; done
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
