@@ -1,8 +1,12 @@
-mpg123 (1.24.0-1) UNRELEASED; urgency=medium
+mpg123 (1.24.0-1) experimental; urgency=medium
 
+  * Team upload.
   * New upstream release.
+  * debian/copyright: Update copyright years.
+  * debian/{rules,compat,control}: Bump debhelper compat to 10.
+  * debian/rules: Simplify flags handling.
 
- -- Sebastian Ramacher <sramacher@debian.org>  Tue, 25 Apr 2017 21:32:33 +0200
+ -- Sebastian Ramacher <sramacher@debian.org>  Tue, 25 Apr 2017 21:46:03 +0200
 
 mpg123 (1.23.8-1) unstable; urgency=high
 
