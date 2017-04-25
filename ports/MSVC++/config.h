@@ -3,6 +3,7 @@
 
 #define HAVE_STRERROR 1
 #define HAVE_SYS_TYPES_H 1
+#define HAVE_LIMITS_H 1
 
 #define HAVE_STRDUP
 #define HAVE_STDLIB_H
@@ -31,6 +32,4 @@
 #define HAVE_WINDOWS_H
 
 /* use the unicode support within libmpg123 */
-#ifdef UNICODE
-	#define WANT_WIN32_UNICODE
-#endif
+#define WANT_WIN32_UNICODE
