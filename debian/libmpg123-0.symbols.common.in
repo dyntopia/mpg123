@@ -37,6 +37,7 @@ libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_framepos_64@Base 1.14.0
  mpg123_free_string@Base 1.6.2
  mpg123_geteq@Base 1.6.2
+ mpg123_getformat2@Base 1.25.0
  mpg123_getformat@Base 1.6.2
  mpg123_getpar@Base 1.6.2
  mpg123_getparam@Base 1.6.2
