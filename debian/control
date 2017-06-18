@@ -14,8 +14,7 @@ Build-Depends:
  libopenal-dev,
  libpulse-dev [!hurd-i386],
  pkg-config,
- portaudio19-dev,
- python-minimal
+ portaudio19-dev
 Standards-Version: 3.9.8
 Homepage: http://mpg123.org/
 Vcs-Git: https://anonscm.debian.org/cgit/pkg-multimedia/mpg123.git
