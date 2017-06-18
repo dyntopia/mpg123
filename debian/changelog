@@ -1,6 +1,8 @@
 mpg123 (1.25.0-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+    - Fix crashes in Remote mode if FORMAT command issued. (Closes: #862753)
+  * debian/libmpg123-0.symbols.common.in: Add new symbol.
 
  -- Sebastian Ramacher <sramacher@debian.org>  Sun, 18 Jun 2017 11:27:16 +0200
 
