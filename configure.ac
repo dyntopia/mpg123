@@ -8,11 +8,11 @@ dnl Require autoconf version >= 2.57
 AC_PREREQ(2.57)
 
 dnl ############# Initialisation
-AC_INIT([mpg123], [1.24.0], [maintainer@mpg123.org])
+AC_INIT([mpg123], [1.25.0], [maintainer@mpg123.org])
 dnl Increment API_VERSION when the API gets changes (new functions).
 
 dnl libmpg123
-API_VERSION=43
+API_VERSION=44
 LIB_PATCHLEVEL=0
 
 dnl libout123
@@ -64,6 +64,7 @@ LT_LDFLAGS=-export-dynamic
 EXEC_LT_LDFLAGS=
 be_static=no
 all_static=no
+lib_static=no
 AC_MSG_CHECKING([if you are up to something totally static with LDFLAGS/CFLAGS])
 for f in $LDFLAGS $CFLAGS
 do
@@ -71,9 +72,14 @@ do
 		-all-static)
 			be_static=yes
 			all_static=yes
+			lib_static=yes
 		;;
 		-static)
 			be_static=yes
+			lib_static=yes
+		;;
+		-static-libgcc)
+			lib_static=yes
 		;;
 	esac
 done
@@ -100,6 +106,12 @@ AC_PROG_EGREP
 AC_C_CONST
 AC_INLINE
 AC_C_BIGENDIAN
+
+if test "x$lib_static" = xyes; then
+        CC="$CC -static-libgcc"
+        CCLD="$CC"
+	echo "Adding -static-libgcc"
+fi
 
 dnl ############# Use Libtool for dynamic module loading
 
@@ -539,10 +551,7 @@ fi
 sys_cppflags=
 newoldwritesample=disabled
 case $host in
-  aarch64-*-linux*|arm64-*-linux*)
-    cpu_type="aarch64"
-  ;;
-  aarch64-apple-darwin*|arm64-apple-darwin*)
+  aarch64-*linux*|arm64-*linux*|aarch64-*bsd*|arm64-*bsd*|aarch64-apple-darwin*|arm64-apple-darwin*)
     cpu_type="aarch64"
   ;;
   arm*-*-linux*-*eabihf|armv7hl*-*-linux*)
@@ -1452,21 +1461,6 @@ dnl Not disabling buffer for float mode... check that this is OK now!
   ;;
 esac
 
-# Mac OS X specific linker flags
-case $cpu_type in
-  3dnow|3dnow_vintage|3dnow_alone|3dnowext|3dnowext_vintage|3dnowext_alone|mmx|mmx_alone|sse|sse_vintage|sse_alone|x86|x86_dither)
-    case $host in
-      i386-apple-darwin8*|*-apple-darwin10*)
-        ADD_LDFLAGS="$ADD_LDFLAGS -Wl,-read_only_relocs,suppress"
-      ;;
-      i386-apple-darwin9*)
-        ADD_CFLAGS="$ADD_CFLAGS -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sdk"
-        ADD_LDFLAGS="$ADD_LDFLAGS -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk -Wl,-classic_linker -Wl,-read_only_relocs,suppress"
-      ;;
-    esac
-  ;;
-esac
-
 # Use yasm instead of the default assembler for AVX sources
 if test "x$use_yasm_for_avx" = "xyes"; then
 	case $host_os in
@@ -1782,12 +1776,25 @@ int main(){
 			fi
 		;;
 		coreaudio)
-			COREAUDIO_LIBS="-framework AudioToolbox -framework AudioUnit -framework CoreServices"
-			AC_CHECK_HEADERS([AudioUnit/AudioUnit.h CoreServices/CoreServices.h AudioToolbox/AudioToolbox.h])
+			COREAUDIO_LIBS="-framework AudioToolbox"
+			AC_CHECK_HEADERS([AudioUnit/AudioUnit.h AudioToolbox/AudioToolbox.h])
 			if test "x${ac_cv_header_AudioUnit_AudioUnit_h}" = "xyes" \
-				 -a "x${ac_cv_header_CoreServices_CoreServices_h}" = "xyes" \
 				 -a "x${ac_cv_header_AudioToolbox_AudioToolbox_h}" = "xyes";
 			then
+				OLD_LIBS=$LIBS
+				LIBS="$LIBS $COREAUDIO_LIBS"
+    			AC_MSG_CHECKING([if AudioUnit functions are available within AudioToolbox])
+				AC_TRY_LINK(
+					[#include <AudioUnit/AudioUnit.h>],
+					[AudioUnitInitialize(NULL);],
+					[AC_MSG_RESULT([yes])],
+					[AC_MSG_RESULT([no])
+					 COREAUDIO_LIBS="$COREAUDIO_LIBS -framework AudioUnit"]
+				)
+				LIBS=$OLD_LIBS
+				AC_CHECK_HEADERS([CoreServices/CoreServices.h],
+					[COREAUDIO_LIBS="$COREAUDIO_LIBS -framework CoreServices"]
+				)
 				if test x"$modules" = xdisabled; then
 					AC_MSG_WARN([Disabling buffer because of directly linked CoreAudio! Use the module if you need the buffer.])
 					buffer=disabled
@@ -1800,7 +1807,7 @@ int main(){
 		;;
 		arts)
 			AC_MSG_CHECKING([for artsc])
-			if artsc-config; then
+			if artsc-config > /dev/null 2>&1; then
 				AC_MSG_RESULT([yes])
 				output_modules="$output_modules arts"
 				HAVE_ARTS=yes
@@ -2471,6 +2478,14 @@ fi
 if test x"$with_optimization" = x0; then
 	echo "No optimization flags chosen, make sure you have something basic in your CFLAGS at least...
 "
+fi
+
+if test x"$cpu_type" = xi486; then
+  echo "WARNING: You selected the i486 decoder. This is not recommened for regular use."
+  echo "It was designed for actual i486 CPUs a long time ago. Generic C code is likely"
+  echo "to perform better nowadays. Also, the decoder misses features like volume"
+  echo "scaling and has clipping issues. Continue if you are into software archeology"
+  echo "only."
 fi
 
 echo
