@@ -1,3 +1,9 @@
+mpg123 (1.25.1-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Mon, 03 Jul 2017 21:12:35 +0200
+
 mpg123 (1.25.0-1) unstable; urgency=medium
 
   * Team upload.
