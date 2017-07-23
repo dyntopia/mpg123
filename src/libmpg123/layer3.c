@@ -47,7 +47,7 @@ static real tfcos12[3];
 #ifdef NEW_DCT9
 static real cos9[3],cos18[3];
 static real tan1_1[16],tan2_1[16],tan1_2[16],tan2_2[16];
-static real pow1_1[2][16],pow2_1[2][16],pow1_2[2][16],pow2_2[2][16];
+static real pow1_1[2][32],pow2_1[2][32],pow1_2[2][32],pow2_2[2][32];
 #endif
 #endif
 
@@ -245,7 +245,10 @@ void init_layer3(void)
 		tan2_1[i] = DOUBLE_TO_REAL_15(1.0 / (1.0 + t));
 		tan1_2[i] = DOUBLE_TO_REAL_15(M_SQRT2 * t / (1.0+t));
 		tan2_2[i] = DOUBLE_TO_REAL_15(M_SQRT2 / (1.0 + t));
+	}
 
+	for(i=0;i<32;i++)
+	{
 		for(j=0;j<2;j++)
 		{
 			double base = pow(2.0,-0.25*(j+1.0));
@@ -768,7 +771,14 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 			}
 		}
 	}
- 
+
+#define CHECK_XRPNT if(xrpnt >= &xr[SBLIMIT][0]) \
+{ \
+	if(NOQUIET) \
+		error2("attempted xrpnt overflow (%p !< %p)", (void*) xrpnt, (void*) &xr[SBLIMIT][0]); \
+	return 1; \
+}
+
 	if(gr_info->block_type == 2)
 	{
 		/* decoding with short or mixed mode BandIndex table */
@@ -849,6 +859,7 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 					y &= 0xf;
 #endif
 				}
+				CHECK_XRPNT;
 				if(x == 15 && h->linbits)
 				{
 					max[lwin] = cb;
@@ -873,6 +884,7 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 				else *xrpnt = DOUBLE_TO_REAL(0.0);
 
 				xrpnt += step;
+				CHECK_XRPNT;
 				if(y == 15 && h->linbits)
 				{
 					max[lwin] = cb;
@@ -905,22 +917,7 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 			const struct newhuff* h;
 			const short* val;
 			register short a;
-			/*
-				This is only a humble hack to prevent a special segfault.
-				More insight into the real workings is still needed.
-				Especially why there are (valid?) files that make xrpnt exceed the array with 4 bytes without segfaulting, more seems to be really bad, though.
-			*/
-			#ifdef DEBUG
-			if(!(xrpnt < &xr[SBLIMIT][0]))
-			{
-				if(VERBOSE) debug2("attempted soft xrpnt overflow (%p !< %p) ?", (void*) xrpnt, (void*) &xr[SBLIMIT][0]);
-			}
-			#endif
-			if(!(xrpnt < &xr[SBLIMIT][0]+5))
-			{
-				if(NOQUIET) error2("attempted xrpnt overflow (%p !< %p)", (void*) xrpnt, (void*) &xr[SBLIMIT][0]);
-				return 2;
-			}
+
 			h = htc+gr_info->count1table_select;
 			val = h->table;
 
@@ -967,6 +964,7 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 					}
 					mc--;
 				}
+				CHECK_XRPNT;
 				if( (a & (0x8>>i)) )
 				{
 					max[lwin] = cb;
@@ -991,6 +989,7 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 			{
 				for(;mc > 0;mc--)
 				{
+					CHECK_XRPNT;
 					*xrpnt = DOUBLE_TO_REAL(0.0); xrpnt += 3; /* short band -> step=3 */
 					*xrpnt = DOUBLE_TO_REAL(0.0); xrpnt += 3;
 				}
@@ -1080,6 +1079,7 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 #endif
 				}
 
+				CHECK_XRPNT;
 				if(x == 15 && h->linbits)
 				{
 					max = cb;
@@ -1103,6 +1103,7 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 				}
 				else *xrpnt++ = DOUBLE_TO_REAL(0.0);
 
+				CHECK_XRPNT;
 				if(y == 15 && h->linbits)
 				{
 					max = cb;
@@ -1171,6 +1172,7 @@ static int III_dequantize_sample(mpg123_handle *fr, real xr[SBLIMIT][SSLIMIT],in
 					}
 					mc--;
 				}
+				CHECK_XRPNT;
 				if( (a & (0x8>>i)) )
 				{
 					max = cb;
