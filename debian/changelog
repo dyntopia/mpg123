@@ -1,3 +1,10 @@
+mpg123 (1.25.4-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+    - Fix buffer over-read. (CVE-2017-9545) (Closes: #870799)
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Sun, 06 Aug 2017 14:30:26 +0200
+
 mpg123 (1.25.3-1) unstable; urgency=medium
 
   * Team upload.
