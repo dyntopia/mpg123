@@ -64,7 +64,8 @@ struct parameter param = {
   NULL,   /* output device */
   0,      /* destination (headphones, ...) */
 #ifdef HAVE_TERMIOS
-  FALSE , /* term control */
+  FALSE,  /* term control */
+  TRUE,   /* term visuals */
   MPG123_TERM_USR1,
   MPG123_TERM_USR2,
 #endif
