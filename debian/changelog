@@ -1,11 +1,14 @@
-mpg123 (1.25.7-1) UNRELEASED; urgency=medium
+mpg123 (1.25.7-1) unstable; urgency=medium
 
+  * Team upload.
   * New upstream release.
     - Do not play with cursor and inverse video for progress bar when
       TERM=dumb. (Closes: #872362)
     - Fix parsing of host port for numerical IPv6 addresses. (Closes: #872361)
+  * debian/control: Bump Standards-Version.
+  * debian/mpg123.manpages: Removed, not needed.
 
- -- Sebastian Ramacher <sramacher@debian.org>  Tue, 26 Sep 2017 15:58:49 +0200
+ -- Sebastian Ramacher <sramacher@debian.org>  Tue, 26 Sep 2017 16:12:35 +0200
 
 mpg123 (1.25.6-1) unstable; urgency=medium
 
