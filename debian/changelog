@@ -1,8 +1,10 @@
-mpg123 (1.25.8-1) UNRELEASED; urgency=medium
+mpg123 (1.25.8-1) unstable; urgency=medium
 
+  * Team upload.
   * New upstream release.
+  * debian/control: Bump Standards-Version.
 
- -- Sebastian Ramacher <sramacher@debian.org>  Sun, 03 Dec 2017 21:27:56 +0100
+ -- Sebastian Ramacher <sramacher@debian.org>  Sun, 03 Dec 2017 21:31:49 +0100
 
 mpg123 (1.25.7-1) unstable; urgency=medium
 
