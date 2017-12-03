@@ -52,8 +52,6 @@ Package: libmpg123-0
 Multi-Arch: same
 Architecture: any
 Section: libs
-Pre-Depends:
- ${misc:Pre-Depends}
 Depends:
  ${misc:Depends},
  ${shlibs:Depends}
