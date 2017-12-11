@@ -1,3 +1,12 @@
+mpg123 (1.23.8-2) unstable; urgency=medium
+
+  * Fix CVE-2017-9545 (closes #870799)
+  * Fix CVE-2017-10683 (closes #866860)
+  * Fix CVE-2017-11126
+  * Fix CVE-2017-12797
+
+ -- Hans Jerry Illikainen <hji@dyntopia.com>  Mon, 11 Dec 2017 09:27:55 +0000
+
 mpg123 (1.23.8-1) unstable; urgency=high
 
   * Team upload.
